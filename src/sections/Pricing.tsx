@@ -18,14 +18,6 @@ const TERMS = [
 /**
  * Pricing — alignment, not extraction.
  *
- * Type pairing on the display number: the digit is Fraunces (the
- * editorial voice) and the % is Inter (a clean modern construction).
- * Fraunces' own % is drawn in the Cooper Black / Windsor "wonky"
- * tradition with an exaggerated slash that visually breaks the glyph
- * at editorial display size — the foundry's own specimen describes
- * it as "playful, even outright goofy". That voice belongs to the
- * wordmark, not to the number.
- *
  * The countdown runs from 100 → 5 over 1.7 s on viewport entry.
  */
 export function Pricing() {
@@ -66,45 +58,20 @@ export function Pricing() {
             <div className="md:col-span-7">
               <RevealScale duration={1.2}>
                 <div className="flex items-start gap-8 md:gap-10">
-                  <div
-                    className="text-[hsl(var(--ink))]"
+                  <span
+                    className="font-serif text-[hsl(var(--ink))]"
                     style={{
                       fontSize: "clamp(6rem, 16vw, 12rem)",
-                      lineHeight: 1,
                       fontWeight: 500,
+                      lineHeight: 1,
+                      letterSpacing: "-0.02em",
+                      fontFeatureSettings: "'ss01' 0, 'kern' 1",
+                      fontVariantNumeric: "lining-nums tabular-nums",
+                      fontOpticalSizing: "auto",
                     }}
                   >
-                    {/* The digit — Fraunces. */}
-                    <span
-                      className="font-serif"
-                      style={{
-                        letterSpacing: "-0.02em",
-                        fontFeatureSettings: "'ss01' 0, 'kern' 1",
-                        fontVariantNumeric: "lining-nums tabular-nums",
-                        fontOpticalSizing: "auto",
-                      }}
-                    >
-                      <CountTo from={100} to={5} duration={1.7} />
-                    </span>
-                    {/* The % — Inter. Sized down to match the digit's
-                        cap-height visually. Fraunces' own % is drawn
-                        in the Cooper Black "wonky" tradition with a
-                        slash that visually breaks the glyph at this
-                        scale — Inter's % is clean and modern. */}
-                    <span
-                      className="font-sans"
-                      style={{
-                        fontSize: "0.7em",
-                        fontWeight: 500,
-                        letterSpacing: "normal",
-                        marginLeft: "0.05em",
-                        verticalAlign: "0.18em",
-                        display: "inline-block",
-                      }}
-                    >
-                      %
-                    </span>
-                  </div>
+                    <CountTo from={100} to={5} duration={1.7} suffix="%" />
+                  </span>
                   <span
                     className="mt-4 font-medium uppercase text-[hsl(var(--ink-subtle))]"
                     style={{
