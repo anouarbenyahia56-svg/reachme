@@ -75,7 +75,7 @@ export function FAQ() {
           <RevealLines
             delay={0.2}
             stagger={0.07}
-            className="mt-16 divide-y divide-[hsl(var(--rule))] border-y border-[hsl(var(--rule))]"
+            className="mt-16 divide-y divide-[hsl(var(--rule))] border-b border-[hsl(var(--rule))]"
           >
             {ITEMS.map((item, i) => {
               const isOpen = open === i;

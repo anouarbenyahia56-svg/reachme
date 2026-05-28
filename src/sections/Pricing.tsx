@@ -66,22 +66,25 @@ export function Pricing() {
                     style={{
                       fontSize: "clamp(6rem, 16vw, 12rem)",
                       fontWeight: 500,
-                      lineHeight: 0.9,
+                      lineHeight: 1,
                       letterSpacing: "-0.035em",
-                      fontFeatureSettings: "'lnum'",
+                      fontVariantNumeric: "lining-nums tabular-nums",
                       fontOpticalSizing: "auto",
-                      paddingTop: "0.05em",
                     }}
                   >
                     <CountTo from={100} to={5} duration={1.7} />
                     <span
                       style={{
-                        // The percent glyph gets its own positive air —
-                        // no negative tracking pulling its rings into
-                        // the slash.
+                        // Isolate the % from any inherited tracking or
+                        // line-box weirdness — its own clean rendering
+                        // context. No padding-top above the parent
+                        // either; that was compressing the line box and
+                        // visually cutting the glyph at large sizes.
                         display: "inline-block",
-                        letterSpacing: 0,
-                        paddingLeft: "0.05em",
+                        letterSpacing: "normal",
+                        lineHeight: 1,
+                        verticalAlign: "baseline",
+                        marginLeft: "0.04em",
                       }}
                     >
                       %

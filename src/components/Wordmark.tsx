@@ -37,8 +37,7 @@ export function Wordmark({
         fontFeatureSettings: "'ss01', 'kern'",
       }}
     >
-      ReachMe
-      <span className="text-[hsl(var(--ink-subtle))]">.</span>
+      ReachMe<span aria-hidden="true">.</span>
     </span>
   );
 }

@@ -72,7 +72,7 @@ export function Nav() {
           <div className="flex items-center gap-5">
             <a
               href="/login"
-              className="hidden text-[12.5px] tracking-[0.005em] text-[hsl(var(--ink-subtle))] transition-colors duration-300 hover:text-[hsl(var(--ink-muted))] sm:block"
+              className="hidden text-[12.5px] tracking-[0.005em] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))] sm:block"
             >
               Log in
             </a>
