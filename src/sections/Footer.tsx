@@ -1,5 +1,5 @@
 import { Wordmark } from "@/components/Wordmark";
-import { Reveal, RevealLines } from "@/components/motion";
+import { BlurReveal, RevealLines } from "@/components/motion";
 
 const COLUMNS = [
   {
@@ -38,7 +38,7 @@ export function Footer() {
   return (
     <footer className="px-6 py-20 md:px-10 md:py-28">
       <div className="mx-auto grid max-w-[1240px] grid-cols-12 gap-10">
-        <Reveal className="col-span-12 md:col-span-5">
+        <BlurReveal className="col-span-12 md:col-span-5">
           <Wordmark size="lg" />
           <p
             className="mt-6 max-w-[36ch] text-[hsl(var(--ink-muted))]"
@@ -46,12 +46,12 @@ export function Footer() {
           >
             Your attention is yours. ReachMe keeps it that way.
           </p>
-        </Reveal>
+        </BlurReveal>
 
         <RevealLines
           delay={0.1}
-          stagger={0.08}
-          className="col-span-12 grid grid-cols-3 gap-8 md:col-span-7 md:gap-12"
+          stagger={0.1}
+          className="col-span-12 grid grid-cols-1 gap-10 sm:grid-cols-3 sm:gap-8 md:col-span-7 md:gap-12"
         >
           {COLUMNS.map((col) => (
             <div key={col.label}>
@@ -82,14 +82,14 @@ export function Footer() {
           ))}
         </RevealLines>
 
-        <Reveal
+        <BlurReveal
           delay={0.2}
           className="col-span-12 mt-8 flex flex-col items-start justify-between gap-3 border-t border-[hsl(var(--rule))] pt-8 text-[hsl(var(--ink-subtle))] md:flex-row md:items-center"
         >
           <span style={{ fontSize: "0.78rem", letterSpacing: "0.02em" }}>
             © {new Date().getFullYear()} ReachMe. All rights reserved.
           </span>
-        </Reveal>
+        </BlurReveal>
       </div>
     </footer>
   );

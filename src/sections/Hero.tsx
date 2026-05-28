@@ -22,7 +22,7 @@ export function Hero() {
     fontFeatureSettings: "'ss01', 'kern'",
     textWrap: "balance" as const,
     paddingTop: "0.06em",
-    paddingBottom: "0.18em",
+    paddingBottom: "0.04em",
     maxWidth: "min(18ch, 100%)",
   };
 

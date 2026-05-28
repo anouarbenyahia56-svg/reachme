@@ -1,5 +1,5 @@
 import { CTA } from "@/components/CTA";
-import { Reveal, SECTION_PADDING, WordReveal } from "@/components/motion";
+import { BlurReveal, SECTION_PADDING, WordReveal } from "@/components/motion";
 
 /**
  * Closing — the last word.
@@ -51,7 +51,7 @@ export function Closing() {
           delay={0.18}
         />
 
-        <Reveal delay={0.5} duration={0.75}>
+        <BlurReveal delay={0.5} duration={0.9}>
           <div className="mt-20 flex justify-center">
             <CTA href="/claim" label="Claim your handle" />
           </div>
@@ -68,7 +68,7 @@ export function Closing() {
             people can send you serious requests. Free to set up. You decide
             who reaches you.
           </p>
-        </Reveal>
+        </BlurReveal>
       </div>
     </section>
   );

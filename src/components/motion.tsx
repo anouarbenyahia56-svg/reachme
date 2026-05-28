@@ -228,6 +228,7 @@ export function CountTo({
   delay = 0,
   className,
   style,
+  suffix = "",
 }: {
   from: number;
   to: number;
@@ -235,6 +236,7 @@ export function CountTo({
   delay?: number;
   className?: string;
   style?: CSSProperties;
+  suffix?: string;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-12% 0px" });
@@ -244,15 +246,15 @@ export function CountTo({
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
-    node.textContent = String(reduced ? to : from);
-  }, [from, to, reduced]);
+    node.textContent = `${reduced ? to : from}${suffix}`;
+  }, [from, to, reduced, suffix]);
 
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
 
     const unsubscribe = value.on("change", (latest) => {
-      node.textContent = String(Math.round(latest));
+      node.textContent = `${Math.round(latest)}${suffix}`;
     });
 
     if (!inView) return unsubscribe;
@@ -272,7 +274,7 @@ export function CountTo({
       unsubscribe();
       controls.stop();
     };
-  }, [inView, reduced, to, duration, delay, value]);
+  }, [inView, reduced, to, duration, delay, value, suffix]);
 
   return (
     <span

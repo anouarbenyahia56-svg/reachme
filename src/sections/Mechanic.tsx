@@ -66,15 +66,15 @@ export function Mechanic() {
         <RevealLines
           delay={0.15}
           stagger={0.13}
-          className="col-span-12 mt-24 grid grid-cols-1 md:grid-cols-3"
+          className="col-span-12 mt-24 grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-0"
         >
           {STEPS.map((step, i) => (
             <article
               key={step.title}
               className={[
-                "relative pt-9 pr-2 pb-2 pl-0 md:pr-10 md:pb-10 md:pl-10",
+                "relative md:pt-9 md:pb-10 md:pr-10",
                 "md:[&:not(:first-child)]:border-l md:[&:not(:first-child)]:border-[hsl(var(--rule))]",
-                i === 0 ? "md:pl-0" : "",
+                i === 0 ? "md:pl-0" : "md:pl-10",
               ].join(" ")}
             >
               <h3

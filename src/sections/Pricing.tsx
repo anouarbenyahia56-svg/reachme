@@ -18,10 +18,15 @@ const TERMS = [
 /**
  * Pricing — alignment, not extraction.
  *
- * The display number runs a smooth count-down from 100 → 5 over
- * 1.7 s on viewport entry, weighted easing, never rushed. The
- * "%" is rendered as its own span with no negative tracking and
- * a small left padding so the glyph reads as one complete shape.
+ * Type pairing on the display number: the digit is Fraunces (the
+ * editorial voice) and the % is Inter (a clean modern construction).
+ * Fraunces' own % is drawn in the Cooper Black / Windsor "wonky"
+ * tradition with an exaggerated slash that visually breaks the glyph
+ * at editorial display size — the foundry's own specimen describes
+ * it as "playful, even outright goofy". That voice belongs to the
+ * wordmark, not to the number.
+ *
+ * The countdown runs from 100 → 5 over 1.7 s on viewport entry.
  */
 export function Pricing() {
   return (
@@ -62,29 +67,39 @@ export function Pricing() {
               <RevealScale duration={1.2}>
                 <div className="flex items-start gap-8 md:gap-10">
                   <div
-                    className="font-serif text-[hsl(var(--ink))]"
+                    className="text-[hsl(var(--ink))]"
                     style={{
                       fontSize: "clamp(6rem, 16vw, 12rem)",
-                      fontWeight: 500,
                       lineHeight: 1,
-                      letterSpacing: "-0.035em",
-                      fontVariantNumeric: "lining-nums tabular-nums",
-                      fontOpticalSizing: "auto",
+                      fontWeight: 500,
                     }}
                   >
-                    <CountTo from={100} to={5} duration={1.7} />
+                    {/* The digit — Fraunces. */}
                     <span
+                      className="font-serif"
                       style={{
-                        // Isolate the % from any inherited tracking or
-                        // line-box weirdness — its own clean rendering
-                        // context. No padding-top above the parent
-                        // either; that was compressing the line box and
-                        // visually cutting the glyph at large sizes.
-                        display: "inline-block",
+                        letterSpacing: "-0.02em",
+                        fontFeatureSettings: "'ss01' 0, 'kern' 1",
+                        fontVariantNumeric: "lining-nums tabular-nums",
+                        fontOpticalSizing: "auto",
+                      }}
+                    >
+                      <CountTo from={100} to={5} duration={1.7} />
+                    </span>
+                    {/* The % — Inter. Sized down to match the digit's
+                        cap-height visually. Fraunces' own % is drawn
+                        in the Cooper Black "wonky" tradition with a
+                        slash that visually breaks the glyph at this
+                        scale — Inter's % is clean and modern. */}
+                    <span
+                      className="font-sans"
+                      style={{
+                        fontSize: "0.7em",
+                        fontWeight: 500,
                         letterSpacing: "normal",
-                        lineHeight: 1,
-                        verticalAlign: "baseline",
-                        marginLeft: "0.04em",
+                        marginLeft: "0.05em",
+                        verticalAlign: "0.18em",
+                        display: "inline-block",
                       }}
                     >
                       %
@@ -120,7 +135,7 @@ export function Pricing() {
                   >
                     <span
                       aria-hidden="true"
-                      className="mt-[1px] inline-block h-1 w-1 shrink-0 rounded-full bg-[hsl(var(--ink))]"
+                      className="mt-[7px] inline-block h-[5px] w-[5px] shrink-0 rounded-full bg-[hsl(var(--ink))]"
                     />
                     <span>{term}</span>
                   </div>

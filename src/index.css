@@ -61,7 +61,9 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    font-feature-settings: "ss01", "cv11";
+    /* No global Fraunces stylistic sets here — `cv11` swaps in
+       wonky alternate glyph forms in Fraunces, which we don't want
+       on body copy. Headings opt in to 'ss01' explicitly below. */
     /* Hide the visual scrollbar across browsers — keep scrolling. */
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -78,7 +80,6 @@
     background: hsl(var(--page));
     color: hsl(var(--ink));
     font-family: var(--font-sans);
-    font-feature-settings: "ss01", "cv11";
     letter-spacing: -0.005em;
     /* Section overflows are intentional inside their own boxes;
        page-level overflow is clipped so a misjudged headline never
