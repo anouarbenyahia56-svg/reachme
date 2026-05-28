@@ -7,6 +7,10 @@
      • the dark-world (dark) — wraps the closing and the footer only
    The dark-world remaps the same token names. Components don't know
    which register they live in; they ask the cascade.
+
+   Fonts: --app-font-sans and --app-font-serif are injected by next/font
+   on <html>, then composed into --font-sans / --font-serif here. The
+   Vite era fetched fonts at runtime; Next self-hosts them at build.
    ──────────────────────────────────────────────────────────────────────────── */
 @theme inline {
   --color-page: hsl(var(--page));
@@ -17,9 +21,10 @@
   --color-rule-strong: hsl(var(--rule-strong));
   --color-surface: hsl(var(--surface));
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
-    sans-serif;
-  --font-serif: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+  --font-sans: var(--app-font-sans), ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-serif: var(--app-font-serif), ui-serif, Georgia, "Times New Roman",
+    serif;
 }
 
 :root {
@@ -33,8 +38,7 @@
   --surface: 0 0% 100%;
 }
 
-/* Dark-world — same token names, inverted values. The wrapper
-   announces its own background so neighbours don't need to. */
+/* Dark-world — same token names, inverted values. */
 .dark-world {
   --page: 0 0% 6%;
   --ink: 40 18% 96%;
@@ -61,9 +65,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    /* No global Fraunces stylistic sets here — `cv11` swaps in
-       wonky alternate glyph forms in Fraunces, which we don't want
-       on body copy. Headings opt in to 'ss01' explicitly below. */
     /* Hide the visual scrollbar across browsers — keep scrolling. */
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -88,8 +89,7 @@
   }
 
   /* Display type — Fraunces. Renders identically to the wordmark:
-     same weight, optical sizing, kerning, feature settings. The logo
-     and the headlines are one typographic voice. */
+     same weight, optical sizing, kerning, feature settings. */
   h1,
   h2,
   h3,

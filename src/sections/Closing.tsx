@@ -1,5 +1,6 @@
 import { CTA } from "@/components/CTA";
-import { BlurReveal, SECTION_PADDING, WordReveal } from "@/components/motion";
+import { BlurReveal, WordReveal } from "@/components/motion";
+import { SECTION_PADDING } from "@/components/layout";
 
 /**
  * Closing — the last word.

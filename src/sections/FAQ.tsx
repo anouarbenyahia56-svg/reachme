@@ -1,12 +1,9 @@
+"use client";
+
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  EASE,
-  RevealLines,
-  SECTION_GRID,
-  SECTION_PADDING,
-  WordReveal,
-} from "@/components/motion";
+import { RevealLines, WordReveal } from "@/components/motion";
+import { EASE, SECTION_GRID, SECTION_PADDING } from "@/components/layout";
 
 const ITEMS = [
   {

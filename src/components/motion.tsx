@@ -1,3 +1,5 @@
+"use client";
+
 import {
   animate,
   motion,
@@ -14,6 +16,7 @@ import {
   useEffect,
   useRef,
 } from "react";
+import { EASE } from "./layout";
 
 /**
  * Motion primitives — the platform's animation language.
@@ -30,12 +33,8 @@ import {
  * Reduced-motion users get the destination, never the journey.
  */
 
-/** Decelerating easing — strong at the start, gentle at the end.
- *  Elements arrive and settle; they never stop abruptly. */
-export const EASE = [0.22, 1, 0.36, 1] as const;
-
-export const SECTION_PADDING = "px-6 py-32 md:px-10 md:py-40";
-export const SECTION_GRID = "mx-auto grid max-w-[1240px] grid-cols-12 gap-8";
+/** Decelerating easing — re-imported from `./layout` above so server
+ *  components don't have to cross the RSC boundary. */
 
 const VIEWPORT = { once: true, margin: "-8% 0px" } as const;
 

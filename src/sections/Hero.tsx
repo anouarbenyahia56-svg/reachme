@@ -1,6 +1,9 @@
+"use client";
+
 import { motion, useReducedMotion } from "framer-motion";
 import { CTA } from "@/components/CTA";
-import { BlurReveal, EASE, WordReveal } from "@/components/motion";
+import { BlurReveal, WordReveal } from "@/components/motion";
+import { EASE } from "@/components/layout";
 
 /**
  * Hero — the first five seconds.

@@ -3,10 +3,13 @@ node_modules
 .pnp
 .pnp.*
 
-# build output
+# build / Next.js output
+.next
+out
 dist
 .tsbuildinfo
 *.tsbuildinfo
+next-env.d.ts
 
 # logs
 npm-debug.log*

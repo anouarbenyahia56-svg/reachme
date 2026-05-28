@@ -1,10 +1,5 @@
-import {
-  BlurReveal,
-  RevealLines,
-  SECTION_GRID,
-  SECTION_PADDING,
-  WordReveal,
-} from "@/components/motion";
+import { BlurReveal, RevealLines, WordReveal } from "@/components/motion";
+import { SECTION_GRID, SECTION_PADDING } from "@/components/layout";
 
 /**
  * Each role gets the full width of the content column.

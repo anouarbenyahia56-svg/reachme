@@ -1,6 +1,8 @@
+"use client";
+
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Wordmark } from "@/components/Wordmark";
-import { EASE } from "@/components/motion";
+import { EASE } from "@/components/layout";
 
 const PRIMARY_LINKS = [
   { label: "How it works", href: "#mechanic" },

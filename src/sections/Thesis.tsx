@@ -1,10 +1,5 @@
-import {
-  BlurReveal,
-  RevealLines,
-  SECTION_GRID,
-  SECTION_PADDING,
-  WordReveal,
-} from "@/components/motion";
+import { BlurReveal, RevealLines, WordReveal } from "@/components/motion";
+import { SECTION_GRID, SECTION_PADDING } from "@/components/layout";
 
 const STATEMENTS = [
   "Noise scaled faster than filters could. Volume won. Signal disappeared.",

@@ -3,10 +3,9 @@ import {
   CountTo,
   RevealLines,
   RevealScale,
-  SECTION_GRID,
-  SECTION_PADDING,
   WordReveal,
 } from "@/components/motion";
+import { SECTION_GRID, SECTION_PADDING } from "@/components/layout";
 
 const TERMS = [
   "Free to create your profile.",
