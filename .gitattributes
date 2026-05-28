@@ -1,0 +1,15 @@
+# Normalise line endings across platforms.
+# Repo content is always LF; Windows checkouts get CRLF in working tree.
+* text=auto eol=lf
+
+# Binary assets — never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
