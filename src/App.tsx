@@ -1,42 +1,36 @@
-import { Nav } from "@/sections/Nav";
-import { Hero } from "@/sections/Hero";
-import { Thesis } from "@/sections/Thesis";
-import { Mechanic } from "@/sections/Mechanic";
-import { Audience } from "@/sections/Audience";
-import { Pricing } from "@/sections/Pricing";
-import { FAQ } from "@/sections/FAQ";
-import { Closing } from "@/sections/Closing";
-import { Footer } from "@/sections/Footer";
+import { RouterProvider } from "@/app/router";
+import { Routes } from "@/app/Routes";
+import { LinkInterceptor } from "@/app/LinkInterceptor";
+import { ToastProvider } from "@/app/ui/Toast";
+import { ErrorBoundary } from "@/app/ErrorBoundary";
 
 /**
- * Page composition.
+ * App root.
  *
- * Two registers, one shared palette:
+ * The router lives at the very top so every screen — marketing,
+ * onboarding, dashboard, public profile — speaks the same path
+ * language and shares the same single source of navigation truth.
  *
- *   • Hero → FAQ          — light register (page).
- *   • Closing + Footer    — dark register (.dark-world).
- *
- * No lines, rules, or hairlines separate sections. The transition
- * between registers is carried by the color change alone — the
- * background shift is the chapter break.
+ *   • ErrorBoundary      — last line of defence. Surfaces render
+ *                          errors as a real, navigable screen
+ *                          instead of a silent blank page.
+ *   • RouterProvider     — pushState + popstate + path context.
+ *   • LinkInterceptor    — captures plain `<a href="/...">` from
+ *                          locked landing sections and routes them
+ *                          through the SPA without a hard reload.
+ *   • ToastProvider      — global confirmation surface used across
+ *                          dashboard, onboarding, and send flows.
+ *   • Routes             — the dispatch surface itself.
  */
 export default function App() {
   return (
-    <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))] antialiased">
-      <Nav />
-      <main>
-        <Hero />
-        <Thesis />
-        <Mechanic />
-        <Audience />
-        <Pricing />
-        <FAQ />
-
-        <div className="dark-world">
-          <Closing />
-          <Footer />
-        </div>
-      </main>
-    </div>
+    <ErrorBoundary>
+      <RouterProvider>
+        <ToastProvider>
+          <LinkInterceptor />
+          <Routes />
+        </ToastProvider>
+      </RouterProvider>
+    </ErrorBoundary>
   );
 }

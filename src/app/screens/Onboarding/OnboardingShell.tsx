@@ -1,0 +1,132 @@
+import { motion } from "framer-motion";
+import { type ReactNode, useEffect } from "react";
+import { Wordmark } from "@/components/Wordmark";
+import { EASE } from "@/components/motion";
+import { Link, useRouter } from "../../router";
+import { ArrowLeft } from "lucide-react";
+
+/**
+ * Onboarding chrome.
+ *
+ * A whisper of a header — wordmark left, step pill right. A bar
+ * of progress beneath. The form sits in a wide, centered column
+ * with full-page room to breathe; nothing competes with the
+ * single decision being made on each step.
+ *
+ * The progress bar fills smoothly, with the same easing as the
+ * blur-reveals. Steps feel like one connected motion, not a
+ * sequence of separate screens.
+ */
+export function OnboardingShell({
+  step,
+  total,
+  back,
+  children,
+}: {
+  step: number;
+  total: number;
+  back?: string;
+  children: ReactNode;
+}) {
+  const { navigate } = useRouter();
+
+  useEffect(() => {
+    document.body.classList.add("reachme-onboarding");
+    return () => document.body.classList.remove("reachme-onboarding");
+  }, []);
+
+  const pct = Math.max(0, Math.min(1, step / total));
+
+  return (
+    <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
+      <header className="sticky inset-x-0 top-0 z-40 bg-[hsl(var(--page))]/85 backdrop-blur">
+        <div className="mx-auto flex h-[68px] max-w-[920px] items-center justify-between px-6 md:px-10">
+          <Link href="/" aria-label="ReachMe" className="-mx-1 px-1">
+            <Wordmark />
+          </Link>
+          <span
+            className="text-[11px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]"
+            aria-label={`Step ${step} of ${total}`}
+          >
+            Step {step} <span className="mx-1.5">/</span> {total}
+          </span>
+        </div>
+        <div className="relative h-px w-full bg-[hsl(var(--rule))]">
+          <motion.div
+            initial={false}
+            animate={{ scaleX: pct }}
+            transition={{ duration: 0.85, ease: EASE }}
+            style={{ transformOrigin: "left", height: "1.5px" }}
+            className="absolute inset-y-0 left-0 w-full bg-[hsl(var(--ink))]"
+          />
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-[920px] overflow-x-clip px-6 pb-32 pt-16 md:px-10 md:pb-44 md:pt-24">
+        {back && (
+          <button
+            type="button"
+            onClick={() => navigate(back)}
+            className="mb-10 inline-flex items-center gap-2 text-[12.5px] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
+          >
+            <ArrowLeft size={14} strokeWidth={1.6} aria-hidden="true" />
+            Back
+          </button>
+        )}
+        {children}
+      </main>
+    </div>
+  );
+}
+
+export function OnboardingTitle({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div>
+      {eyebrow && (
+        <motion.p
+          initial={{ opacity: 0, x: 28, filter: "blur(6px)" }}
+          animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+          transition={{ duration: 0.85, ease: EASE }}
+          className="mb-5 text-[11px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]"
+        >
+          {eyebrow}
+        </motion.p>
+      )}
+      <motion.h1
+        initial={{ opacity: 0, x: 36, filter: "blur(8px)" }}
+        animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.95, delay: 0.05, ease: EASE }}
+        className="font-serif text-[hsl(var(--ink))]"
+        style={{
+          fontSize: "clamp(2.6rem, 6vw, 4.4rem)",
+          lineHeight: 1.02,
+          letterSpacing: "-0.04em",
+          fontWeight: 500,
+          textWrap: "balance",
+          maxWidth: "16ch",
+        }}
+      >
+        {title}
+      </motion.h1>
+      {description && (
+        <motion.p
+          initial={{ opacity: 0, x: 30, filter: "blur(6px)" }}
+          animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+          transition={{ duration: 0.9, delay: 0.18, ease: EASE }}
+          className="mt-7 max-w-[52ch] text-[hsl(var(--ink-muted))]"
+          style={{ fontSize: "1.1rem", lineHeight: 1.55 }}
+        >
+          {description}
+        </motion.p>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,138 @@
+import { motion, type HTMLMotionProps } from "framer-motion";
+import { ArrowRight, Check, X } from "lucide-react";
+import { forwardRef, type ReactNode } from "react";
+import { EASE } from "@/components/motion";
+import { cn } from "@/lib/utils";
+
+/**
+ * Buttons — the action surface used everywhere outside the
+ * landing page's primary CTA.
+ *
+ * Same pill shape, same easing, same hover-lift as the locked
+ * `<CTA />` component, scaled across variants and sizes for the
+ * dashboard, onboarding, and forms.
+ */
+
+type Variant = "solid" | "outline" | "ghost" | "danger";
+type Size = "sm" | "md" | "lg";
+
+const sizeClasses: Record<Size, string> = {
+  sm: "px-4 py-2 text-[13px]",
+  md: "px-5 py-2.5 text-[14px]",
+  lg: "px-7 py-3.5 text-[15px]",
+};
+
+const variantClasses: Record<Variant, string> = {
+  solid:
+    "bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:bg-[hsl(var(--ink))]/92 disabled:bg-[hsl(var(--rule-strong))] disabled:text-[hsl(var(--ink-subtle))]",
+  outline:
+    "border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))] disabled:opacity-50",
+  ghost:
+    "text-[hsl(var(--ink))] hover:text-[hsl(var(--ink))]/70 disabled:opacity-50",
+  danger:
+    "border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))] hover:bg-[hsl(var(--ink))] hover:text-[hsl(var(--page))] disabled:opacity-50",
+};
+
+export interface ButtonProps
+  extends Omit<HTMLMotionProps<"button">, "children" | "ref"> {
+  variant?: Variant;
+  size?: Size;
+  trailingArrow?: boolean;
+  leadingIcon?: ReactNode;
+  children: ReactNode;
+  loading?: boolean;
+}
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+  function Button(
+    {
+      variant = "solid",
+      size = "md",
+      trailingArrow,
+      leadingIcon,
+      children,
+      className,
+      disabled,
+      loading,
+      ...rest
+    },
+    ref,
+  ) {
+    const isDisabled = disabled || loading;
+    return (
+      <motion.button
+        ref={ref}
+        whileHover={isDisabled ? undefined : { y: -1 }}
+        whileTap={isDisabled ? undefined : { y: 0 }}
+        transition={{ duration: 0.25, ease: EASE }}
+        disabled={isDisabled}
+        className={cn(
+          "group inline-flex items-center justify-center gap-2 rounded-full font-medium tracking-[-0.005em] transition-[transform,background-color,color,border-color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] disabled:cursor-not-allowed",
+          sizeClasses[size],
+          variantClasses[variant],
+          className,
+        )}
+        {...rest}
+      >
+        {loading ? (
+          <Spinner />
+        ) : leadingIcon ? (
+          <span className="inline-flex">{leadingIcon}</span>
+        ) : null}
+        <span>{children}</span>
+        {trailingArrow && !loading ? (
+          <ArrowRight
+            size={size === "sm" ? 14 : 16}
+            strokeWidth={1.6}
+            className="transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-[3px]"
+            aria-hidden="true"
+          />
+        ) : null}
+      </motion.button>
+    );
+  },
+);
+
+function Spinner() {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-[1.5px] border-current border-r-transparent opacity-70"
+    />
+  );
+}
+
+/** Compact inline action — used for "approve / decline" rows. */
+export function InlineAction({
+  intent,
+  children,
+  onClick,
+  disabled,
+}: {
+  intent: "approve" | "decline";
+  children: ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors duration-300",
+        intent === "approve"
+          ? "border border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:bg-[hsl(var(--ink))]/90"
+          : "border border-[hsl(var(--rule-strong))] text-[hsl(var(--ink-muted))] hover:border-[hsl(var(--ink))] hover:text-[hsl(var(--ink))]",
+        "disabled:cursor-not-allowed disabled:opacity-50",
+      )}
+    >
+      {intent === "approve" ? (
+        <Check size={12} strokeWidth={2} aria-hidden="true" />
+      ) : (
+        <X size={12} strokeWidth={2} aria-hidden="true" />
+      )}
+      {children}
+    </button>
+  );
+}
