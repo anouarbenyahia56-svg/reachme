@@ -1,26 +1,29 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { EASE } from "@/components/motion";
 import { AppHeader } from "../../ui/AppHeader";
 import { Reveal } from "../../ui/Reveal";
-import { Link, useRouter } from "../../router";
+import { Link } from "../../router";
 import { findInDirectory } from "../../store/directory";
+import { useProfile } from "../../store/session";
 import { ProfilePreviewCard } from "./ProfilePreviewCard";
 import { useToast } from "../../ui/Toast";
-import { Button } from "../../ui/Button";
 
 /**
- * Public profile route — what every sender sees first when they
- * land on reachme.com/:handle. Quiet, focused, identical in
- * voice to the marketing page; no chrome competes with the
- * person.
+ * Public profile route — what every visitor sees on
+ * reachme.com/:handle. Quiet, focused, identical in voice to the
+ * marketing page; no chrome competes with the person.
  *
- * If the handle isn't in the directory, render a graceful "not
- * found" that still represents the platform with care.
+ * The owner viewing their own page sees the same card, with the
+ * "Get your own ReachMe page" CTA suppressed (it's irrelevant to
+ * them — they already have one). The dashboard return path lives
+ * in the AppHeader, which switches its right-side link to "Back
+ * to dashboard" when the active path matches the owner's handle.
  */
 export function PublicProfile({ handle }: { handle: string }) {
   const profile = findInDirectory(handle);
-  const { navigate } = useRouter();
+  const ownerProfile = useProfile();
+  const isOwner =
+    Boolean(ownerProfile) &&
+    ownerProfile?.handle.toLowerCase() === handle.toLowerCase();
   const toast = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -60,44 +63,18 @@ export function PublicProfile({ handle }: { handle: string }) {
           />
         </Reveal>
 
-        <motion.div
-          initial={{ opacity: 0, y: 8, filter: "blur(6px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ duration: 0.85, delay: 0.4, ease: EASE }}
-          className="mt-12 text-center"
-        >
-          <p className="text-[12.5px] uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-            How ReachMe works
-          </p>
-          <p
-            className="mx-auto mt-4 max-w-[44ch] font-serif italic text-[hsl(var(--ink))]"
-            style={{
-              fontSize: "1.25rem",
-              lineHeight: 1.4,
-              letterSpacing: "-0.015em",
-              fontWeight: 500,
-            }}
-          >
-            The amount is held until {profile.displayName.split(" ")[0]} replies.
-            Declined or expired requests are refunded automatically.
-          </p>
-        </motion.div>
-
-        <Reveal delay={0.5}>
-          <div className="mt-14 flex flex-col items-center gap-4 border-t border-[hsl(var(--rule))] pt-10">
-            <p className="text-[12.5px] text-[hsl(var(--ink-muted))]">
-              Want a page like this?
-            </p>
-            <Button
-              size="md"
-              trailingArrow
-              variant="outline"
-              onClick={() => navigate("/claim")}
-            >
-              Claim your handle
-            </Button>
-          </div>
-        </Reveal>
+        {!isOwner && (
+          <Reveal delay={0.3}>
+            <div className="mt-8 text-center">
+              <Link
+                href="/claim"
+                className="inline-block text-[12.5px] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
+              >
+                Get your own ReachMe page →
+              </Link>
+            </div>
+          </Reveal>
+        )}
       </main>
     </div>
   );

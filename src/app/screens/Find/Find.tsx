@@ -5,7 +5,8 @@ import { EASE } from "@/components/motion";
 import { AppHeader } from "../../ui/AppHeader";
 import { Reveal } from "../../ui/Reveal";
 import { listDirectory } from "../../store/directory";
-import { Avatar, VerifiedMark } from "../../ui/Avatar";
+import { Avatar } from "../../ui/Avatar";
+import { VerifiedBadge } from "../../ui/VerifiedBadge";
 import { Pill } from "../../ui/Pill";
 import { Link } from "../../router";
 import { formatMoney } from "../../store/format";
@@ -116,7 +117,7 @@ export function Find() {
                         <p className="truncate font-serif text-[1.1rem] font-semibold text-[hsl(var(--ink))]" style={{ letterSpacing: "-0.02em" }}>
                           {p.displayName}
                         </p>
-                        {p.verified && <VerifiedMark size={13} />}
+                        {p.verified && <VerifiedBadge size={14} />}
                       </div>
                       <p className="truncate text-[12.5px] text-[hsl(var(--ink-muted))]">
                         {p.title}

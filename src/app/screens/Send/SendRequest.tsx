@@ -5,7 +5,8 @@ import { EASE } from "@/components/motion";
 import { AppHeader } from "../../ui/AppHeader";
 import { Button } from "../../ui/Button";
 import { TextField, TextArea } from "../../ui/Field";
-import { Avatar, VerifiedMark } from "../../ui/Avatar";
+import { Avatar } from "../../ui/Avatar";
+import { VerifiedBadge } from "../../ui/VerifiedBadge";
 import { Pill } from "../../ui/Pill";
 import { Reveal } from "../../ui/Reveal";
 import { findInDirectory } from "../../store/directory";
@@ -47,6 +48,7 @@ export function SendRequest({ handle }: { handle: string }) {
   const [name, setName] = useState(account?.displayName ?? "");
   const [email, setEmail] = useState(account?.email ?? "");
   const [organization, setOrganization] = useState("");
+  const [context, setContext] = useState("");
   const [category, setCategory] = useState<string>("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
@@ -123,14 +125,13 @@ export function SendRequest({ handle }: { handle: string }) {
       if (!name.trim()) return "Add your name.";
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
         return "Add a valid email.";
+      if (!context.trim()) return "Add a line of context.";
       return null;
     },
     () => (category ? null : "Pick a category."),
     () => {
       if (!subject.trim()) return "Add a subject.";
-      if (subject.trim().length < 4) return "Make the subject clearer.";
-      if (message.trim().length < 30)
-        return "Write a substantive message — at least a few sentences.";
+      if (!message.trim()) return "Write a message.";
       return null;
     },
     () => {
@@ -145,6 +146,7 @@ export function SendRequest({ handle }: { handle: string }) {
     step,
     name,
     email,
+    context,
     category,
     subject,
     message,
@@ -163,7 +165,12 @@ export function SendRequest({ handle }: { handle: string }) {
   const submit = () => {
     const result = submitRequest({
       toHandle: profile.handle,
-      from: { name: name.trim(), email: email.trim(), organization: organization.trim() || undefined },
+      from: {
+        name: name.trim(),
+        email: email.trim(),
+        context: context.trim() || undefined,
+        organization: organization.trim() || undefined,
+      },
       category,
       subject: subject.trim(),
       message: message.trim(),
@@ -214,9 +221,11 @@ export function SendRequest({ handle }: { handle: string }) {
                       name={name}
                       email={email}
                       organization={organization}
+                      context={context}
                       onName={setName}
                       onEmail={setEmail}
                       onOrganization={setOrganization}
+                      onContext={setContext}
                     />
                   )}
                   {step === 1 && (
@@ -245,7 +254,7 @@ export function SendRequest({ handle }: { handle: string }) {
                   {step === 4 && (
                     <StepReview
                       profile={profile}
-                      from={{ name, email, organization }}
+                      from={{ name, email, context, organization }}
                       category={category}
                       subject={subject}
                       message={message}
@@ -331,7 +340,7 @@ function RecipientHeader({
           >
             {profile.displayName}
           </p>
-          {profile.verified && <VerifiedMark size={13} />}
+          {profile.verified && <VerifiedBadge size={14} />}
         </div>
         <p className="text-[12.5px] text-[hsl(var(--ink-muted))]">
           {profile.title} · Minimum {formatMoney(profile.minAmountCents)}
@@ -358,16 +367,16 @@ function Stepper({
         >
           <span
             className={[
-              "inline-flex h-5 w-5 items-center justify-center rounded-full border text-[10.5px] font-medium",
+              "inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-medium leading-none tabular-nums",
               i < current
                 ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
                 : i === current
-                  ? "border-[hsl(var(--ink))] text-[hsl(var(--ink))]"
-                  : "border-[hsl(var(--rule-strong))] text-[hsl(var(--ink-subtle))]",
+                  ? "border-[hsl(var(--ink))] bg-transparent text-[hsl(var(--ink))]"
+                  : "border-[hsl(var(--rule-strong))] bg-transparent text-[hsl(var(--ink-subtle))]",
             ].join(" ")}
           >
             {i < current ? (
-              <Check size={11} strokeWidth={2.2} aria-hidden="true" />
+              <Check size={12} strokeWidth={2.2} aria-hidden="true" />
             ) : (
               i + 1
             )}
@@ -431,23 +440,27 @@ function StepAbout({
   name,
   email,
   organization,
+  context,
   onName,
   onEmail,
   onOrganization,
+  onContext,
 }: {
   name: string;
   email: string;
   organization: string;
+  context: string;
   onName: (s: string) => void;
   onEmail: (s: string) => void;
   onOrganization: (s: string) => void;
+  onContext: (s: string) => void;
 }) {
   return (
     <div>
       <PanelTitle
         eyebrow="About you"
         title="Tell them who's writing."
-        description="Use a name and email they can verify. Anonymous requests rarely earn replies."
+        description="Your email creates a private ReachMe account so you can track this request, your refund, and any reply. Only your name and what you choose to share appear to them. Your email visibility stays your call."
       />
       <div className="grid gap-5 md:grid-cols-2">
         <TextField
@@ -465,6 +478,16 @@ function StepAbout({
           onChange={(e) => onEmail(e.target.value)}
           placeholder="jane@company.com"
           autoComplete="email"
+          helper="Used to confirm your account and notify you of replies."
+        />
+      </div>
+      <div className="mt-5">
+        <TextField
+          label="Context"
+          value={context}
+          onChange={(e) => onContext(e.target.value)}
+          placeholder="Founder, writer, designer, researcher…"
+          helper="A line about who you are. Specific is better than impressive."
         />
       </div>
       <div className="mt-5">
@@ -474,7 +497,6 @@ function StepAbout({
           value={organization}
           onChange={(e) => onOrganization(e.target.value)}
           placeholder="Where you work, what you build"
-          helper="One line. Specific is better than impressive."
         />
       </div>
     </div>
@@ -663,13 +685,21 @@ function StepReview({
   cents,
 }: {
   profile: NonNullable<ReturnType<typeof findInDirectory>>;
-  from: { name: string; email: string; organization: string };
+  from: {
+    name: string;
+    email: string;
+    context: string;
+    organization: string;
+  };
   category: string;
   subject: string;
   message: string;
   cents: number;
 }) {
   const cat = profile.categories.find((c) => c.id === category);
+  const aboutLine = [from.context, from.organization]
+    .filter((s) => s.trim())
+    .join(" · ");
   return (
     <div>
       <PanelTitle
@@ -680,6 +710,9 @@ function StepReview({
       <dl className="grid gap-5 sm:grid-cols-2">
         <RVal label="From" value={`${from.name} · ${from.email}`} />
         <RVal label="Category" value={cat?.label ?? "—"} />
+        {aboutLine && (
+          <RVal label="Context" value={aboutLine} fullWidth />
+        )}
         <RVal label="Subject" value={subject} fullWidth />
         <RVal
           label="Amount on hold"
@@ -698,8 +731,7 @@ function StepReview({
       </div>
       <p className="mt-5 text-[12px] text-[hsl(var(--ink-subtle))]">
         By sending, you agree to ReachMe's escrow terms: held on submit,
-        released on reply, refunded on decline or after 7 days with no
-        response.
+        released on reply, refunded on decline or expiry.
       </p>
     </div>
   );

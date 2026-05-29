@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Image as ImageIcon, Plus, Trash2, X } from "lucide-react";
 import { EASE } from "@/components/motion";
 import { Card } from "../../ui/Card";
-import { Pill } from "../../ui/Pill";
 import { Button } from "../../ui/Button";
 import { TextField, TextArea, Label } from "../../ui/Field";
 import { Avatar } from "../../ui/Avatar";
@@ -151,6 +150,8 @@ export function MyPage() {
             <VisibilityField
               value={draft.visibility}
               onChange={(v) => set("visibility", v)}
+              replyWindowDays={draft.replyWindowDays}
+              onChangeReplyWindow={(d) => set("replyWindowDays", d)}
             />
           </div>
         </Card>
@@ -482,32 +483,37 @@ function CategoriesField({
 const VIS: ReadonlyArray<{ value: Visibility; label: string; helper: string }> = [
   {
     value: "public",
-    label: "Public + searchable",
-    helper: "Indexed in ReachMe search.",
-  },
-  {
-    value: "link-only",
-    label: "Link only",
-    helper: "Only people with the link can open it.",
+    label: "Active",
+    helper: "Live, public, searchable, accepting requests.",
   },
   {
     value: "paused",
     label: "Paused",
-    helper: "Visible, but not accepting requests.",
+    helper: "Visible, but not accepting new requests.",
   },
+];
+
+const REPLY_WINDOWS: ReadonlyArray<{ days: number; label: string }> = [
+  { days: 3, label: "3 days" },
+  { days: 7, label: "7 days" },
+  { days: 14, label: "14 days" },
 ];
 
 function VisibilityField({
   value,
   onChange,
+  replyWindowDays,
+  onChangeReplyWindow,
 }: {
   value: Visibility;
   onChange: (v: Visibility) => void;
+  replyWindowDays: number;
+  onChangeReplyWindow: (d: number) => void;
 }) {
   return (
     <div>
-      <Label>Visibility</Label>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <Label>State</Label>
+      <div className="grid gap-3 sm:grid-cols-2">
         {VIS.map((opt) => {
           const active = value === opt.value;
           return (
@@ -538,11 +544,42 @@ function VisibilityField({
           );
         })}
       </div>
-      <div className="mt-4 flex items-center gap-3 rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--page))] px-4 py-3">
-        <Pill size="sm">7-day reply window</Pill>
-        <p className="text-[12.5px] text-[hsl(var(--ink-muted))]">
-          Fixed platform policy. Senders are refunded automatically after 7
-          days with no reply.
+
+      <div className="mt-7">
+        <Label>Reply window</Label>
+        <div className="grid grid-cols-3 gap-3">
+          {REPLY_WINDOWS.map((w) => {
+            const active = replyWindowDays === w.days;
+            return (
+              <button
+                key={w.days}
+                type="button"
+                onClick={() => onChangeReplyWindow(w.days)}
+                aria-pressed={active}
+                className={[
+                  "rounded-2xl border px-3 py-3 text-center transition-[border-color,background-color,color] duration-300",
+                  active
+                    ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
+                    : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
+                ].join(" ")}
+              >
+                <span
+                  className="font-serif"
+                  style={{
+                    fontSize: "1.15rem",
+                    fontWeight: 500,
+                    letterSpacing: "-0.025em",
+                  }}
+                >
+                  {w.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2.5 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
+          If you don't reply within your window, the request expires and the
+          amount is refunded automatically.
         </p>
       </div>
     </div>

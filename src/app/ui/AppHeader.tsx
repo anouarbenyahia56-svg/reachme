@@ -1,7 +1,7 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Wordmark } from "@/components/Wordmark";
 import { EASE } from "@/components/motion";
-import { Link } from "../router";
+import { Link, useRouter } from "../router";
 import { useAccount, useProfile, signOut } from "../store/session";
 import { Avatar } from "./Avatar";
 import { useState, useRef, useEffect } from "react";
@@ -31,6 +31,9 @@ export function AppHeader({
   );
   const account = useAccount();
   const profile = useProfile();
+  const { path } = useRouter();
+  const onOwnPublicPage =
+    Boolean(profile) && path === `/${profile?.handle}`;
 
   const mode =
     variant === "auto"
@@ -83,6 +86,7 @@ export function AppHeader({
               displayName={profile?.displayName ?? account.displayName}
               avatarUrl={profile?.avatarUrl}
               handle={profile?.handle}
+              onOwnPublicPage={onOwnPublicPage}
             />
           )}
 
@@ -104,11 +108,13 @@ function AuthedHeaderRight({
   displayName,
   avatarUrl,
   handle,
+  onOwnPublicPage,
 }: {
   email: string;
   displayName: string;
   avatarUrl?: string;
   handle?: string;
+  onOwnPublicPage?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -133,12 +139,21 @@ function AuthedHeaderRight({
   return (
     <div className="flex items-center gap-3" ref={ref}>
       {handle && (
-        <Link
-          href={`/${handle}`}
-          className="hidden text-[12.5px] tracking-[0.005em] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))] md:block"
-        >
-          View public page
-        </Link>
+        onOwnPublicPage ? (
+          <Link
+            href="/dashboard"
+            className="hidden text-[12.5px] tracking-[0.005em] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))] md:block"
+          >
+            Back to dashboard
+          </Link>
+        ) : (
+          <Link
+            href={`/${handle}`}
+            className="hidden text-[12.5px] tracking-[0.005em] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))] md:block"
+          >
+            View public page
+          </Link>
+        )
       )}
       <button
         type="button"

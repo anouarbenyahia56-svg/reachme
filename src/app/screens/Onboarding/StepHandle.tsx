@@ -54,16 +54,16 @@ export function StepHandle() {
   const canContinue = status === "ok" && !checking;
 
   return (
-    <OnboardingShell step={1} total={6}>
+    <OnboardingShell step={1} total={6} back="/">
       <OnboardingTitle
         eyebrow="Claim"
         title="Claim your handle."
-        description="Your handle becomes the public page where serious people can reach you. Choose something short, memorable, and yours."
+        description="Your handle becomes the public page where people can reach you. Choose something short, memorable, and yours."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x">
         <div className="mt-14 max-w-[640px]">
-          <Label htmlFor="handle">Your address</Label>
+          <Label htmlFor="handle">This is where people will find you</Label>
           <div
             className={[
               "relative flex items-stretch overflow-hidden rounded-2xl border bg-[hsl(var(--surface))] transition-[border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
@@ -110,6 +110,9 @@ export function StepHandle() {
           <div className="mt-3 min-h-[20px]">
             <StatusMessage status={status} value={normalized} />
           </div>
+          <p className="mt-1.5 text-[12px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
+            Lowercase letters, numbers, hyphens, and underscores.
+          </p>
 
           {status === "ok" && (
             <motion.div
@@ -147,9 +150,6 @@ export function StepHandle() {
             >
               Continue
             </Button>
-            <p className="text-[12.5px] text-[hsl(var(--ink-subtle))]">
-              Lowercase letters, numbers, hyphens and underscores.
-            </p>
           </div>
         </div>
       </Reveal>
@@ -208,7 +208,7 @@ function StatusMessage({
     status === "empty"
       ? ""
       : status === "invalid"
-        ? "Lowercase letters, numbers, hyphens and underscores. Two characters or more."
+        ? "Two characters or more, please."
         : status === "reserved"
           ? "That handle is reserved. Pick another."
           : status === "taken"

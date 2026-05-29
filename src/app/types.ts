@@ -16,7 +16,7 @@
 
 export type ISODate = string;
 
-export type Visibility = "public" | "link-only" | "paused";
+export type Visibility = "public" | "paused";
 
 export type RequestStatus =
   | "pending"
@@ -45,8 +45,8 @@ export interface Profile {
   bannerUrl?: string;
   /** Minimum amount, in cents, that a sender must attach. */
   minAmountCents: number;
-  /** Reply window in days. Fixed by platform policy at 7 — kept
-   *  as a field so we can vary it later without UI changes. */
+  /** Reply window in days. Selectable by the page owner: 3, 7,
+   *  or 14. Defaults to 7. */
   replyWindowDays: number;
   categories: Category[];
   visibility: Visibility;
@@ -69,6 +69,8 @@ export interface Account {
 export interface SenderContact {
   name: string;
   email: string;
+  /** A line of professional context — who they are, beyond a name. */
+  context?: string;
   organization?: string;
 }
 

@@ -18,6 +18,7 @@ export interface OnboardingDraft {
   avatarUrl?: string;
   bannerUrl?: string;
   minAmountCents?: number;
+  replyWindowDays?: number;
   categories?: Category[];
   visibility?: Visibility;
 }
@@ -26,6 +27,7 @@ const KEY = "draft.onboarding";
 
 const DEFAULTS: OnboardingDraft = {
   minAmountCents: 15000,
+  replyWindowDays: 7,
   categories: [...DEFAULT_CATEGORIES],
   visibility: "public",
 };

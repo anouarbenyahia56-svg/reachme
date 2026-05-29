@@ -122,8 +122,7 @@ export function StepFloor() {
               />
             </div>
             <p className="mt-2.5 text-[12.5px] text-[hsl(var(--ink-subtle))]">
-              You can change this any time. Senders can attach more — they
-              cannot attach less.
+              You can change this any time. Anyone reaching out can attach more — they cannot attach less. The minimum is $10, but most people benefit from setting it higher.
             </p>
           </div>
 
@@ -138,9 +137,6 @@ export function StepFloor() {
             >
               Continue
             </Button>
-            <p className="text-[12.5px] text-[hsl(var(--ink-subtle))]">
-              Minimum is $10 — but most people benefit from more.
-            </p>
           </div>
         </div>
       </Reveal>
@@ -154,7 +150,7 @@ function EscrowExplainer({ cents }: { cents: number }) {
       <Row
         eyebrow="Held"
         title="On submit"
-        body="The amount is held the moment a sender attaches it. They have committed."
+        body="The amount is held the moment someone attaches it. They have committed."
       />
       <Row
         eyebrow="Released"
@@ -166,7 +162,7 @@ function EscrowExplainer({ cents }: { cents: number }) {
       <Row
         eyebrow="Refunded"
         title="On decline or expiry"
-        body="Decline or let it expire after 7 days. The sender is refunded automatically. We earn nothing."
+        body="Decline or let it expire. The person reaching out is refunded automatically. We earn nothing."
       />
     </div>
   );

@@ -92,19 +92,13 @@ export function Overview() {
               <p className="mt-3 max-w-[52ch] text-[hsl(var(--ink-muted))]">
                 {profile.visibility === "paused"
                   ? "It's still visible, but no one can submit a request right now."
-                  : profile.visibility === "link-only"
-                    ? "Reachable by anyone who has your link, but not searchable."
-                    : "People can reach you when their request meets your rules."}
+                  : "People can reach you when their request meets your rules."}
               </p>
             </div>
             <StatusDot
               tone={profile.visibility === "paused" ? "paused" : "live"}
             >
-              {profile.visibility === "paused"
-                ? "Paused"
-                : profile.visibility === "link-only"
-                  ? "Link only"
-                  : "Public"}
+              {profile.visibility === "paused" ? "Paused" : "Active"}
             </StatusDot>
           </div>
 

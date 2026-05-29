@@ -40,8 +40,8 @@ export function StepIdentity() {
     <OnboardingShell step={2} total={6} back="/claim">
       <OnboardingTitle
         eyebrow="Identity"
-        title="Show senders who you are."
-        description="This is what serious people see before they decide to reach out. Make it count — quietly."
+        title="Show people who you are."
+        description="This is what people see before they decide to reach out. Make it count — quietly."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x">
@@ -79,7 +79,7 @@ export function StepIdentity() {
             optional
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            placeholder="I review serious business, partnership, and acquisition opportunities."
+            placeholder="I review business, partnership, and acquisition opportunities."
             maxChars={240}
             helper="Two sentences at most. Set the tone for what reaches you."
           />
@@ -124,7 +124,14 @@ function AvatarUploader({
   const input = useRef<HTMLInputElement>(null);
   return (
     <div className="flex items-center gap-5">
-      <Avatar size="xl" src={value} name={displayName} />
+      {value ? (
+        <Avatar size="xl" src={value} name={displayName} />
+      ) : (
+        <span
+          aria-hidden="true"
+          className="h-24 w-24 shrink-0 rounded-full bg-[hsl(var(--rule))]"
+        />
+      )}
       <div className="flex flex-col items-start gap-2">
         <div className="flex items-center gap-2">
           <Button
@@ -208,15 +215,34 @@ function BannerUploader({
           </span>
         )}
       </button>
-      {value && (
-        <button
-          type="button"
-          onClick={() => onChange(undefined)}
-          className="mt-2 inline-flex items-center gap-1.5 text-[12px] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
-        >
-          <Trash2 size={12} strokeWidth={1.6} aria-hidden="true" /> Remove banner
-        </button>
-      )}
+
+      {value ? (
+        <div className="mt-3 flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            leadingIcon={<ImageIcon size={14} strokeWidth={1.6} />}
+            onClick={() => input.current?.click()}
+            type="button"
+          >
+            Replace banner
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            leadingIcon={<Trash2 size={14} strokeWidth={1.6} />}
+            onClick={() => onChange(undefined)}
+            type="button"
+          >
+            Remove
+          </Button>
+        </div>
+      ) : null}
+
+      <p className="mt-3 text-[12px] text-[hsl(var(--ink-subtle))]">
+        A wide crop, ideally 1600 × 400. Up to 2 MB.
+      </p>
+
       <input
         ref={input}
         type="file"

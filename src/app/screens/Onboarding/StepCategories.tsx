@@ -65,7 +65,7 @@ export function StepCategories() {
       <OnboardingTitle
         eyebrow="Categories"
         title="What's worth your time?"
-        description="Senders pick a category before they reach out. Choose the ones you're genuinely open to. Everything else self-selects out."
+        description="People reaching out pick a category before they send. Choose the ones you're genuinely open to. Everything else self-selects out."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x">

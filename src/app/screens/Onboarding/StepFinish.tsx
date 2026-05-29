@@ -52,7 +52,7 @@ export function StepFinish() {
     avatarUrl: draft.avatarUrl,
     bannerUrl: draft.bannerUrl,
     minAmountCents: draft.minAmountCents ?? 15000,
-    replyWindowDays: 7,
+    replyWindowDays: draft.replyWindowDays ?? 7,
     categories: draft.categories ?? [],
     visibility: draft.visibility ?? "public",
     verified: false,
@@ -83,7 +83,7 @@ export function StepFinish() {
       <OnboardingTitle
         eyebrow="Almost there"
         title="One last thing."
-        description="We'll email you when serious requests arrive — and only then. No marketing, no digests, nothing else."
+        description="We'll email you when a request arrives — and only then. No marketing, no digests, nothing else."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x">
@@ -116,16 +116,13 @@ export function StepFinish() {
                   label="Minimum signal"
                   value={formatMoney(draft.minAmountCents ?? 15000)}
                 />
-                <SummaryRow label="Reply window" value="7 days" />
                 <SummaryRow
-                  label="Visibility"
-                  value={
-                    draft.visibility === "public"
-                      ? "Public + searchable"
-                      : draft.visibility === "link-only"
-                        ? "Link only"
-                        : "Paused"
-                  }
+                  label="Reply window"
+                  value={`${draft.replyWindowDays ?? 7} days`}
+                />
+                <SummaryRow
+                  label="State"
+                  value={draft.visibility === "paused" ? "Paused" : "Active"}
                 />
               </dl>
               <div className="mt-5 border-t border-[hsl(var(--rule))] pt-5">
@@ -150,11 +147,8 @@ export function StepFinish() {
                 loading={submitting}
                 onClick={goLive}
               >
-                Make my page live
+                Take my page live
               </Button>
-              <p className="text-[12.5px] text-[hsl(var(--ink-subtle))]">
-                Free to set up. You decide who reaches you.
-              </p>
             </div>
           </div>
 
@@ -164,7 +158,7 @@ export function StepFinish() {
               <ProfilePreviewCard profile={previewProfile} variant="preview" />
             </div>
             <p className="mt-3 text-[12.5px] text-[hsl(var(--ink-subtle))]">
-              This is what serious people will see.
+              This is what people will see.
             </p>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { Link as LinkIcon } from "lucide-react";
-import { Avatar, VerifiedMark } from "../../ui/Avatar";
+import { Avatar } from "../../ui/Avatar";
+import { VerifiedBadge } from "../../ui/VerifiedBadge";
 import { Pill } from "../../ui/Pill";
 import { formatMoney } from "../../store/format";
 import type { Profile } from "../../types";
@@ -78,7 +79,7 @@ export function ProfilePreviewCard({
           >
             {profile.displayName}
           </h2>
-          {profile.verified && <VerifiedMark size={15} />}
+          {profile.verified && <VerifiedBadge size={18} />}
         </div>
         <p className="mt-1 text-[14px] text-[hsl(var(--ink-muted))]">
           {profile.title}
@@ -124,8 +125,7 @@ export function ProfilePreviewCard({
           <Pill size="sm" tone="ink">
             {formatMoney(profile.minAmountCents)} minimum
           </Pill>
-          <Pill size="sm">7-day reply window</Pill>
-          <Pill size="sm">Structured request</Pill>
+          <Pill size="sm">{profile.replyWindowDays}-day reply window</Pill>
         </div>
 
         <div className="mt-7">
@@ -154,13 +154,13 @@ export function ProfilePreviewCard({
           )}
         </div>
 
-        {variant === "public" && (
-          <Link
-            href="/claim"
-            className="mt-5 block text-center text-[12.5px] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
+        {variant === "public" && !isPaused && (
+          <p
+            className="mt-5 text-center text-[12.5px] leading-[1.55] text-[hsl(var(--ink-muted))]"
           >
-            Get your own ReachMe page →
-          </Link>
+            The amount is held until {profile.displayName.split(" ")[0]} replies.
+            Declined or expired requests are refunded automatically.
+          </p>
         )}
       </div>
     </article>
