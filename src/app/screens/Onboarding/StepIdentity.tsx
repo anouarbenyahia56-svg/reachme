@@ -50,7 +50,8 @@ export function StepIdentity() {
 
           <AvatarUploader
             value={avatarUrl}
-            displayName={displayName || "Y"}
+            displayName={displayName}
+            handle={draft.handle ?? ""}
             onChange={setAvatarUrl}
           />
 
@@ -60,7 +61,6 @@ export function StepIdentity() {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Jordan Smith"
-              autoFocus
               maxLength={48}
               helper="Shown at the top of your page."
             />
@@ -93,9 +93,6 @@ export function StepIdentity() {
             >
               Continue
             </Button>
-            <p className="text-[12.5px] text-[hsl(var(--ink-subtle))]">
-              Display name and role are required. Everything else can wait.
-            </p>
           </div>
         </div>
       </Reveal>
@@ -115,17 +112,32 @@ function readFileAsDataURL(file: File): Promise<string> {
 function AvatarUploader({
   value,
   displayName,
+  handle,
   onChange,
 }: {
   value?: string;
   displayName: string;
+  handle: string;
   onChange: (v?: string) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  // The initial falls back to the handle (claimed in step 1) so the
+  // placeholder is never empty before a display name is typed.
+  const initialSource = displayName.trim() || handle.trim();
+  const firstInitial = initialSource.charAt(0).toUpperCase();
+  const hasInitial = firstInitial.length > 0;
   return (
     <div className="flex items-center gap-5">
       {value ? (
-        <Avatar size="xl" src={value} name={displayName} />
+        <Avatar size="xl" src={value} name={displayName || handle} />
+      ) : hasInitial ? (
+        <span
+          aria-hidden="true"
+          className="inline-flex h-24 w-24 shrink-0 select-none items-center justify-center rounded-full bg-[hsl(var(--rule))] font-serif text-[28px] font-medium text-[hsl(var(--ink-muted))]"
+          style={{ letterSpacing: "-0.02em" }}
+        >
+          {firstInitial}
+        </span>
       ) : (
         <span
           aria-hidden="true"

@@ -9,6 +9,7 @@ import { StepFloor } from "./screens/Onboarding/StepFloor";
 import { StepCategories } from "./screens/Onboarding/StepCategories";
 import { StepVisibility } from "./screens/Onboarding/StepVisibility";
 import { StepFinish } from "./screens/Onboarding/StepFinish";
+import { StepVerify } from "./screens/Onboarding/StepVerify";
 
 import { DashboardShell } from "./screens/Dashboard/DashboardShell";
 import { Overview } from "./screens/Dashboard/Overview";
@@ -65,6 +66,7 @@ export function Routes() {
   if (path === "/claim/categories") return <StepCategories />;
   if (path === "/claim/visibility") return <StepVisibility />;
   if (path === "/claim/finish") return <StepFinish />;
+  if (path === "/claim/verify") return <StepVerify />;
 
   if (path.startsWith("/dashboard")) {
     return <DashboardRoutes path={path} hasProfile={Boolean(profile)} hasAccount={Boolean(account)} />;

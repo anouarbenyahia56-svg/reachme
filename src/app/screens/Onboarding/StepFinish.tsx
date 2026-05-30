@@ -4,27 +4,27 @@ import { TextField, Label } from "../../ui/Field";
 import { Reveal } from "../../ui/Reveal";
 import { useRouter } from "../../router";
 import { OnboardingShell, OnboardingTitle } from "./OnboardingShell";
-import { clearDraft, patchDraft, useDraft } from "../../store/draft";
-import { setAccount, setProfile } from "../../store/session";
-import { seedDemoForOwner } from "../../store/requests";
+import { patchDraft, useDraft } from "../../store/draft";
 import type { Profile } from "../../types";
 import { formatMoney } from "../../store/format";
 import { ProfilePreviewCard } from "../Public/ProfilePreviewCard";
 import { Pill } from "../../ui/Pill";
+import { requestVerification } from "../../store/verification";
+import { useToast } from "../../ui/Toast";
 
 /**
  * Step 6 — Finish.
  *
- * The final review. Email is captured here (lightweight
- * authentication seam — a real flow drops a magic-link verifier
- * in this exact spot). Below the email, a live preview of the
- * profile reaffirms the decision. Pressing "Make my page live"
- * commits the profile, seeds a single welcome request, and
- * navigates into the dashboard with a celebratory beat.
+ * The final review. The CTA does not take the page live directly:
+ * it issues an email verification challenge and hands off to the
+ * verify screen (/claim/verify). The page only goes live once the
+ * code is confirmed there — a real auth gate that a production
+ * verifier can slot into cleanly.
  */
 export function StepFinish() {
   const { navigate } = useRouter();
   const draft = useDraft();
+  const toast = useToast();
   const [email, setEmail] = useState(draft.email ?? "");
   const [submitting, setSubmitting] = useState(false);
 
@@ -59,23 +59,21 @@ export function StepFinish() {
     createdAt: new Date().toISOString(),
   };
 
-  const goLive = async () => {
+  // Issue a verification challenge, then hand off to the verify
+  // screen. The page is NOT committed here — that happens only
+  // after the emailed code is confirmed on /claim/verify.
+  const startVerification = async () => {
     if (!validEmail) return;
     setSubmitting(true);
-    // A 600 ms beat — same easing the rest of the platform uses.
-    // It earns its weight: this is a meaningful moment.
-    await new Promise((r) => setTimeout(r, 600));
+    patchDraft({ email });
+    await new Promise((r) => setTimeout(r, 500));
 
-    setAccount({
-      email,
-      displayName: draft.displayName!,
-      hasProfile: true,
-    });
-    setProfile(previewProfile);
-    seedDemoForOwner(previewProfile);
-    clearDraft();
+    const { code } = requestVerification(email);
+    // No mail server in this build, so the code surfaces here. A
+    // real backend emails it and returns nothing sensitive.
+    toast.show("Verification code sent.", `Demo code: ${code}`);
 
-    navigate("/dashboard?welcome=1", { replace: true });
+    navigate("/claim/verify");
   };
 
   return (
@@ -98,35 +96,48 @@ export function StepFinish() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && validEmail && !submitting) goLive();
+                if (e.key === "Enter" && validEmail && !submitting)
+                  startVerification();
               }}
-              helper="Used to sign in to ReachMe. We'll send a confirmation here."
+              helper="Used to sign in to ReachMe. We'll send a confirmation code here."
             />
 
-            <div className="mt-10 rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-6 py-6 sm:px-8 sm:py-7">
-              <p className="mb-3 text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-                Your rules
+            <div className="mt-10 rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-7 py-8 sm:px-9 sm:py-9">
+              <p className="mb-6 text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
+                The terms you set
               </p>
-              <dl className="grid gap-5 sm:grid-cols-2">
-                <SummaryRow
-                  label="Public address"
-                  value={`reachme.com/${draft.handle}`}
-                />
-                <SummaryRow
+
+              <div className="rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--page))] px-5 py-4">
+                <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]">
+                  Public address
+                </p>
+                <p className="mt-2.5 text-[15px] leading-snug">
+                  <span className="text-[hsl(var(--ink-subtle))]">
+                    reachme.com/
+                  </span>
+                  <span className="break-all font-medium text-[hsl(var(--ink))]">
+                    {draft.handle}
+                  </span>
+                </p>
+              </div>
+
+              <dl className="mt-7 divide-y divide-[hsl(var(--rule))]">
+                <TermRow
                   label="Minimum signal"
                   value={formatMoney(draft.minAmountCents ?? 15000)}
                 />
-                <SummaryRow
+                <TermRow
                   label="Reply window"
                   value={`${draft.replyWindowDays ?? 7} days`}
                 />
-                <SummaryRow
+                <TermRow
                   label="State"
                   value={draft.visibility === "paused" ? "Paused" : "Active"}
                 />
               </dl>
-              <div className="mt-5 border-t border-[hsl(var(--rule))] pt-5">
-                <p className="mb-3 text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
+
+              <div className="mt-7 border-t border-[hsl(var(--rule))] pt-7">
+                <p className="mb-4 text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
                   Categories
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -145,7 +156,7 @@ export function StepFinish() {
                 trailingArrow
                 disabled={!validEmail}
                 loading={submitting}
-                onClick={goLive}
+                onClick={startVerification}
               >
                 Take my page live
               </Button>
@@ -153,13 +164,15 @@ export function StepFinish() {
           </div>
 
           <div className="lg:pt-9">
-            <Label>Live preview</Label>
+            <Label>
+              Live preview{" "}
+              <span className="font-normal normal-case tracking-normal text-[hsl(var(--ink-subtle))]">
+                (This is what people will see.)
+              </span>
+            </Label>
             <div className="rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--page))] p-5">
               <ProfilePreviewCard profile={previewProfile} variant="preview" />
             </div>
-            <p className="mt-3 text-[12.5px] text-[hsl(var(--ink-subtle))]">
-              This is what people will see.
-            </p>
           </div>
         </div>
       </Reveal>
@@ -167,13 +180,13 @@ export function StepFinish() {
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+function TermRow({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div className="flex items-center justify-between gap-6 py-3.5 first:pt-0 last:pb-0">
       <dt className="text-[11px] font-medium uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]">
         {label}
       </dt>
-      <dd className="mt-1.5 break-words text-[14.5px] text-[hsl(var(--ink))]">
+      <dd className="whitespace-nowrap text-[15px] font-medium text-[hsl(var(--ink))]">
         {value}
       </dd>
     </div>

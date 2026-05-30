@@ -1,6 +1,5 @@
 import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { initials as makeInitials } from "../store/format";
 
 /**
  * Avatar — circular, neutral, with a serif initial when no
@@ -49,7 +48,9 @@ export function Avatar({
           draggable={false}
         />
       ) : (
-        <span style={{ letterSpacing: "-0.02em" }}>{makeInitials(name)}</span>
+        <span style={{ letterSpacing: "-0.02em" }}>
+          {name.trim().charAt(0).toUpperCase()}
+        </span>
       )}
     </span>
   );

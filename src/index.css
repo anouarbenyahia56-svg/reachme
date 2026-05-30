@@ -109,6 +109,31 @@
     color: hsl(var(--page));
   }
 
+  /* Cursor consistency — every interactive element shows a pointer
+     on hover. Anchors, buttons, role="button", role="menuitem",
+     summary, selectable labels, and elements carrying an onClick
+     (which React surfaces with no native affordance) all opt in.
+     Disabled controls correctly revert to not-allowed. */
+  a[href],
+  button,
+  summary,
+  label[for],
+  select,
+  [role="button"],
+  [role="menuitem"],
+  [role="tab"],
+  [role="option"],
+  [onclick],
+  [tabindex]:not([tabindex="-1"]) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"],
+  [disabled] {
+    cursor: not-allowed;
+  }
+
   :focus-visible {
     outline: 1.5px solid hsl(var(--ink));
     outline-offset: 3px;

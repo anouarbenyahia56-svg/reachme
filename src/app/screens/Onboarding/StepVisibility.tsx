@@ -58,9 +58,9 @@ export function StepVisibility() {
   return (
     <OnboardingShell step={5} total={6} back="/claim/categories">
       <OnboardingTitle
-        eyebrow="Visibility"
-        title="Decide who can find you."
-        description="You can change this any time. Even at its most public, your page only forwards requests that meet your rules."
+        eyebrow="Availability"
+        title="Decide if you're open."
+        description="Change this whenever you like. Being active doesn't mean being open to everyone — your rules still decide what reaches you."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x">

@@ -12,18 +12,17 @@ import { useToast } from "../../ui/Toast";
  * reachme.com/:handle. Quiet, focused, identical in voice to the
  * marketing page; no chrome competes with the person.
  *
- * The owner viewing their own page sees the same card, with the
- * "Get your own ReachMe page" CTA suppressed (it's irrelevant to
- * them — they already have one). The dashboard return path lives
- * in the AppHeader, which switches its right-side link to "Back
- * to dashboard" when the active path matches the owner's handle.
+ * "Get your own ReachMe page" sits below the card only for people
+ * who don't already own one. Anyone who has a ReachMe page (a
+ * profile in session) never sees it — their return path to the
+ * dashboard lives in the AppHeader, which switches its right-side
+ * link to "Back to dashboard" on their own handle and in the send
+ * flow.
  */
 export function PublicProfile({ handle }: { handle: string }) {
   const profile = findInDirectory(handle);
   const ownerProfile = useProfile();
-  const isOwner =
-    Boolean(ownerProfile) &&
-    ownerProfile?.handle.toLowerCase() === handle.toLowerCase();
+  const hasOwnPage = Boolean(ownerProfile);
   const toast = useToast();
   const [copied, setCopied] = useState(false);
 
@@ -53,7 +52,7 @@ export function PublicProfile({ handle }: { handle: string }) {
     <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
       <AppHeader />
 
-      <main className="mx-auto max-w-[640px] px-5 pb-32 pt-16 md:px-6 md:pt-24">
+      <main className="mx-auto max-w-[600px] px-5 pb-36 pt-20 md:px-6 md:pt-28">
         <Reveal delay={0.05}>
           <ProfilePreviewCard
             profile={profile}
@@ -63,14 +62,20 @@ export function PublicProfile({ handle }: { handle: string }) {
           />
         </Reveal>
 
-        {!isOwner && (
+        {!hasOwnPage && (
           <Reveal delay={0.3}>
-            <div className="mt-8 text-center">
+            <div className="mt-10 text-center">
               <Link
                 href="/claim"
-                className="inline-block text-[12.5px] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
+                className="group inline-flex items-center gap-1.5 text-[12.5px] tracking-[0.01em] text-[hsl(var(--ink-subtle))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
               >
-                Get your own ReachMe page →
+                Get your own ReachMe page
+                <span
+                  aria-hidden="true"
+                  className="transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:translate-x-[3px]"
+                >
+                  →
+                </span>
               </Link>
             </div>
           </Reveal>

@@ -11,7 +11,7 @@ type Tone = "neutral" | "ink" | "muted";
 
 const tones: Record<Tone, string> = {
   neutral:
-    "border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))]",
+    "border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))]",
   ink: "bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
   muted:
     "border border-[hsl(var(--rule))] bg-transparent text-[hsl(var(--ink-muted))]",
@@ -31,10 +31,10 @@ export function Pill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full font-medium tracking-[-0.005em]",
+        "inline-flex items-center gap-1.5 rounded-full font-medium",
         size === "sm"
-          ? "px-3 py-1 text-[11.5px]"
-          : "px-4 py-1.5 text-[12.5px]",
+          ? "px-4 py-[7px] text-[12.5px] tracking-[-0.01em]"
+          : "px-[18px] py-2 text-[13px] tracking-[-0.01em]",
         tones[tone],
         className,
       )}

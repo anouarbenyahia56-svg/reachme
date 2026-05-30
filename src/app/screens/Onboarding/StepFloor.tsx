@@ -99,7 +99,12 @@ export function StepFloor() {
           </div>
 
           <div className="mt-7">
-            <Label htmlFor="floor-custom">Or set a custom amount</Label>
+            <Label htmlFor="floor-custom">
+              Or set a custom amount{" "}
+              <span className="ml-1 font-normal normal-case tracking-normal text-[hsl(var(--ink-subtle))]">
+                ($10 is the lowest floor you can set)
+              </span>
+            </Label>
             <div className="flex items-center overflow-hidden rounded-2xl border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] focus-within:border-[hsl(var(--ink))]">
               <span className="select-none border-r border-[hsl(var(--rule))] bg-[hsl(var(--page))] px-5 py-4 text-[15px] text-[hsl(var(--ink-muted))]">
                 USD
@@ -122,7 +127,7 @@ export function StepFloor() {
               />
             </div>
             <p className="mt-2.5 text-[12.5px] text-[hsl(var(--ink-subtle))]">
-              You can change this any time. Anyone reaching out can attach more — they cannot attach less. The minimum is $10, but most people benefit from setting it higher.
+              You can change this any time. Anyone reaching out can attach more — they cannot attach less.
             </p>
           </div>
 

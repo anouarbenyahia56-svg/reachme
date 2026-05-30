@@ -1,5 +1,5 @@
-import { motion, AnimatePresence, type HTMLMotionProps } from "framer-motion";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, Check } from "lucide-react";
 import { EASE } from "@/components/motion";
 import { AppHeader } from "../../ui/AppHeader";
@@ -14,7 +14,7 @@ import { Link, useRouter } from "../../router";
 import { formatMoney, parseMoneyToCents, dateLong } from "../../store/format";
 import { submitRequest } from "../../store/requests";
 import { useToast } from "../../ui/Toast";
-import { useAccount } from "../../store/session";
+import { useAccount, useProfile } from "../../store/session";
 
 /**
  * Send-a-request flow.
@@ -32,14 +32,24 @@ import { useAccount } from "../../store/session";
  *
  * On success, an outcome screen replaces the form with a quiet
  * confirmation and the next-step ask.
+ *
+ * Preview mode: when the page owner opens their own send flow, the
+ * whole experience is walkable but read-only at the finish — they
+ * can't send a request to themselves. A quiet "Preview" marker
+ * runs from the first step so nothing is hidden, and the final
+ * action is replaced by a calm explanation.
  */
 export function SendRequest({ handle }: { handle: string }) {
   const profile = findInDirectory(handle);
+  const ownerProfile = useProfile();
   const { navigate } = useRouter();
   const toast = useToast();
   const account = useAccount();
 
   const [step, setStep] = useState(0);
+  // Slide direction for step transitions: +1 advancing (new step
+  // enters from the right, current exits left), -1 going back.
+  const [direction, setDirection] = useState(1);
   const [done, setDone] = useState<{
     id: string;
     expiresAt: string;
@@ -53,7 +63,9 @@ export function SendRequest({ handle }: { handle: string }) {
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [amountStr, setAmountStr] = useState<string>(
-    profile ? String(profile.minAmountCents / 100) : "",
+    profile
+      ? String(buildAmountTiers(profile.minAmountCents)[1].cents / 100)
+      : "",
   );
   const amountCents = parseMoneyToCents(amountStr);
 
@@ -120,6 +132,11 @@ export function SendRequest({ handle }: { handle: string }) {
     "Review",
   ] as const;
 
+  // The owner walking their own page: full preview, no send.
+  const isPreview =
+    Boolean(ownerProfile) &&
+    ownerProfile?.handle.toLowerCase() === profile.handle.toLowerCase();
+
   const validators: Array<() => string | null> = [
     () => {
       if (!name.trim()) return "Add your name.";
@@ -159,6 +176,7 @@ export function SendRequest({ handle }: { handle: string }) {
       toast.show(err);
       return;
     }
+    setDirection(1);
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
 
@@ -192,7 +210,7 @@ export function SendRequest({ handle }: { handle: string }) {
 
       <main className="mx-auto max-w-[760px] px-5 pb-32 pt-12 md:px-6 md:pt-16">
         <Reveal>
-          <RecipientHeader profile={profile} />
+          <RecipientHeader profile={profile} preview={isPreview} />
         </Reveal>
 
         {!done ? (
@@ -204,16 +222,32 @@ export function SendRequest({ handle }: { handle: string }) {
               />
             </div>
 
-            <div className="relative mt-8">
-              <AnimatePresence mode="wait">
+            <div className="relative mt-8 overflow-hidden">
+              <AnimatePresence mode="wait" custom={direction}>
                 <motion.div
                   key={step}
-                  {...({
-                    initial: { opacity: 0, y: 12, filter: "blur(8px)" },
-                    animate: { opacity: 1, y: 0, filter: "blur(0px)" },
-                    exit: { opacity: 0, y: -8, filter: "blur(6px)" },
-                    transition: { duration: 0.55, ease: EASE },
-                  } as HTMLMotionProps<"div">)}
+                  custom={direction}
+                  variants={{
+                    enter: (dir: number) => ({
+                      opacity: 0,
+                      x: dir >= 0 ? 40 : -40,
+                      filter: "blur(8px)",
+                    }),
+                    center: {
+                      opacity: 1,
+                      x: 0,
+                      filter: "blur(0px)",
+                    },
+                    exit: (dir: number) => ({
+                      opacity: 0,
+                      x: dir >= 0 ? -40 : 40,
+                      filter: "blur(6px)",
+                    }),
+                  }}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.55, ease: EASE }}
                   className="rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-6 py-7 sm:px-8 sm:py-8"
                 >
                   {step === 0 && (
@@ -272,6 +306,7 @@ export function SendRequest({ handle }: { handle: string }) {
                   if (step === 0) {
                     navigate(`/${profile.handle}`);
                   } else {
+                    setDirection(-1);
                     setStep((s) => Math.max(0, s - 1));
                   }
                 }}
@@ -290,6 +325,11 @@ export function SendRequest({ handle }: { handle: string }) {
                 >
                   Continue
                 </Button>
+              ) : isPreview ? (
+                <p className="max-w-[34ch] text-right text-[12.5px] leading-[1.55] text-[hsl(var(--ink-muted))]">
+                  This is a preview of what senders see. You can't send a
+                  request to your own page.
+                </p>
               ) : (
                 <Button
                   size="lg"
@@ -318,17 +358,26 @@ export function SendRequest({ handle }: { handle: string }) {
 
 function RecipientHeader({
   profile,
+  preview,
 }: {
   profile: ReturnType<typeof findInDirectory>;
+  preview?: boolean;
 }) {
   if (!profile) return null;
   return (
     <div className="flex items-center gap-4 rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-5 py-4 sm:px-6">
       <Avatar src={profile.avatarUrl} name={profile.displayName} size="lg" />
-      <div className="min-w-0">
-        <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-          You're reaching out to
-        </p>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2.5">
+          <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
+            You're reaching out to
+          </p>
+          {preview && (
+            <span className="inline-flex items-center rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--page))] px-2.5 py-[3px] text-[10px] font-medium uppercase tracking-[0.18em] text-[hsl(var(--ink-muted))]">
+              Preview
+            </span>
+          )}
+        </div>
         <div className="mt-1 flex items-center gap-2">
           <p
             className="font-serif text-[hsl(var(--ink))]"
@@ -358,41 +407,45 @@ function Stepper({
   current: number;
 }) {
   return (
-    <ol className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]">
+    <ol className="flex w-full items-center text-[11px] uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]">
       {steps.map((s, i) => (
-        <li
-          key={s}
-          className="flex items-center gap-2"
-          aria-current={i === current ? "step" : undefined}
-        >
-          <span
-            className={[
-              "inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-medium leading-none tabular-nums",
-              i < current
-                ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
-                : i === current
-                  ? "border-[hsl(var(--ink))] bg-transparent text-[hsl(var(--ink))]"
-                  : "border-[hsl(var(--rule-strong))] bg-transparent text-[hsl(var(--ink-subtle))]",
-            ].join(" ")}
+        <Fragment key={s}>
+          <li
+            className="flex shrink-0 items-center gap-2"
+            aria-current={i === current ? "step" : undefined}
           >
-            {i < current ? (
-              <Check size={12} strokeWidth={2.2} aria-hidden="true" />
-            ) : (
-              i + 1
-            )}
-          </span>
-          <span
-            className={[
-              "hidden sm:inline",
-              i === current ? "text-[hsl(var(--ink))]" : "",
-            ].join(" ")}
-          >
-            {s}
-          </span>
+            <span
+              className={[
+                "inline-flex aspect-square h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-medium leading-none tabular-nums",
+                i < current
+                  ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
+                  : i === current
+                    ? "border-[hsl(var(--ink))] bg-transparent text-[hsl(var(--ink))]"
+                    : "border-[hsl(var(--rule-strong))] bg-transparent text-[hsl(var(--ink-subtle))]",
+              ].join(" ")}
+            >
+              {i < current ? (
+                <Check size={12} strokeWidth={2.2} aria-hidden="true" />
+              ) : (
+                i + 1
+              )}
+            </span>
+            <span
+              className={[
+                "hidden whitespace-nowrap sm:inline",
+                i === current ? "text-[hsl(var(--ink))]" : "",
+              ].join(" ")}
+            >
+              {s}
+            </span>
+          </li>
           {i < steps.length - 1 && (
-            <span className="mx-1 hidden h-px w-8 bg-[hsl(var(--rule))] sm:inline-block" />
+            <span
+              aria-hidden="true"
+              className="mx-3 hidden h-px flex-1 bg-[hsl(var(--rule))] sm:block"
+            />
           )}
-        </li>
+        </Fragment>
       ))}
     </ol>
   );
@@ -460,7 +513,7 @@ function StepAbout({
       <PanelTitle
         eyebrow="About you"
         title="Tell them who's writing."
-        description="Your email creates a private ReachMe account so you can track this request, your refund, and any reply. Only your name and what you choose to share appear to them. Your email visibility stays your call."
+        description="Your email creates a private account to track this request, refunds, and replies. Only your name appears to them — you choose whether to share your email."
       />
       <div className="grid gap-5 md:grid-cols-2">
         <TextField
@@ -588,6 +641,43 @@ function StepMessage({
   );
 }
 
+/** Rounds a dollar amount to a clean, considered increment scaled
+ *  to its magnitude — no cents, nothing with a decimal point. */
+function roundNiceDollars(dollars: number): number {
+  if (dollars <= 50) return Math.round(dollars / 5) * 5;
+  if (dollars <= 150) return Math.round(dollars / 10) * 10;
+  if (dollars <= 500) return Math.round(dollars / 25) * 25;
+  if (dollars <= 1000) return Math.round(dollars / 50) * 50;
+  return Math.round(dollars / 100) * 100;
+}
+
+interface AmountTier {
+  cents: number;
+  label: string;
+}
+
+/** Suggested amounts for a given floor. The minimum is shown
+ *  exactly; the rest are scaled, rounded to clean whole dollars,
+ *  and kept strictly increasing. Index 1 is the recommended
+ *  default. */
+function buildAmountTiers(minCents: number): AmountTier[] {
+  const minD = minCents / 100;
+  const tiers: AmountTier[] = [{ cents: minCents, label: "Minimum" }];
+  const specs: Array<{ mult: number; label: string }> = [
+    { mult: 1.5, label: "Recommended" },
+    { mult: 2.5, label: "Strong signal" },
+    { mult: 5, label: "Top priority" },
+  ];
+  let prevCents = minCents;
+  for (const s of specs) {
+    let cents = roundNiceDollars(minD * s.mult) * 100;
+    if (cents <= prevCents) cents = prevCents + 500; // keep increasing
+    tiers.push({ cents, label: s.label });
+    prevCents = cents;
+  }
+  return tiers;
+}
+
 function StepAmount({
   profile,
   amountStr,
@@ -600,12 +690,7 @@ function StepAmount({
   cents: number;
 }) {
   const min = profile.minAmountCents;
-  const tiers = [
-    min,
-    Math.round(min * 1.5),
-    Math.round(min * 2.5),
-    Math.round(min * 5),
-  ];
+  const tiers = buildAmountTiers(min);
   return (
     <div>
       <PanelTitle
@@ -615,13 +700,13 @@ function StepAmount({
       />
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-        {tiers.map((c) => {
-          const active = cents === c;
+        {tiers.map((t) => {
+          const active = cents === t.cents;
           return (
             <button
-              key={c}
+              key={t.cents}
               type="button"
-              onClick={() => onAmountStr(String(c / 100))}
+              onClick={() => onAmountStr(String(t.cents / 100))}
               aria-pressed={active}
               className={[
                 "rounded-2xl border px-3 py-4 text-center transition-[border-color,background-color,color] duration-300",
@@ -638,13 +723,11 @@ function StepAmount({
                   letterSpacing: "-0.025em",
                 }}
               >
-                {formatMoney(c)}
+                {formatMoney(t.cents)}
               </span>
-              {c === min && (
-                <span className="mt-1 block text-[11px] uppercase tracking-[0.18em] opacity-70">
-                  Minimum
-                </span>
-              )}
+              <span className="mt-1 block text-[11px] uppercase tracking-[0.18em] opacity-70">
+                {t.label}
+              </span>
             </button>
           );
         })}
@@ -700,36 +783,74 @@ function StepReview({
   const aboutLine = [from.context, from.organization]
     .filter((s) => s.trim())
     .join(" · ");
+  const firstName = profile.displayName.split(" ")[0];
+
   return (
     <div>
       <PanelTitle
         eyebrow="Review"
         title="Send your request."
-        description={`We'll hold ${formatMoney(cents)} until ${profile.displayName.split(" ")[0]} replies. No charge today — this is a hold, not a payment.`}
+        description={`No charge today — this is a hold, not a payment. The amount is released only if ${firstName} replies.`}
       />
-      <dl className="grid gap-5 sm:grid-cols-2">
-        <RVal label="From" value={`${from.name} · ${from.email}`} />
-        <RVal label="Category" value={cat?.label ?? "—"} />
-        {aboutLine && (
-          <RVal label="Context" value={aboutLine} fullWidth />
-        )}
-        <RVal label="Subject" value={subject} fullWidth />
-        <RVal
-          label="Amount on hold"
-          value={formatMoney(cents)}
-          fullWidth
-          emphasis
-        />
+
+      {/* Recipient + amount — the weight of the moment, stated first. */}
+      <div className="flex flex-col gap-5 rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--page))] px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+        <div className="flex items-center gap-3.5">
+          <Avatar src={profile.avatarUrl} name={profile.displayName} size="md" />
+          <div className="min-w-0">
+            <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
+              To
+            </p>
+            <p className="mt-1 flex items-center gap-1.5 text-[15px] font-medium text-[hsl(var(--ink))]">
+              {profile.displayName}
+              {profile.verified && <VerifiedBadge size={14} />}
+            </p>
+          </div>
+        </div>
+        <div className="sm:text-right">
+          <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
+            Amount on hold
+          </p>
+          <p
+            className="mt-1 font-serif text-[hsl(var(--ink))]"
+            style={{
+              fontSize: "1.9rem",
+              fontWeight: 500,
+              letterSpacing: "-0.03em",
+              lineHeight: 1,
+            }}
+          >
+            {formatMoney(cents)}
+          </p>
+        </div>
+      </div>
+
+      {/* The request, laid out as a clean spec sheet. */}
+      <dl className="mt-6 divide-y divide-[hsl(var(--rule))] border-t border-[hsl(var(--rule))]">
+        <ReviewRow label="From">
+          <span className="text-[hsl(var(--ink))]">{from.name}</span>
+          <span className="block text-[13px] text-[hsl(var(--ink-muted))]">
+            {from.email}
+          </span>
+        </ReviewRow>
+        {aboutLine && <ReviewRow label="Context">{aboutLine}</ReviewRow>}
+        <ReviewRow label="Category">{cat?.label ?? "—"}</ReviewRow>
+        <ReviewRow label="Subject">{subject}</ReviewRow>
       </dl>
-      <div className="mt-6 rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--page))] px-5 py-4">
-        <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
+
+      {/* The message itself — given room to breathe. */}
+      <div className="mt-8">
+        <p className="mb-3 text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
           Message
         </p>
-        <p className="mt-2 whitespace-pre-line text-[14.5px] leading-[1.65] text-[hsl(var(--ink))]">
-          {message}
-        </p>
+        <div className="rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--page))] px-5 py-5 sm:px-6">
+          <p className="whitespace-pre-line text-[15px] leading-[1.7] text-[hsl(var(--ink))]">
+            {message}
+          </p>
+        </div>
       </div>
-      <p className="mt-5 text-[12px] text-[hsl(var(--ink-subtle))]">
+
+      <p className="mt-7 text-[12px] leading-[1.6] text-[hsl(var(--ink-subtle))]">
         By sending, you agree to ReachMe's escrow terms: held on submit,
         released on reply, refunded on decline or expiry.
       </p>
@@ -737,31 +858,20 @@ function StepReview({
   );
 }
 
-function RVal({
+function ReviewRow({
   label,
-  value,
-  fullWidth,
-  emphasis,
+  children,
 }: {
   label: string;
-  value: string;
-  fullWidth?: boolean;
-  emphasis?: boolean;
+  children: ReactNode;
 }) {
   return (
-    <div className={fullWidth ? "sm:col-span-2" : ""}>
+    <div className="grid grid-cols-[6.5rem_1fr] items-baseline gap-x-6 py-4 first:pt-5 last:pb-0 sm:grid-cols-[8.5rem_1fr]">
       <dt className="text-[11px] font-medium uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]">
         {label}
       </dt>
-      <dd
-        className={[
-          "mt-1.5 break-words text-[hsl(var(--ink))]",
-          emphasis
-            ? "font-serif text-[1.3rem] tracking-[-0.025em]"
-            : "text-[14.5px]",
-        ].join(" ")}
-      >
-        {value}
+      <dd className="break-words text-[14.5px] leading-[1.5] text-[hsl(var(--ink))]">
+        {children}
       </dd>
     </div>
   );

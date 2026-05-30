@@ -32,8 +32,22 @@ export function AppHeader({
   const account = useAccount();
   const profile = useProfile();
   const { path } = useRouter();
+  // Show "Back to dashboard" instead of "View public page" whenever
+  // the link to one's own public page would be a non-sequitur:
+  //   • viewing your own public page, or
+  //   • anywhere inside a send-a-request flow (/:handle/send), where
+  //     you're acting as a sender, not managing your own page.
   const onOwnPublicPage =
     Boolean(profile) && path === `/${profile?.handle}`;
+  const inSendFlow = /^\/[^/]+\/send$/.test(path);
+  const showDashboardReturn = onOwnPublicPage || inSendFlow;
+
+  // Per-item dropdown context: never offer a link to where the
+  // user already is. Each flag hides exactly one menu item when
+  // its destination matches the current location.
+  const atDashboard = path === "/dashboard";
+  const atSettings = path === "/dashboard/settings";
+  const atOwnPublicPage = onOwnPublicPage;
 
   const mode =
     variant === "auto"
@@ -86,7 +100,10 @@ export function AppHeader({
               displayName={profile?.displayName ?? account.displayName}
               avatarUrl={profile?.avatarUrl}
               handle={profile?.handle}
-              onOwnPublicPage={onOwnPublicPage}
+              showDashboardReturn={showDashboardReturn}
+              atDashboard={atDashboard}
+              atSettings={atSettings}
+              atOwnPublicPage={atOwnPublicPage}
             />
           )}
 
@@ -108,13 +125,19 @@ function AuthedHeaderRight({
   displayName,
   avatarUrl,
   handle,
-  onOwnPublicPage,
+  showDashboardReturn,
+  atDashboard,
+  atSettings,
+  atOwnPublicPage,
 }: {
   email: string;
   displayName: string;
   avatarUrl?: string;
   handle?: string;
-  onOwnPublicPage?: boolean;
+  showDashboardReturn?: boolean;
+  atDashboard?: boolean;
+  atSettings?: boolean;
+  atOwnPublicPage?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -139,7 +162,7 @@ function AuthedHeaderRight({
   return (
     <div className="flex items-center gap-3" ref={ref}>
       {handle && (
-        onOwnPublicPage ? (
+        showDashboardReturn ? (
           <Link
             href="/dashboard"
             className="hidden text-[12.5px] tracking-[0.005em] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))] md:block"
@@ -186,13 +209,15 @@ function AuthedHeaderRight({
           </p>
         </div>
         <div className="mx-2 my-1 h-px bg-[hsl(var(--rule))]" />
-        <Link
-          href="/dashboard"
-          className="block rounded-xl px-3 py-2 text-[13px] text-[hsl(var(--ink))] transition-colors duration-200 hover:bg-[hsl(var(--rule))]/40"
-        >
-          Dashboard
-        </Link>
-        {handle && (
+        {!atDashboard && (
+          <Link
+            href="/dashboard"
+            className="block rounded-xl px-3 py-2 text-[13px] text-[hsl(var(--ink))] transition-colors duration-200 hover:bg-[hsl(var(--rule))]/40"
+          >
+            Dashboard
+          </Link>
+        )}
+        {handle && !atOwnPublicPage && (
           <Link
             href={`/${handle}`}
             className="block rounded-xl px-3 py-2 text-[13px] text-[hsl(var(--ink))] transition-colors duration-200 hover:bg-[hsl(var(--rule))]/40"
@@ -200,12 +225,14 @@ function AuthedHeaderRight({
             View public page
           </Link>
         )}
-        <Link
-          href="/dashboard/settings"
-          className="block rounded-xl px-3 py-2 text-[13px] text-[hsl(var(--ink))] transition-colors duration-200 hover:bg-[hsl(var(--rule))]/40"
-        >
-          Settings
-        </Link>
+        {!atSettings && (
+          <Link
+            href="/dashboard/settings"
+            className="block rounded-xl px-3 py-2 text-[13px] text-[hsl(var(--ink))] transition-colors duration-200 hover:bg-[hsl(var(--rule))]/40"
+          >
+            Settings
+          </Link>
+        )}
         <div className="mx-2 my-1 h-px bg-[hsl(var(--rule))]" />
         <button
           type="button"

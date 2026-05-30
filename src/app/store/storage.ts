@@ -29,7 +29,31 @@ type Listener = () => void;
 // older builds. We did this once during development to escape a
 // stale shape; production should never bump it without a real
 // migration path.
-const PREFIX = "reachme.v2.";
+const PREFIX = "reachme.v3.";
+
+// One-time cleanup: when the app loads, drop any keys left behind
+// by earlier storage versions (reachme.v1.*, reachme.v2.*, …).
+// This frees up every previously-used name and handle so they can
+// be reused, without touching the current namespace. Runs once at
+// module init; cheap and idempotent.
+function purgeLegacyNamespaces() {
+  try {
+    if (typeof window === "undefined") return;
+    const ls = window.localStorage;
+    const stale: string[] = [];
+    for (let i = 0; i < ls.length; i++) {
+      const key = ls.key(i);
+      if (key && key.startsWith("reachme.") && !key.startsWith(PREFIX)) {
+        stale.push(key);
+      }
+    }
+    stale.forEach((k) => ls.removeItem(k));
+  } catch {
+    /* private mode / quota — nothing to clean up */
+  }
+}
+
+purgeLegacyNamespaces();
 
 const listeners = new Map<string, Set<Listener>>();
 

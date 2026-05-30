@@ -114,6 +114,17 @@ export function submitRequest(
   if (!recipient) {
     return { ok: false, reason: "Page not found." };
   }
+  // A page owner can never send a request to their own page. The
+  // send flow renders for them as a read-only preview; this is the
+  // hard guard so a self-request can never be written even if the
+  // UI is bypassed.
+  const owner = getProfile();
+  if (owner && owner.handle.toLowerCase() === recipient.handle.toLowerCase()) {
+    return {
+      ok: false,
+      reason: "This is a preview of your own page — you can't send a request to yourself.",
+    };
+  }
   if (recipient.visibility === "paused") {
     return { ok: false, reason: "This page is not currently accepting requests." };
   }

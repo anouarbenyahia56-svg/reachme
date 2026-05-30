@@ -107,12 +107,12 @@ export function StepHandle() {
             </span>
           </div>
 
-          <div className="mt-3 min-h-[20px]">
-            <StatusMessage status={status} value={normalized} />
-          </div>
-          <p className="mt-1.5 text-[12px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
+          <p className="mt-2.5 text-[12px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
             Lowercase letters, numbers, hyphens, and underscores.
           </p>
+          <div className="mt-1.5 min-h-[18px]">
+            <StatusMessage status={status} value={normalized} />
+          </div>
 
           {status === "ok" && (
             <motion.div
