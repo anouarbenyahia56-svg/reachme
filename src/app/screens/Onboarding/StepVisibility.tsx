@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { EASE } from "@/components/motion";
 import { Button } from "../../ui/Button";
 import { Label } from "../../ui/Field";
@@ -17,12 +17,12 @@ const STATE_OPTIONS: ReadonlyArray<{
   {
     value: "public",
     label: "Active",
-    helper: "Your page is live, public, searchable, and accepting requests.",
+    helper: "Your page is live and accepting requests.",
   },
   {
     value: "paused",
     label: "Paused",
-    helper: "Your page exists but is not accepting new requests.",
+    helper: "Your page is visible, but not accepting requests.",
   },
 ];
 
@@ -56,7 +56,7 @@ export function StepVisibility() {
   }, [replyDays]);
 
   return (
-    <OnboardingShell step={5} total={6} back="/claim/categories">
+    <OnboardingShell step={6} total={7} back="/claim/categories">
       <OnboardingTitle
         eyebrow="Availability"
         title="Decide if you're open."
@@ -65,7 +65,7 @@ export function StepVisibility() {
 
       <Reveal delay={0.32} duration={0.85} axis="x">
         <div className="mt-14 max-w-[780px]">
-          <Label>State</Label>
+          <Label>Status</Label>
           <div className="grid gap-3 sm:grid-cols-2">
             {STATE_OPTIONS.map((opt) => {
               const active = v === opt.value;
@@ -110,42 +110,63 @@ export function StepVisibility() {
 
           <div className="mt-10">
             <Label>Reply window</Label>
-            <div className="grid grid-cols-3 gap-3">
-              {REPLY_WINDOWS.map((w) => {
-                const active = replyDays === w.days;
-                return (
-                  <motion.button
-                    key={w.days}
-                    type="button"
-                    whileHover={{ y: -1 }}
-                    transition={{ duration: 0.25, ease: EASE }}
-                    onClick={() => setReplyDays(w.days)}
-                    aria-pressed={active}
-                    className={[
-                      "rounded-2xl border px-4 py-4 text-center transition-[border-color,background-color,color] duration-300",
-                      active
-                        ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
-                        : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
-                    ].join(" ")}
-                  >
-                    <span
-                      className="font-serif"
-                      style={{
-                        fontSize: "1.3rem",
-                        fontWeight: 500,
-                        letterSpacing: "-0.025em",
-                      }}
+            <AnimatePresence initial={false}>
+              {v === "paused" && (
+                <motion.p
+                  key="paused-hint"
+                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginBottom: 8 }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  transition={{ duration: 0.25, ease: EASE }}
+                  className="-mt-1 overflow-hidden text-[12px] leading-[1.5] text-[hsl(var(--ink-subtle))]"
+                >
+                  Active when you're accepting requests.
+                </motion.p>
+              )}
+            </AnimatePresence>
+            <motion.div
+              animate={{ opacity: v === "paused" ? 0.4 : 1 }}
+              transition={{ duration: 0.3, ease: EASE }}
+            >
+              <div className="grid grid-cols-3 gap-3">
+                {REPLY_WINDOWS.map((w) => {
+                  const active = replyDays === w.days;
+                  const disabled = v === "paused";
+                  return (
+                    <motion.button
+                      key={w.days}
+                      type="button"
+                      whileHover={disabled ? undefined : { y: -1 }}
+                      transition={{ duration: 0.25, ease: EASE }}
+                      onClick={() => setReplyDays(w.days)}
+                      disabled={disabled}
+                      aria-pressed={active}
+                      className={[
+                        "rounded-2xl border px-4 py-4 text-center transition-[border-color,background-color,color] duration-300 disabled:cursor-not-allowed",
+                        active
+                          ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
+                          : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
+                      ].join(" ")}
                     >
-                      {w.label}
-                    </span>
-                  </motion.button>
-                );
-              })}
-            </div>
-            <p className="mt-3 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
-              If you don't reply within your window, the request expires and
-              the amount is refunded automatically.
-            </p>
+                      <span
+                        className="font-serif"
+                        style={{
+                          fontSize: "1.3rem",
+                          fontWeight: 500,
+                          letterSpacing: "-0.025em",
+                        }}
+                      >
+                        {w.label}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
+                If you don't reply within your window, the request expires and
+                the amount is refunded automatically.
+              </p>
+            </motion.div>
           </div>
 
           <div className="mt-10 flex items-center gap-4">

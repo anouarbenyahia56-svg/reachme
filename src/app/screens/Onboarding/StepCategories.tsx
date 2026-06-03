@@ -61,10 +61,10 @@ export function StepCategories() {
   const remaining = SUGGESTED_EXTRAS.filter((s) => !has(s.id));
 
   return (
-    <OnboardingShell step={4} total={6} back="/claim/floor">
+    <OnboardingShell step={5} total={7} back="/claim/floor">
       <OnboardingTitle
         eyebrow="Categories"
-        title="What's worth your time?"
+        title="What deserves your attention?"
         description="People reaching out pick a category before they send. Choose the ones you're genuinely open to. Everything else self-selects out."
       />
 
@@ -73,14 +73,19 @@ export function StepCategories() {
           <Label>Your categories</Label>
           <div className="rounded-2xl border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] p-4">
             <ul className="flex flex-wrap gap-2">
-              <AnimatePresence initial={false}>
+              <AnimatePresence initial={false} mode="popLayout">
                 {items.map((c) => (
                   <motion.li
                     key={c.id}
+                    layout
                     initial={{ opacity: 0, y: 6, filter: "blur(6px)" }}
                     animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                     exit={{ opacity: 0, y: -4, filter: "blur(6px)" }}
-                    transition={{ duration: 0.45, ease: EASE }}
+                    transition={{
+                      duration: 0.2,
+                      ease: EASE,
+                      layout: { type: "spring", stiffness: 1500, damping: 50, mass: 0.25 },
+                    }}
                   >
                     <span className="group inline-flex items-center gap-2 rounded-full bg-[hsl(var(--ink))] py-1.5 pl-4 pr-1.5 text-[12.5px] font-medium text-[hsl(var(--page))]">
                       {c.label}

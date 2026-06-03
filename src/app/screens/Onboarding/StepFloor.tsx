@@ -41,7 +41,7 @@ export function StepFloor() {
   const canContinue = cents >= 1000; // $10 floor minimum-of-minimums
 
   return (
-    <OnboardingShell step={3} total={6} back="/claim/identity">
+    <OnboardingShell step={4} total={7} back="/claim/identity">
       <OnboardingTitle
         eyebrow="Your floor"
         title="Set your minimum signal."

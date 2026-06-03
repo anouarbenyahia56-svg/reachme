@@ -32,24 +32,8 @@ export function ProfilePreviewCard({
   const isPaused = profile.visibility === "paused";
   return (
     <article className="overflow-hidden rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))]">
-      <div
-        className="relative aspect-[5/2] w-full bg-[hsl(var(--ink))]"
-        aria-hidden={!profile.bannerUrl}
-      >
-        {profile.bannerUrl ? (
-          <img
-            src={profile.bannerUrl}
-            alt=""
-            className="h-full w-full object-cover"
-            draggable={false}
-          />
-        ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,_hsl(0_0%_18%)_0%,_hsl(0_0%_4%)_70%)]" />
-        )}
-      </div>
-
-      <div className="relative px-7 pb-9 pt-0 sm:px-10 sm:pb-11">
-        <div className="-mt-14">
+      <div className="relative px-7 pb-9 pt-6 sm:px-10 sm:pb-11">
+        <div>
           <Avatar
             src={profile.avatarUrl}
             name={profile.displayName || profile.handle}

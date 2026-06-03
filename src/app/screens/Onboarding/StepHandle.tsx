@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { Check, Loader2, X } from "lucide-react";
-import { EASE } from "@/components/motion";
 import { useRouter } from "../../router";
 import { Button } from "../../ui/Button";
 import { Label } from "../../ui/Field";
@@ -20,8 +18,7 @@ import { patchDraft, useDraft } from "../../store/draft";
  * one row of microcopy beneath the field — green on available,
  * neutral on empty, ink on rejected.
  *
- * The "Your public page" preview appears once the handle is valid
- * and available, blur-revealed in. Continue is disabled until then.
+ * Continue commits the handle and advances to Step 2 (Email).
  */
 export function StepHandle() {
   const { navigate } = useRouter();
@@ -54,7 +51,7 @@ export function StepHandle() {
   const canContinue = status === "ok" && !checking;
 
   return (
-    <OnboardingShell step={1} total={6} back="/">
+    <OnboardingShell step={1} total={7}>
       <OnboardingTitle
         eyebrow="Claim"
         title="Claim your handle."
@@ -95,7 +92,7 @@ export function StepHandle() {
               onKeyDown={(e) => {
                 if (e.key === "Enter" && canContinue) {
                   patchDraft({ handle: normalized });
-                  navigate("/claim/identity");
+                  navigate("/claim/email");
                 }
               }}
               className="w-full bg-transparent px-5 py-4 text-[15px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
@@ -114,29 +111,6 @@ export function StepHandle() {
             <StatusMessage status={status} value={normalized} />
           </div>
 
-          {status === "ok" && (
-            <motion.div
-              initial={{ opacity: 0, y: 10, filter: "blur(8px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 0.7, ease: EASE }}
-              className="mt-7 rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--page))] px-5 py-4"
-            >
-              <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-                Your public page
-              </p>
-              <p
-                className="mt-1.5 font-serif text-[hsl(var(--ink))]"
-                style={{
-                  fontSize: "1.25rem",
-                  letterSpacing: "-0.025em",
-                  fontWeight: 500,
-                }}
-              >
-                reachme.com/<span className="font-semibold">{normalized}</span>
-              </p>
-            </motion.div>
-          )}
-
           <div className="mt-10 flex items-center gap-4">
             <Button
               size="lg"
@@ -145,7 +119,7 @@ export function StepHandle() {
               loading={checking}
               onClick={() => {
                 patchDraft({ handle: normalized });
-                navigate("/claim/identity");
+                navigate("/claim/email");
               }}
             >
               Continue

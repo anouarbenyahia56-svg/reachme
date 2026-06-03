@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Image as ImageIcon, Trash2 } from "lucide-react";
+import { Camera, Trash2 } from "lucide-react";
 import { Button } from "../../ui/Button";
 import { TextField, TextArea } from "../../ui/Field";
 import { Avatar } from "../../ui/Avatar";
@@ -9,15 +9,12 @@ import { OnboardingShell, OnboardingTitle } from "./OnboardingShell";
 import { patchDraft, useDraft } from "../../store/draft";
 
 /**
- * Step 2 — Identity.
+ * Step 3 — Identity.
  *
- * Display name, role, short bio. Optional banner and avatar.
- * Uploads are read as data URLs so the experience is end-to-end
- * functional locally; the same shape works against a CDN later.
- *
- * The title/bio fields write through to the draft on every change
- * — no save button, no anxious commit. Continue is enabled the
- * moment the required fields are present.
+ * Display name, title, short bio, and an avatar. The title/bio
+ * fields write through to the draft on every change — no save
+ * button, no anxious commit. Continue is enabled the moment the
+ * required fields are present.
  */
 export function StepIdentity() {
   const { navigate } = useRouter();
@@ -26,28 +23,25 @@ export function StepIdentity() {
   const [title, setTitle] = useState(draft.title ?? "");
   const [bio, setBio] = useState(draft.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(draft.avatarUrl);
-  const [bannerUrl, setBannerUrl] = useState<string | undefined>(draft.bannerUrl);
 
   // Persist on every change so a refresh doesn't lose work.
   useEffect(() => {
-    patchDraft({ displayName, title, bio, avatarUrl, bannerUrl });
-  }, [displayName, title, bio, avatarUrl, bannerUrl]);
+    patchDraft({ displayName, title, bio, avatarUrl });
+  }, [displayName, title, bio, avatarUrl]);
 
   const canContinue =
     displayName.trim().length > 0 && title.trim().length > 0;
 
   return (
-    <OnboardingShell step={2} total={6} back="/claim">
+    <OnboardingShell step={3} total={7} back="/claim/email">
       <OnboardingTitle
         eyebrow="Identity"
-        title="Show people who you are."
+        title="Set the tone."
         description="This is what people see before they decide to reach out. Make it count — quietly."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x">
         <div className="mt-14 max-w-[760px] space-y-8">
-          <BannerUploader value={bannerUrl} onChange={setBannerUrl} />
-
           <AvatarUploader
             value={avatarUrl}
             displayName={displayName}
@@ -65,10 +59,10 @@ export function StepIdentity() {
               helper="Shown at the top of your page."
             />
             <TextField
-              label="Role"
+              label="TITLE"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Founder, Investor, Author…"
+              placeholder="Music Producer"
               maxLength={64}
               helper="A single line. Specific is good."
             />
@@ -79,9 +73,10 @@ export function StepIdentity() {
             optional
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            placeholder="I review business, partnership, and acquisition opportunities."
+            placeholder="Open to brand deals and collabs."
             maxChars={240}
             helper="Two sentences at most. Set the tone for what reaches you."
+            style={{ resize: "none", height: "120px" }}
           />
 
           <div className="flex items-center gap-4">
@@ -121,9 +116,9 @@ function AvatarUploader({
   onChange: (v?: string) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
-  // The initial falls back to the handle (claimed in step 1) so the
-  // placeholder is never empty before a display name is typed.
-  const initialSource = displayName.trim() || handle.trim();
+  // The initial is locked to the handle (claimed in step 1) so it
+  // doesn't flicker as the user types in the display name field.
+  const initialSource = handle.trim();
   const firstInitial = initialSource.charAt(0).toUpperCase();
   const hasInitial = firstInitial.length > 0;
   return (
@@ -171,90 +166,6 @@ function AvatarUploader({
           A square crop, ideally 800 × 800. Up to 1 MB.
         </p>
       </div>
-      <input
-        ref={input}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={async (e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          const url = await readFileAsDataURL(f);
-          onChange(url);
-        }}
-      />
-    </div>
-  );
-}
-
-function BannerUploader({
-  value,
-  onChange,
-}: {
-  value?: string;
-  onChange: (v?: string) => void;
-}) {
-  const input = useRef<HTMLInputElement>(null);
-  return (
-    <div>
-      <p className="mb-2.5 text-[11px] font-medium uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]">
-        Banner <span className="ml-2 normal-case tracking-normal">— optional</span>
-      </p>
-      <button
-        type="button"
-        onClick={() => input.current?.click()}
-        className={[
-          "group relative block aspect-[4/1] w-full overflow-hidden rounded-3xl border border-dashed transition-colors duration-300",
-          value
-            ? "border-transparent"
-            : "border-[hsl(var(--rule-strong))] hover:border-[hsl(var(--ink))]",
-        ].join(" ")}
-        aria-label="Upload banner"
-      >
-        {value ? (
-          <img
-            src={value}
-            alt=""
-            className="h-full w-full object-cover"
-            draggable={false}
-          />
-        ) : (
-          <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[hsl(var(--ink-subtle))] transition-colors duration-300 group-hover:text-[hsl(var(--ink))]">
-            <ImageIcon size={18} strokeWidth={1.6} />
-            <span className="text-[12.5px]">
-              Upload a banner image — subtle is good.
-            </span>
-          </span>
-        )}
-      </button>
-
-      {value ? (
-        <div className="mt-3 flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            leadingIcon={<ImageIcon size={14} strokeWidth={1.6} />}
-            onClick={() => input.current?.click()}
-            type="button"
-          >
-            Replace banner
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            leadingIcon={<Trash2 size={14} strokeWidth={1.6} />}
-            onClick={() => onChange(undefined)}
-            type="button"
-          >
-            Remove
-          </Button>
-        </div>
-      ) : null}
-
-      <p className="mt-3 text-[12px] text-[hsl(var(--ink-subtle))]">
-        A wide crop, ideally 1600 × 400. Up to 2 MB.
-      </p>
-
       <input
         ref={input}
         type="file"

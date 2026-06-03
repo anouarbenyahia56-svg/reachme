@@ -169,3 +169,23 @@ body::after {
   background-size: 320px 320px;
   mix-blend-mode: multiply;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Breathing glow — a calm, slow pulse for the launch preview.
+   Rests at a soft ink glow, recedes to nothing, returns.
+   Respects prefers-reduced-motion (the global base-layer override
+   collapses it to a static frame).
+   ──────────────────────────────────────────────────────────────────────────── */
+@keyframes breathing {
+  0%,
+  100% {
+    box-shadow: 0 0 32px 0 hsl(var(--ink) / 0.09);
+  }
+  50% {
+    box-shadow: 0 0 0 0 hsl(var(--ink) / 0);
+  }
+}
+
+.breathing {
+  animation: breathing 3s ease-in-out infinite;
+}
