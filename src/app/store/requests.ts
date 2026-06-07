@@ -118,6 +118,13 @@ export function submitRequest(
   if (!owner) {
     return { ok: false, reason: "Page not found." };
   }
+  const me = getProfile();
+  if (me && me.handle.toLowerCase() === owner.handle.toLowerCase()) {
+    return {
+      ok: false,
+      reason: "You can't send a request to your own page.",
+    };
+  }
   if (owner.visibility === "paused") {
     return { ok: false, reason: "This page is not currently accepting requests." };
   }
@@ -163,7 +170,6 @@ export function submitRequest(
   // list when the owner *is* this device's logged-in user — otherwise
   // the local inbox would fill with noise every time the same person
   // tested another handle.
-  const me = getProfile();
   if (me && me.handle.toLowerCase() === owner.handle.toLowerCase()) {
     setReceived([record, ...getReceived()]);
   }

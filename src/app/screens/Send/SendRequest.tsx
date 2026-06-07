@@ -28,8 +28,9 @@ import { useAccount, useProfile } from "../../store/session";
  * On success, an outcome screen replaces the form with a quiet
  * confirmation.
  *
- * The request form is for anyone reaching out — including the
- * page owner testing their own flow.
+ * The request form is for senders. If a ReachMe owner somehow
+ * lands here (e.g. direct URL access), we bounce them to their
+ * own page — the CTA on the live page shows a modal instead.
  */
 export function SendRequest({ handle }: { handle: string }) {
   const profile = findInDirectory(handle);
@@ -37,6 +38,13 @@ export function SendRequest({ handle }: { handle: string }) {
   const { navigate } = useRouter();
   const toast = useToast();
   const account = useAccount();
+
+  const isOwner =
+    Boolean(ownerProfile) &&
+    ownerProfile?.handle.toLowerCase() === handle.toLowerCase();
+  useEffect(() => {
+    if (isOwner) navigate(`/${handle}`, { replace: true });
+  }, [isOwner, handle, navigate]);
 
   const [step, setStep] = useState(0);
   // Slide direction for step transitions: +1 advancing (new step

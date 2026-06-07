@@ -1,11 +1,14 @@
 import { motion, useReducedMotion } from "framer-motion";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { EASE } from "@/components/motion";
 import { Link } from "../../router";
 import { Avatar } from "../../ui/Avatar";
+import { Button } from "../../ui/Button";
+import { Modal } from "../../ui/Modal";
 import { Reveal } from "../../ui/Reveal";
 import { SocialIcons } from "../../ui/SocialIcons";
 import { formatMoney } from "../../store/format";
+import { useProfile } from "../../store/session";
 import type { Profile } from "../../types";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +68,11 @@ export function ProfilePreviewCard({
   animate?: boolean;
 }) {
   const reduced = useReducedMotion();
+  const ownerProfile = useProfile();
+  const isOwner =
+    Boolean(ownerProfile) &&
+    ownerProfile?.handle.toLowerCase() === profile.handle.toLowerCase();
+  const [selfRequestOpen, setSelfRequestOpen] = useState(false);
   const isPaused = profile.visibility === "paused";
   const fullName = profile.displayName || profile.handle;
   const replyValue = `${profile.replyWindowDays}-day`;
@@ -298,6 +306,14 @@ export function ProfilePreviewCard({
               >
                 Not accepting requests right now.
               </div>
+            ) : isOwner ? (
+              <button
+                type="button"
+                onClick={() => setSelfRequestOpen(true)}
+                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92 focus-visible:outline-none"
+              >
+                Send a request
+              </button>
             ) : (
               <Link
                 href={`/${profile.handle}/send`}
@@ -316,6 +332,14 @@ export function ProfilePreviewCard({
               >
                 Not accepting requests right now.
               </div>
+            ) : isOwner ? (
+              <button
+                type="button"
+                onClick={() => setSelfRequestOpen(true)}
+                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92 focus-visible:outline-none"
+              >
+                Send a request
+              </button>
             ) : (
               <Link
                 href={`/${profile.handle}/send`}
@@ -327,6 +351,20 @@ export function ProfilePreviewCard({
           </Static>
         )}
       </div>
+
+      <Modal
+        open={selfRequestOpen}
+        onClose={() => setSelfRequestOpen(false)}
+        title="Looking good from here"
+        description="This is your live page. To experience the sender flow, open your link in an incognito window or share it with someone."
+        size="sm"
+      >
+        <div className="mt-2">
+          <Button variant="ghost" onClick={() => setSelfRequestOpen(false)} className="w-full">
+            Makes sense
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
