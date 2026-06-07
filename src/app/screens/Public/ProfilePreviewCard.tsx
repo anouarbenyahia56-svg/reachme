@@ -75,7 +75,8 @@ export function ProfilePreviewCard({
   const [selfRequestOpen, setSelfRequestOpen] = useState(false);
   const isPaused = profile.visibility === "paused";
   const fullName = profile.displayName || profile.handle;
-  const replyValue = `${profile.replyWindowDays}-day`;
+
+  const replyValue = `${profile.replyWindowDays} days`;
 
   const avatarInitial = reduced
     ? { opacity: 1, scale: 1, filter: "blur(0px)" }
@@ -211,7 +212,7 @@ export function ProfilePreviewCard({
           <Reveal
             as="div"
             delay={0.26}
-            className="mt-[72px] grid grid-cols-2 gap-x-10"
+            className="mt-[48px] grid grid-cols-2 gap-x-10"
           >
             <div>
               <p
@@ -254,7 +255,7 @@ export function ProfilePreviewCard({
             </div>
           </Reveal>
         ) : (
-          <Static className="mt-[72px] grid grid-cols-2 gap-x-10">
+          <Static className="mt-[48px] grid grid-cols-2 gap-x-10">
             <div>
               <p
                 className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
@@ -355,13 +356,17 @@ export function ProfilePreviewCard({
       <Modal
         open={selfRequestOpen}
         onClose={() => setSelfRequestOpen(false)}
-        title="Looking good from here"
-        description="This is your live page. To experience the sender flow, open your link in an incognito window or share it with someone."
+        title="This is your page"
+        description="You can't request yourself — but you can share your link and watch requests land in your inbox."
         size="sm"
       >
-        <div className="mt-2">
-          <Button variant="ghost" onClick={() => setSelfRequestOpen(false)} className="w-full">
-            Makes sense
+        <div className="mt-4 flex justify-end">
+          <Button
+            variant="ghost"
+            onClick={() => setSelfRequestOpen(false)}
+            className="px-6 py-2.5 text-[15px]"
+          >
+            Got it
           </Button>
         </div>
       </Modal>
