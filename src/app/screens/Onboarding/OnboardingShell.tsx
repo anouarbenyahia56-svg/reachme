@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode } from "react";
 import { Wordmark } from "@/components/Wordmark";
 import { EASE } from "@/components/motion";
 import { Link, useRouter } from "../../router";
@@ -25,15 +25,11 @@ export function OnboardingShell({
 }: {
   step: number;
   total: number;
+  /** Top-left Back target — the path to navigate to. */
   back?: string;
   children: ReactNode;
 }) {
   const { navigate } = useRouter();
-
-  useEffect(() => {
-    document.body.classList.add("reachme-onboarding");
-    return () => document.body.classList.remove("reachme-onboarding");
-  }, []);
 
   const pct = Math.max(0, Math.min(1, step / total));
 
@@ -45,31 +41,31 @@ export function OnboardingShell({
             <Wordmark />
           </Link>
           <span
-            className="text-[11px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]"
+            className="sr-only"
             aria-label={`Step ${step} of ${total}`}
           >
-            Step {step} <span className="mx-1.5">/</span> {total}
+            Step {step} / {total}
           </span>
         </div>
-        <div className="relative h-px w-full bg-[hsl(var(--rule))]">
+        <div className="relative h-[3px] w-full bg-[hsl(var(--rule))]">
           <motion.div
             initial={false}
             animate={{ scaleX: pct }}
-            transition={{ duration: 0.85, ease: EASE }}
-            style={{ transformOrigin: "left", height: "1.5px" }}
+            transition={{ duration: 0.4, ease: EASE }}
+            style={{ transformOrigin: "left", height: "3px" }}
             className="absolute inset-y-0 left-0 w-full bg-[hsl(var(--ink))]"
           />
         </div>
       </header>
 
-      <main className="mx-auto max-w-[920px] overflow-x-clip px-6 pb-32 pt-16 md:px-10 md:pb-44 md:pt-24">
+      <main className="mx-auto max-w-[920px] overflow-x-clip px-6 pb-32 pt-12 md:px-10 md:pb-44 md:pt-16">
         {back && (
           <button
             type="button"
             onClick={() => navigate(back)}
-            className="mb-10 inline-flex items-center gap-2 text-[12.5px] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
+            className="-ml-2 mb-10 inline-flex items-center gap-2 rounded-md px-2 py-3 text-[15px] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
           >
-            <ArrowLeft size={14} strokeWidth={1.6} aria-hidden="true" />
+            <ArrowLeft size={16} strokeWidth={1.6} aria-hidden="true" />
             Back
           </button>
         )}
@@ -92,7 +88,7 @@ export function OnboardingTitle({
     <div>
       {eyebrow && (
         <motion.p
-          initial={{ opacity: 0, x: 28, filter: "blur(6px)" }}
+          initial={{ opacity: 0, x: 28, filter: "blur(4px)" }}
           animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
           transition={{ duration: 0.85, ease: EASE }}
           className="mb-5 text-[11px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]"
@@ -101,7 +97,7 @@ export function OnboardingTitle({
         </motion.p>
       )}
       <motion.h1
-        initial={{ opacity: 0, x: 36, filter: "blur(8px)" }}
+        initial={{ opacity: 0, x: 36, filter: "blur(5px)" }}
         animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
         transition={{ duration: 0.95, delay: 0.05, ease: EASE }}
         className="font-serif text-[hsl(var(--ink))]"
@@ -118,7 +114,7 @@ export function OnboardingTitle({
       </motion.h1>
       {description && (
         <motion.p
-          initial={{ opacity: 0, x: 30, filter: "blur(6px)" }}
+          initial={{ opacity: 0, x: 30, filter: "blur(4px)" }}
           animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
           transition={{ duration: 0.9, delay: 0.18, ease: EASE }}
           className="mt-7 max-w-[52ch] text-[hsl(var(--ink-muted))]"

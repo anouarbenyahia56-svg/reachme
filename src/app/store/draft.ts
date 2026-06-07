@@ -1,5 +1,5 @@
 import { read, write, remove } from "./storage";
-import type { Category, Visibility } from "../types";
+import type { Category, Socials, Visibility } from "../types";
 import { DEFAULT_CATEGORIES } from "./categories";
 import { useExternal } from "./useExternal";
 
@@ -14,12 +14,11 @@ export interface OnboardingDraft {
   handle?: string;
   displayName?: string;
   title?: string;
-  bio?: string;
   avatarUrl?: string;
-  bannerUrl?: string;
   minAmountCents?: number;
   replyWindowDays?: number;
   categories?: Category[];
+  socials?: Socials;
   visibility?: Visibility;
 }
 
@@ -27,7 +26,7 @@ const KEY = "draft.onboarding";
 
 const DEFAULTS: OnboardingDraft = {
   minAmountCents: 15000,
-  replyWindowDays: 7,
+  replyWindowDays: 5,
   categories: [...DEFAULT_CATEGORIES],
   visibility: "public",
 };

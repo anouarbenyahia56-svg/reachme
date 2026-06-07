@@ -32,6 +32,7 @@ export function Reveal({
   className,
   as = "div",
   style,
+  blur = 8,
 }: {
   children: ReactNode;
   delay?: number;
@@ -43,6 +44,11 @@ export function Reveal({
   className?: string;
   as?: "div" | "span" | "section" | "article" | "p";
   style?: React.CSSProperties;
+  /** Initial blur radius in pixels. 8 is the platform default;
+   *  onboarding screens pass a smaller value (5) because four
+   *  elements blur-resolve simultaneously and the full 8px on
+   *  the large h1/form area can stutter on lower-end devices. */
+  blur?: number;
 }) {
   const reduced = useReducedMotion();
   const distance = offset ?? (axis === "x" ? 32 : 24);
@@ -50,8 +56,8 @@ export function Reveal({
   const initial = reduced
     ? { opacity: 1, x: 0, y: 0, filter: "blur(0px)" }
     : axis === "x"
-      ? { opacity: 0, x: distance, y: 0, filter: "blur(8px)" }
-      : { opacity: 0, x: 0, y: distance, filter: "blur(8px)" };
+      ? { opacity: 0, x: distance, y: 0, filter: `blur(${blur}px)` }
+      : { opacity: 0, x: 0, y: distance, filter: `blur(${blur}px)` };
   const animate = { opacity: 1, x: 0, y: 0, filter: "blur(0px)" };
   const transition = { duration, delay, ease: EASE };
 

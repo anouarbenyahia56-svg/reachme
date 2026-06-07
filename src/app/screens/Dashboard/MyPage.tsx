@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Image as ImageIcon, Plus, Trash2, X } from "lucide-react";
+import { ArrowUpRight, Camera, Plus, Trash2, X } from "lucide-react";
 import { EASE } from "@/components/motion";
 import { Card } from "../../ui/Card";
 import { Button } from "../../ui/Button";
-import { TextField, TextArea, Label } from "../../ui/Field";
+import { TextField, Label } from "../../ui/Field";
 import { Avatar } from "../../ui/Avatar";
-import { Reveal } from "../../ui/Reveal";
 import { setProfile, useProfile } from "../../store/session";
-import { ProfilePreviewCard } from "../Public/ProfilePreviewCard";
 import {
   formatMoney,
   parseMoneyToCents,
@@ -17,22 +15,34 @@ import {
   SUGGESTED_EXTRAS,
   makeCategoryId,
 } from "../../store/categories";
-import type { Category, Profile, Visibility } from "../../types";
+import {
+  SOCIAL_PLATFORMS,
+  SocialIcon,
+} from "../../ui/SocialIcons";
+import { setSocial, extractSocialHandle } from "../../store/socials";
+import type {
+  Category,
+  Profile,
+  SocialPlatform,
+  Socials,
+  Visibility,
+} from "../../types";
 import { useToast } from "../../ui/Toast";
 
 /**
  * My page — the live editor.
  *
- * Two columns: edit on the left, the public preview on the right
- * (sticks below the page header on desktop). Changes don't commit
- * until "Save changes" is pressed; an unsaved-changes pill makes
- * the state explicit.
+ * Centered single column of cards (identity, socials, amount,
+ * categories, status). Changes don't commit until "Save changes"
+ * is pressed; an unsaved-changes pill makes the state explicit.
+ * The public page itself is the live preview — a "View live page"
+ * link sits beside Save.
  */
 export function MyPage() {
   const profile = useProfile();
   const toast = useToast();
   const [draft, setDraft] = useState<Profile | null>(profile);
-  const [savedTick, setSavedTick] = useState(0);
+  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     if (profile && !draft) setDraft(profile);
@@ -40,71 +50,34 @@ export function MyPage() {
 
   if (!profile || !draft) return null;
 
-  const dirty = JSON.stringify(profile) !== JSON.stringify(draft);
-
-  const set = <K extends keyof Profile>(k: K, v: Profile[K]) =>
+  const set = <K extends keyof Profile>(k: K, v: Profile[K]) => {
     setDraft((d) => (d ? { ...d, [k]: v } : d));
+    setHasChanges(true);
+  };
 
   const save = () => {
     setProfile(draft);
-    setSavedTick((t) => t + 1);
+    setHasChanges(false);
     toast.show("Page updated.");
   };
 
-  const reset = () => setDraft(profile);
+  const reset = () => {
+    setDraft(profile);
+    setHasChanges(false);
+  };
 
   return (
-    <div className="grid gap-8 lg:grid-cols-12">
-      <div className="space-y-6 lg:col-span-7">
-        <Card>
-          <div className="flex items-center justify-between gap-4 border-b border-[hsl(var(--rule))] px-7 py-5 md:px-9">
-            <div>
-              <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-                Public page
-              </p>
-              <p className="mt-1 text-[14px] font-medium text-[hsl(var(--ink))]">
-                Edit how you appear to senders.
-              </p>
-            </div>
-            <AnimatePresence>
-              {dirty ? (
-                <motion.span
-                  key="dirty"
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.3, ease: EASE }}
-                  className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--ink))] px-3 py-1 text-[11.5px] font-medium text-[hsl(var(--ink))]"
-                >
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-[hsl(var(--ink))]" />
-                  Unsaved changes
-                </motion.span>
-              ) : (
-                <motion.span
-                  key={`saved-${savedTick}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-[11.5px] uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]"
-                >
-                  All saved
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="space-y-7 px-7 py-7 md:px-9 md:py-8">
-            <BannerField
-              value={draft.bannerUrl}
-              onChange={(v) => set("bannerUrl", v)}
-            />
+    <div className="mx-auto max-w-3xl space-y-14">
+      <Card>
+        <div className="px-10 py-12 md:px-14 md:py-16">
+          <div className="space-y-10">
             <AvatarField
               value={draft.avatarUrl}
               displayName={draft.displayName}
               onChange={(v) => set("avatarUrl", v)}
             />
 
-            <div className="grid gap-5 sm:grid-cols-2">
+            <div className="grid gap-6 sm:grid-cols-2">
               <TextField
                 label="Display name"
                 value={draft.displayName}
@@ -112,74 +85,87 @@ export function MyPage() {
                 maxLength={48}
               />
               <TextField
-                label="Role"
+                label="Title"
                 value={draft.title}
                 onChange={(e) => set("title", e.target.value)}
                 maxLength={64}
               />
             </div>
-
-            <TextArea
-              label="Short bio"
-              value={draft.bio}
-              onChange={(e) => set("bio", e.target.value)}
-              maxChars={240}
-              optional
-            />
           </div>
-        </Card>
-
-        <Card>
-          <div className="border-b border-[hsl(var(--rule))] px-7 py-5 md:px-9">
-            <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-              Rules
-            </p>
-            <p className="mt-1 text-[14px] font-medium text-[hsl(var(--ink))]">
-              Set what reaches you.
-            </p>
-          </div>
-          <div className="space-y-7 px-7 py-7 md:px-9 md:py-8">
-            <FloorField
-              cents={draft.minAmountCents}
-              onChange={(c) => set("minAmountCents", c)}
-            />
-            <CategoriesField
-              items={draft.categories}
-              onChange={(items) => set("categories", items)}
-            />
-            <VisibilityField
-              value={draft.visibility}
-              onChange={(v) => set("visibility", v)}
-              replyWindowDays={draft.replyWindowDays}
-              onChangeReplyWindow={(d) => set("replyWindowDays", d)}
-            />
-          </div>
-        </Card>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={save} disabled={!dirty} trailingArrow>
-            Save changes
-          </Button>
-          {dirty && (
-            <Button variant="ghost" onClick={reset}>
-              Discard
-            </Button>
-          )}
         </div>
-      </div>
+      </Card>
 
-      <div className="lg:col-span-5">
-        <Reveal>
-          <div className="lg:sticky lg:top-[88px]">
-            <Label>Live preview</Label>
-            <div className="rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--page))] p-5">
-              <ProfilePreviewCard profile={draft} variant="preview" />
-            </div>
-            <p className="mt-3 text-[12.5px] text-[hsl(var(--ink-subtle))]">
-              Changes appear immediately here. They go live the moment you save.
-            </p>
-          </div>
-        </Reveal>
+      <Card>
+        <div className="px-10 py-12 md:px-14 md:py-16">
+          <SocialsField
+            value={draft.socials ?? {}}
+            onChange={(v) => set("socials", v)}
+          />
+        </div>
+      </Card>
+
+      <Card>
+        <div className="px-10 py-12 md:px-14 md:py-16">
+          <FloorField
+            cents={draft.minAmountCents}
+            onChange={(c) => set("minAmountCents", c)}
+          />
+        </div>
+      </Card>
+
+      <Card>
+        <div className="px-10 py-12 md:px-14 md:py-16">
+          <CategoriesField
+            items={draft.categories}
+            onChange={(items) => set("categories", items)}
+          />
+        </div>
+      </Card>
+
+      <Card>
+        <div className="px-10 py-12 md:px-14 md:py-16">
+          <VisibilityField
+            value={draft.visibility}
+            onChange={(v) => set("visibility", v)}
+            replyWindowDays={draft.replyWindowDays}
+            onChangeReplyWindow={(d) => set("replyWindowDays", d)}
+          />
+        </div>
+      </Card>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <Button onClick={save} disabled={!hasChanges} trailingArrow>
+          Save changes
+        </Button>
+        {hasChanges && (
+          <Button variant="ghost" onClick={reset}>
+            Discard
+          </Button>
+        )}
+        <AnimatePresence>
+          {hasChanges && (
+            <motion.span
+              key="dirty"
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.3, ease: EASE }}
+              className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--ink))] px-3 py-1 text-[11.5px] font-medium text-[hsl(var(--ink))]"
+            >
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[hsl(var(--ink))]" />
+              Unsaved changes
+            </motion.span>
+          )}
+        </AnimatePresence>
+        <a
+          href={`https://reachme.com/${profile.handle}`}
+          target="_blank"
+          rel="noreferrer"
+          className="ml-auto inline-flex items-center gap-1.5 text-[13px] font-medium text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
+        >
+          View live page
+          <ArrowUpRight size={14} strokeWidth={1.8} />
+        </a>
       </div>
     </div>
   );
@@ -196,67 +182,6 @@ function readFileAsDataURL(file: File): Promise<string> {
   });
 }
 
-function BannerField({
-  value,
-  onChange,
-}: {
-  value?: string;
-  onChange: (v?: string) => void;
-}) {
-  const input = useRef<HTMLInputElement>(null);
-  return (
-    <div>
-      <Label optional>Banner image</Label>
-      <button
-        type="button"
-        onClick={() => input.current?.click()}
-        className={[
-          "group relative block aspect-[4/1] w-full overflow-hidden rounded-3xl border border-dashed transition-colors duration-300",
-          value
-            ? "border-transparent"
-            : "border-[hsl(var(--rule-strong))] hover:border-[hsl(var(--ink))]",
-        ].join(" ")}
-        aria-label="Upload banner"
-      >
-        {value ? (
-          <img
-            src={value}
-            alt=""
-            className="h-full w-full object-cover"
-            draggable={false}
-          />
-        ) : (
-          <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[hsl(var(--ink-subtle))] transition-colors duration-300 group-hover:text-[hsl(var(--ink))]">
-            <ImageIcon size={18} strokeWidth={1.6} />
-            <span className="text-[12.5px]">Replace banner</span>
-          </span>
-        )}
-      </button>
-      {value && (
-        <button
-          type="button"
-          onClick={() => onChange(undefined)}
-          className="mt-2 inline-flex items-center gap-1.5 text-[12px] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
-        >
-          <Trash2 size={12} strokeWidth={1.6} aria-hidden="true" /> Remove banner
-        </button>
-      )}
-      <input
-        ref={input}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={async (e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          const url = await readFileAsDataURL(f);
-          onChange(url);
-        }}
-      />
-    </div>
-  );
-}
-
 function AvatarField({
   value,
   displayName,
@@ -268,7 +193,7 @@ function AvatarField({
 }) {
   const input = useRef<HTMLInputElement>(null);
   return (
-    <div className="flex items-center gap-5">
+    <div className="flex items-center gap-7">
       <Avatar size="xl" src={value} name={displayName} />
       <div className="flex flex-col items-start gap-2">
         <div className="flex items-center gap-2">
@@ -286,7 +211,10 @@ function AvatarField({
               variant="ghost"
               size="sm"
               leadingIcon={<Trash2 size={14} strokeWidth={1.6} />}
-              onClick={() => onChange(undefined)}
+              onClick={() => {
+                onChange(undefined);
+                if (input.current) input.current.value = "";
+              }}
               type="button"
             >
               Remove
@@ -298,6 +226,7 @@ function AvatarField({
         </p>
       </div>
       <input
+        key={value ? "has-image" : "no-image"}
         ref={input}
         type="file"
         accept="image/*"
@@ -307,13 +236,292 @@ function AvatarField({
           if (!f) return;
           const url = await readFileAsDataURL(f);
           onChange(url);
+          e.target.value = "";
         }}
       />
     </div>
   );
 }
 
-const PRESETS = [5000, 15000, 50000, 150000] as const;
+const PRESETS = [
+  { cents: 5000, label: "$50", helper: "Light filter" },
+  { cents: 15000, label: "$150", helper: "Recommended" },
+  { cents: 50000, label: "$500", helper: "High signal" },
+  { cents: 150000, label: "$1,500", helper: "Very high signal" },
+] as const;
+
+// ─── Social links ───────────────────────────────────────────────────
+//
+// The editor follows a "connected rows + picker" pattern:
+// only platforms the owner has already added are rendered, and
+// new platforms are added by clicking an icon in a compact
+// picker that appears beneath the list. The picker only offers
+// the seven platforms the product supports (in a fixed order);
+// legacy profiles that carry other platform ids still display
+// in the editor — they just can't be re-added from the picker.
+//
+// The limit is 5. The picker hides (and the Add button hides
+// with it) when 5 are connected, and reappears the moment any
+// row is removed. No helper line, no "remove one to add another"
+// — the absence of the button is the signal.
+const MAX_SOCIALS = 5;
+
+const EDITOR_PLATFORMS: SocialPlatform[] = [
+  "instagram",
+  "x",
+  "tiktok",
+  "youtube",
+  "twitch",
+  "linkedin",
+  "spotify",
+  "facebook",
+  "kick",
+  "github",
+  "pinterest",
+];
+
+function platformLabel(id: SocialPlatform): string {
+  return SOCIAL_PLATFORMS.find((p) => p.id === id)?.label ?? id;
+}
+
+/** Build the `connected` list from a saved Socials map. The
+ *  owner's add order is preserved for platforms that are still
+ *  supported in the editor; platforms the editor no longer
+ *  offers (not in EDITOR_PLATFORMS) fall to the end in their
+ *  original relative order. */
+function buildConnectedList(socials: Socials | undefined): SocialPlatform[] {
+  const v = socials ?? {};
+  const inEditor: SocialPlatform[] = [];
+  const legacy: SocialPlatform[] = [];
+  for (const k of Object.keys(v)) {
+    const id = k as SocialPlatform;
+    if (!v[id]) continue;
+    if (EDITOR_PLATFORMS.includes(id)) {
+      inEditor.push(id);
+    } else {
+      legacy.push(id);
+    }
+  }
+  return [...inEditor, ...legacy];
+}
+
+function SocialsField({
+  value,
+  onChange,
+}: {
+  value: Socials;
+  onChange: (v: Socials) => void;
+}) {
+  // The list of platforms currently shown in the editor. Order
+  // is the order the owner added them, so the list reads as
+  // their flow rather than a forced sequence. Platforms the
+  // editor no longer offers (legacy) fall to the end.
+  const [connected, setConnected] = useState<SocialPlatform[]>(() =>
+    buildConnectedList(value),
+  );
+
+  // Per-platform handle draft. The canonical https URL is built
+  // from the handle on every change and pushed up; an empty
+  // draft means "added but not yet typed", which the row shows
+  // in place until the field is blurred empty.
+  const [handles, setHandles] = useState<
+    Partial<Record<SocialPlatform, string>>
+  >(() => {
+    const initial: Partial<Record<SocialPlatform, string>> = {};
+    for (const id of EDITOR_PLATFORMS) {
+      initial[id] = extractSocialHandle(id, value[id]);
+    }
+    return initial;
+  });
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const inputRefs = useRef<
+    Partial<Record<SocialPlatform, HTMLInputElement | null>>
+  >({});
+  const justAddedRef = useRef<SocialPlatform | null>(null);
+  // When the field itself caused the upstream value change
+  // (typing, removing) we set this so the resync effect skips
+  // the rebuild. Without it, clearing a handle would delete
+  // the row — clearing should only empty the input, not the
+  // platform. Only an outside change (Discard, profile swap)
+  // should resync.
+  const suppressSyncRef = useRef(false);
+
+  // Resync from the upstream value when it changes from outside.
+  useEffect(() => {
+    if (suppressSyncRef.current) {
+      suppressSyncRef.current = false;
+      return;
+    }
+    const v = value ?? {};
+    setConnected(buildConnectedList(v));
+    setHandles(() => {
+      const next: Partial<Record<SocialPlatform, string>> = {};
+      for (const k of Object.keys(v)) {
+        const id = k as SocialPlatform;
+        if (v[id]) next[id] = extractSocialHandle(id, v[id]);
+      }
+      return next;
+    });
+    setPickerOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(value)]);
+
+  // Auto-focus the input of a newly added row.
+  useEffect(() => {
+    if (!justAddedRef.current) return;
+    const id = justAddedRef.current;
+    justAddedRef.current = null;
+    const t = setTimeout(() => inputRefs.current[id]?.focus(), 80);
+    return () => clearTimeout(t);
+  });
+
+  const atCap = connected.length >= MAX_SOCIALS;
+  const available = EDITOR_PLATFORMS.filter((id) => !connected.includes(id));
+
+  const addPlatform = (id: SocialPlatform) => {
+    if (connected.includes(id) || atCap) return;
+    setConnected((c) => [...c, id]);
+    setHandles((h) => ({ ...h, [id]: h[id] ?? "" }));
+    setPickerOpen(false);
+    justAddedRef.current = id;
+  };
+
+  const removePlatform = (id: SocialPlatform) => {
+    setConnected((c) => c.filter((x) => x !== id));
+    setHandles((h) => {
+      const next = { ...h };
+      delete next[id];
+      return next;
+    });
+    suppressSyncRef.current = true;
+    onChange(setSocial(value, id, ""));
+  };
+
+  const updateHandle = (id: SocialPlatform, raw: string) => {
+    setHandles((h) => ({ ...h, [id]: raw }));
+    suppressSyncRef.current = true;
+    onChange(setSocial(value, id, raw));
+  };
+
+  const onBlurHandle = (id: SocialPlatform) => {
+    // The owner clicked "Add", never typed, then moved on. Drop
+    // the row so the list stays clean — they can re-add it from
+    // the picker. We only do this when the field is truly empty
+    // and the platform has no URL upstream; an explicit remove
+    // (the X button) is the way to drop a platform that has a
+    // saved handle.
+    if (!(handles[id] ?? "").trim() && !value[id]) {
+      removePlatform(id);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-4">
+        <Label>Social links</Label>
+        <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]">
+          {connected.length} of {MAX_SOCIALS}
+        </span>
+      </div>
+      <p className="mb-6 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-muted))]">
+        Link the profiles your audience already follows.
+      </p>
+
+      <ul className="space-y-3">
+        <AnimatePresence initial={false}>
+          {connected.map((id) => {
+            const label = platformLabel(id);
+            return (
+              <motion.li
+                key={id}
+                layout="position"
+                initial={{ opacity: 0, y: -6, filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: -4, filter: "blur(4px)" }}
+                transition={{ duration: 0.3, ease: EASE }}
+              >
+                <div className="grid grid-cols-[auto_88px_1fr_auto] items-center gap-4 rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-4 py-3.5">
+                  <SocialIcon
+                    platform={id}
+                    className="h-[18px] w-[18px] shrink-0 text-[hsl(var(--ink))]"
+                  />
+                  <span className="text-[10.5px] font-medium uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]">
+                    {label}
+                  </span>
+                  <input
+                    ref={(el) => {
+                      inputRefs.current[id] = el;
+                    }}
+                    type="text"
+                    inputMode="text"
+                    value={handles[id] ?? ""}
+                    onChange={(e) => updateHandle(id, e.target.value)}
+                    onBlur={() => onBlurHandle(id)}
+                    placeholder="username"
+                    aria-label={`${label} handle`}
+                    className="min-w-0 bg-transparent text-[14px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePlatform(id)}
+                    aria-label={`Remove ${label}`}
+                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[hsl(var(--ink-subtle))] transition-colors duration-200 hover:bg-[hsl(var(--rule))]/40 hover:text-[hsl(var(--ink))]"
+                  >
+                    <X size={14} strokeWidth={1.6} aria-hidden="true" />
+                  </button>
+                </div>
+              </motion.li>
+            );
+          })}
+        </AnimatePresence>
+      </ul>
+
+      <AnimatePresence initial={false}>
+        {pickerOpen && available.length > 0 && (
+          <motion.div
+            key="picker"
+            initial={{ opacity: 0, y: -6, filter: "blur(6px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -4, filter: "blur(6px)" }}
+            transition={{ duration: 0.3, ease: EASE }}
+            className="mt-4 flex flex-wrap items-center gap-2"
+          >
+            {available.map((id) => {
+              const label = platformLabel(id);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => addPlatform(id)}
+                  aria-label={`Add ${label}`}
+                  title={label}
+                  className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink-muted))] transition-colors duration-200 hover:border-[hsl(var(--ink))] hover:text-[hsl(var(--ink))]"
+                >
+                  <SocialIcon platform={id} className="h-4 w-4" />
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {!atCap && (
+        <div className="mt-5">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPickerOpen((v) => !v)}
+            leadingIcon={<Plus size={14} strokeWidth={1.8} />}
+          >
+            Add platform
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function FloorField({
   cents,
@@ -324,37 +532,56 @@ function FloorField({
 }) {
   const [custom, setCustom] = useState(String(cents / 100));
   useEffect(() => setCustom(String(cents / 100)), [cents]);
+
+  const customCents = parseMoneyToCents(custom);
+  const belowFloor =
+    custom.trim() !== "" && customCents > 0 && customCents < 1000;
+
   return (
     <div>
-      <Label>Minimum signal</Label>
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+      <Label>Amount</Label>
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {PRESETS.map((p) => {
-          const active = cents === p;
+          const active = cents === p.cents;
           return (
             <button
-              key={p}
+              key={p.cents}
               type="button"
-              onClick={() => onChange(p)}
+              onClick={() => onChange(p.cents)}
               aria-pressed={active}
               className={[
-                "rounded-2xl border px-3 py-3 text-left transition-[border-color,background-color,color] duration-300",
+                "flex flex-col items-start rounded-2xl border px-5 py-5 text-left transition-[border-color,background-color,color] duration-300",
                 active
                   ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
                   : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
               ].join(" ")}
             >
-              <span className="font-serif text-[1.15rem] font-medium">
-                {formatMoney(p)}
+              <span className="font-serif text-[1.75rem] font-medium tracking-[-0.025em]">
+                {p.label}
+              </span>
+              <span
+                className={[
+                  "mt-1 text-[11.5px]",
+                  active
+                    ? "text-[hsl(var(--page))]/75"
+                    : "text-[hsl(var(--ink-subtle))]",
+                ].join(" ")}
+              >
+                {p.helper}
               </span>
             </button>
           );
         })}
       </div>
-      <div className="mt-3 flex items-center overflow-hidden rounded-2xl border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] focus-within:border-[hsl(var(--ink))]">
-        <span className="select-none border-r border-[hsl(var(--rule))] bg-[hsl(var(--page))] px-4 py-3 text-[14px] text-[hsl(var(--ink-muted))]">
-          USD
-        </span>
-        <span className="pl-3 text-[14px] text-[hsl(var(--ink-muted))]">$</span>
+      <div
+        className={[
+          "mt-4 flex items-center rounded-2xl border bg-[hsl(var(--surface))] transition-[border-color] duration-300 focus-within:border-[hsl(var(--ink))]",
+          belowFloor
+            ? "border-[hsl(var(--danger))]"
+            : "border-[hsl(var(--rule-strong))]",
+        ].join(" ")}
+      >
+        <span className="pl-4 text-[15px] text-[hsl(var(--ink-muted))]">$</span>
         <input
           inputMode="decimal"
           value={custom}
@@ -363,9 +590,22 @@ function FloorField({
             const c = parseMoneyToCents(e.target.value);
             if (c >= 1000) onChange(c);
           }}
-          className="w-full bg-transparent px-3 py-3 text-[14px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
+          aria-invalid={belowFloor}
+          aria-describedby="myfloor-custom-help"
+          className="w-full bg-transparent px-3 py-3.5 text-[15px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
         />
       </div>
+      <p
+        id="myfloor-custom-help"
+        className={[
+          "mt-2.5 text-[12.5px] leading-[1.55]",
+          belowFloor
+            ? "text-[hsl(var(--danger))]"
+            : "text-[hsl(var(--ink-subtle))]",
+        ].join(" ")}
+      >
+        Floor must be at least $10.
+      </p>
     </div>
   );
 }
@@ -396,17 +636,22 @@ function CategoriesField({
 
   return (
     <div>
-      <Label>Request categories</Label>
-      <div className="rounded-2xl border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] p-4">
+      <Label>Your categories</Label>
+      <div className="space-y-6">
         <ul className="flex flex-wrap gap-2">
-          <AnimatePresence initial={false}>
+          <AnimatePresence initial={false} mode="popLayout">
             {items.map((c) => (
               <motion.li
                 key={c.id}
-                initial={{ opacity: 0, y: 6, filter: "blur(4px)" }}
+                layout
+                initial={{ opacity: 0, y: 6, filter: "blur(6px)" }}
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                exit={{ opacity: 0, y: -4, filter: "blur(4px)" }}
-                transition={{ duration: 0.4, ease: EASE }}
+                exit={{ opacity: 0, y: -4, filter: "blur(6px)" }}
+                transition={{
+                  duration: 0.2,
+                  ease: EASE,
+                  layout: { duration: 0.3, ease: EASE },
+                }}
               >
                 <span className="inline-flex items-center gap-2 rounded-full bg-[hsl(var(--ink))] py-1.5 pl-4 pr-1.5 text-[12.5px] font-medium text-[hsl(var(--page))]">
                   {c.label}
@@ -424,58 +669,48 @@ function CategoriesField({
           </AnimatePresence>
         </ul>
         {remaining.length > 0 && (
-          <div className="mt-4 border-t border-[hsl(var(--rule))] pt-4">
-            <p className="mb-3 text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-              Suggested
-            </p>
-            <ul className="flex flex-wrap gap-2">
-              {remaining.map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    onClick={() => add(s)}
-                    disabled={items.length >= 6}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--rule-strong))] bg-transparent px-3.5 py-1.5 text-[12.5px] text-[hsl(var(--ink))] transition-[border-color,background-color] duration-300 hover:border-[hsl(var(--ink))] disabled:opacity-40"
-                  >
-                    <Plus size={11} strokeWidth={1.8} aria-hidden="true" />
-                    {s.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <ul className="flex flex-wrap gap-2">
+            {remaining.map((s) => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() => add(s)}
+                  disabled={items.length >= 6}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--rule-strong))] bg-transparent px-3.5 py-1.5 text-[12.5px] text-[hsl(var(--ink))] transition-[border-color,background-color] duration-300 hover:border-[hsl(var(--ink))] disabled:opacity-40"
+                >
+                  <Plus size={11} strokeWidth={1.8} aria-hidden="true" />
+                  {s.label}
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
-        <div className="mt-4 border-t border-[hsl(var(--rule))] pt-4">
-          <div className="flex items-stretch gap-2">
-            <input
-              value={custom}
-              onChange={(e) => setCustom(e.target.value)}
-              placeholder="Add a custom category"
-              maxLength={32}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  addCustom();
-                }
-              }}
-              className="w-full rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--page))] px-4 py-2.5 text-[13.5px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:border-[hsl(var(--ink))] focus:outline-none"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={addCustom}
-              disabled={!custom.trim() || items.length >= 6}
-              leadingIcon={<Plus size={13} strokeWidth={1.8} />}
-            >
-              Add
-            </Button>
-          </div>
+        <div className="flex items-stretch gap-2">
+          <input
+            value={custom}
+            onChange={(e) => setCustom(e.target.value)}
+            placeholder="Add a custom category"
+            maxLength={32}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addCustom();
+              }
+            }}
+            className="w-full rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--page))] px-4 py-3 text-[15px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:border-[hsl(var(--ink))] focus:outline-none"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addCustom}
+            disabled={!custom.trim() || items.length >= 6}
+            leadingIcon={<Plus size={13} strokeWidth={1.8} />}
+          >
+            Add
+          </Button>
         </div>
       </div>
-      <p className="mt-2.5 text-[12.5px] text-[hsl(var(--ink-subtle))]">
-        1–6 categories. The same minimum applies to all of them.
-      </p>
     </div>
   );
 }
@@ -483,20 +718,20 @@ function CategoriesField({
 const VIS: ReadonlyArray<{ value: Visibility; label: string; helper: string }> = [
   {
     value: "public",
-    label: "Active",
-    helper: "Live, public, searchable, accepting requests.",
+    label: "Open",
+    helper: "Live and accepting requests.",
   },
   {
     value: "paused",
-    label: "Paused",
+    label: "Closed",
     helper: "Visible, but not accepting new requests.",
   },
 ];
 
 const REPLY_WINDOWS: ReadonlyArray<{ days: number; label: string }> = [
   { days: 3, label: "3 days" },
+  { days: 5, label: "5 days" },
   { days: 7, label: "7 days" },
-  { days: 14, label: "14 days" },
 ];
 
 function VisibilityField({
@@ -512,7 +747,7 @@ function VisibilityField({
 }) {
   return (
     <div>
-      <Label>State</Label>
+      <Label>Status</Label>
       <div className="grid gap-3 sm:grid-cols-2">
         {VIS.map((opt) => {
           const active = value === opt.value;
@@ -545,7 +780,7 @@ function VisibilityField({
         })}
       </div>
 
-      <div className="mt-7">
+      <div className="mt-10">
         <Label>Reply window</Label>
         <div className="grid grid-cols-3 gap-3">
           {REPLY_WINDOWS.map((w) => {
@@ -557,7 +792,7 @@ function VisibilityField({
                 onClick={() => onChangeReplyWindow(w.days)}
                 aria-pressed={active}
                 className={[
-                  "rounded-2xl border px-3 py-3 text-center transition-[border-color,background-color,color] duration-300",
+                  "rounded-2xl border px-4 py-5 text-center transition-[border-color,background-color,color] duration-300",
                   active
                     ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
                     : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
@@ -566,7 +801,7 @@ function VisibilityField({
                 <span
                   className="font-serif"
                   style={{
-                    fontSize: "1.15rem",
+                    fontSize: "1.75rem",
                     fontWeight: 500,
                     letterSpacing: "-0.025em",
                   }}
@@ -577,10 +812,6 @@ function VisibilityField({
             );
           })}
         </div>
-        <p className="mt-2.5 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
-          If you don't reply within your window, the request expires and the
-          amount is refunded automatically.
-        </p>
       </div>
     </div>
   );

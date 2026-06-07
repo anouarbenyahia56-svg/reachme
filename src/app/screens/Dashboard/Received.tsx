@@ -1,7 +1,5 @@
 import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { Inbox, Search } from "lucide-react";
-import { EASE } from "@/components/motion";
 import { Card } from "../../ui/Card";
 import { Pill } from "../../ui/Pill";
 import { Reveal } from "../../ui/Reveal";
@@ -9,7 +7,7 @@ import { useReceived } from "../../store/requests";
 import { useProfile } from "../../store/session";
 import { Avatar } from "../../ui/Avatar";
 import { Link } from "../../router";
-import { formatMoney, timeAgo, timeUntil } from "../../store/format";
+import { formatMoney, timeAgo } from "../../store/format";
 import type { ReceivedRequest, RequestStatus } from "../../types";
 import { cn } from "@/lib/utils";
 
@@ -106,8 +104,8 @@ export function Received() {
             <Search size={13} strokeWidth={1.6} />
           </span>
           <input
-            type="search"
-            placeholder="Search subjects, names, messages"
+            type="text"
+            placeholder="Search names, subjects"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-[260px] bg-transparent px-3 py-2 text-[13px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
@@ -119,8 +117,8 @@ export function Received() {
         <Empty filter={filter} />
       ) : (
         <ul>
-          {visible.map((r, i) => (
-            <Row key={r.id} r={r} i={i} />
+          {visible.map((r) => (
+            <Row key={r.id} r={r} />
           ))}
         </ul>
       )}
@@ -128,14 +126,9 @@ export function Received() {
   );
 }
 
-function Row({ r, i }: { r: ReceivedRequest; i: number }) {
+function Row({ r }: { r: ReceivedRequest }) {
   return (
-    <motion.li
-      initial={{ opacity: 0, y: 6, filter: "blur(6px)" }}
-      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-      transition={{ duration: 0.5, delay: i * 0.04, ease: EASE }}
-      className="border-b border-[hsl(var(--rule))] last:border-b-0"
-    >
+    <li className="border-b border-[hsl(var(--rule))] last:border-b-0">
       <Link
         href={`/dashboard/received/${r.id}`}
         className="group flex items-center gap-4 px-7 py-5 transition-colors duration-300 hover:bg-[hsl(var(--rule))]/30 md:px-9"
@@ -178,16 +171,9 @@ function Row({ r, i }: { r: ReceivedRequest; i: number }) {
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           <Pill size="sm">{formatMoney(r.amountCents)}</Pill>
-          <span className="text-[11px] uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]">
-            {r.status === "pending"
-              ? `Replies ${timeUntil(r.expiresAt)}`
-              : r.status === "replied"
-                ? "Replied"
-                : r.status}
-          </span>
         </div>
       </Link>
-    </motion.li>
+    </li>
   );
 }
 
@@ -207,7 +193,7 @@ function Empty({ filter }: { filter: string }) {
     },
     expired: {
       title: "Nothing expired.",
-      body: "Requests left unattended for 7 days expire — and refund — on their own.",
+      body: "Requests left unattended past your reply window expire — and refund — on their own.",
     },
     all: {
       title: "Nothing in your inbox yet.",
@@ -216,7 +202,7 @@ function Empty({ filter }: { filter: string }) {
   };
   const m = messages[filter] ?? messages.all;
   return (
-    <Reveal>
+    <Reveal duration={0.3} blur={0}>
       <div className="px-7 py-20 text-center md:px-9">
         <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[hsl(var(--page))] text-[hsl(var(--ink-muted))] ring-1 ring-[hsl(var(--rule))]">
           <Inbox size={18} strokeWidth={1.6} aria-hidden="true" />

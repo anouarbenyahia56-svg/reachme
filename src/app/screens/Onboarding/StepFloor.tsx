@@ -8,16 +8,17 @@ import { useRouter } from "../../router";
 import { OnboardingShell, OnboardingTitle } from "./OnboardingShell";
 import { patchDraft, useDraft } from "../../store/draft";
 import { formatMoney, parseMoneyToCents } from "../../store/format";
+import { platformFeeCents } from "../../store/requests";
 
 const PRESETS = [
   { cents: 5000, label: "$50", helper: "Light filter" },
   { cents: 15000, label: "$150", helper: "Recommended" },
   { cents: 50000, label: "$500", helper: "High signal" },
-  { cents: 150000, label: "$1.5k", helper: "Very high signal" },
+    { cents: 150000, label: "$1,500", helper: "Very high signal" },
 ] as const;
 
 /**
- * Step 3 — Set your floor.
+ * Step 4 — Set your floor.
  *
  * Presets, plus a free-form custom amount. Beneath the choice,
  * an explanation rendered as a quiet card: held on submit,
@@ -35,22 +36,25 @@ export function StepFloor() {
   );
 
   useEffect(() => {
-    patchDraft({ minAmountCents: cents });
+    if (cents >= 1000) patchDraft({ minAmountCents: cents });
   }, [cents]);
+
+  const customCents = parseMoneyToCents(custom);
+  const belowFloor = custom.trim() !== "" && customCents > 0 && customCents < 1000;
+  const belowFloorError = belowFloor ? "Floor must be at least $10." : undefined;
 
   const canContinue = cents >= 1000; // $10 floor minimum-of-minimums
 
   return (
-    <OnboardingShell step={4} total={7} back="/claim/identity">
+    <OnboardingShell step={4} total={8} back="/claim/identity">
       <OnboardingTitle
-        eyebrow="Your floor"
-        title="Set your minimum signal."
+        title="Set your floor."
         description="The floor is the minimum amount someone must attach to reach you. It is not a price for your time — it is a filter for whether someone means it."
       />
 
-      <Reveal delay={0.32} duration={0.85} axis="x">
+      <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
         <div className="mt-14 max-w-[780px]">
-          <Label htmlFor="floor-custom">Minimum amount</Label>
+          <Label>Amount</Label>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {PRESETS.map((p) => {
@@ -99,17 +103,18 @@ export function StepFloor() {
           </div>
 
           <div className="mt-7">
-            <Label htmlFor="floor-custom">
-              Or set a custom amount{" "}
-              <span className="ml-1 font-normal normal-case tracking-normal text-[hsl(var(--ink-subtle))]">
-                ($10 is the lowest floor you can set)
-              </span>
+            <Label>
+              Or set a custom floor
             </Label>
-            <div className="flex items-center overflow-hidden rounded-2xl border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] focus-within:border-[hsl(var(--ink))]">
-              <span className="select-none border-r border-[hsl(var(--rule))] bg-[hsl(var(--page))] px-5 py-4 text-[15px] text-[hsl(var(--ink-muted))]">
-                USD
-              </span>
-              <span className="pl-4 text-[15px] text-[hsl(var(--ink-muted))]">
+            <div
+              className={[
+                "flex items-center overflow-hidden rounded-2xl border bg-[hsl(var(--surface))] transition-[border-color] duration-300",
+                belowFloorError
+                  ? "border-[hsl(var(--danger))]"
+                  : "border-[hsl(var(--rule-strong))] focus-within:border-[hsl(var(--ink))]",
+              ].join(" ")}
+            >
+              <span className="select-none pl-5 text-[15px] text-[hsl(var(--ink-muted))]">
                 $
               </span>
               <input
@@ -122,13 +127,24 @@ export function StepFloor() {
                   const c = parseMoneyToCents(v);
                   if (c > 0) setCents(c);
                 }}
-                placeholder="150"
-                className="w-full bg-transparent px-3 py-4 text-[15px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
+                placeholder="Enter amount"
+                aria-invalid={Boolean(belowFloorError)}
+                aria-describedby={belowFloorError ? "floor-custom-error" : undefined}
+                className="w-full bg-transparent px-2 py-4 text-[15px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))]/60 focus:outline-none"
               />
             </div>
-            <p className="mt-2.5 text-[12.5px] text-[hsl(var(--ink-subtle))]">
-              You can change this any time. Anyone reaching out can attach more — they cannot attach less.
-            </p>
+            {belowFloorError ? (
+              <p
+                id="floor-custom-error"
+                className="mt-2.5 text-[12.5px] leading-[1.55] text-[hsl(var(--danger))]"
+              >
+                {belowFloorError}
+              </p>
+            ) : (
+              <p className="mt-2.5 text-[12.5px] text-[hsl(var(--ink-subtle))]">
+                You can change this any time. Anyone reaching out can attach more — they cannot attach less.
+              </p>
+            )}
           </div>
 
           <EscrowExplainer cents={cents} />
@@ -161,7 +177,7 @@ function EscrowExplainer({ cents }: { cents: number }) {
         eyebrow="Released"
         title="On your reply"
         body={`If you reply, the amount is released to you. Our 5% applies only here — ${formatMoney(
-          Math.round(cents * 0.05),
+          platformFeeCents(cents),
         )} on a ${formatMoney(cents)} request.`}
       />
       <Row

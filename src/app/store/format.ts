@@ -90,7 +90,7 @@ export function isHandleAvailable(
 }
 
 export function isHandleValid(handle: string): boolean {
-  return /^[a-z0-9][a-z0-9_-]{1,29}$/.test(handle.toLowerCase());
+  return /^[a-z0-9][a-z0-9_-]{0,29}$/.test(handle.toLowerCase());
 }
 
 /** Reserved system paths so handles never collide with routes. */
@@ -105,6 +105,7 @@ export const RESERVED: readonly string[] = [
   "received",
   "sent",
   "page",
+  "earnings",
   "admin",
   "api",
   "about",

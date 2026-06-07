@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, Trash2 } from "lucide-react";
 import { Button } from "../../ui/Button";
-import { TextField, TextArea } from "../../ui/Field";
+import { TextField } from "../../ui/Field";
 import { Avatar } from "../../ui/Avatar";
 import { Reveal } from "../../ui/Reveal";
 import { useRouter } from "../../router";
@@ -11,37 +11,35 @@ import { patchDraft, useDraft } from "../../store/draft";
 /**
  * Step 3 — Identity.
  *
- * Display name, title, short bio, and an avatar. The title/bio
- * fields write through to the draft on every change — no save
- * button, no anxious commit. Continue is enabled the moment the
- * required fields are present.
+ * Display name, title, and an avatar. The fields write through
+ * to the draft on every change — no save button, no anxious
+ * commit. Continue is enabled the moment the required fields
+ * are present.
  */
 export function StepIdentity() {
   const { navigate } = useRouter();
   const draft = useDraft();
   const [displayName, setDisplayName] = useState(draft.displayName ?? "");
   const [title, setTitle] = useState(draft.title ?? "");
-  const [bio, setBio] = useState(draft.bio ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(draft.avatarUrl);
 
   // Persist on every change so a refresh doesn't lose work.
   useEffect(() => {
-    patchDraft({ displayName, title, bio, avatarUrl });
-  }, [displayName, title, bio, avatarUrl]);
+    patchDraft({ displayName, title, avatarUrl });
+  }, [displayName, title, avatarUrl]);
 
   const canContinue =
     displayName.trim().length > 0 && title.trim().length > 0;
 
   return (
-    <OnboardingShell step={3} total={7} back="/claim/email">
+    <OnboardingShell step={3} total={8} back="/claim/email">
       <OnboardingTitle
-        eyebrow="Identity"
         title="Set the tone."
         description="This is what people see before they decide to reach out. Make it count — quietly."
       />
 
-      <Reveal delay={0.32} duration={0.85} axis="x">
-        <div className="mt-14 max-w-[760px] space-y-8">
+      <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
+        <div className="mt-14 max-w-[760px]">
           <AvatarUploader
             value={avatarUrl}
             displayName={displayName}
@@ -49,7 +47,7 @@ export function StepIdentity() {
             onChange={setAvatarUrl}
           />
 
-          <div className="grid gap-7 md:grid-cols-2">
+          <div className="mt-10 grid gap-7 md:grid-cols-2">
             <TextField
               label="Display name"
               value={displayName}
@@ -59,7 +57,7 @@ export function StepIdentity() {
               helper="Shown at the top of your page."
             />
             <TextField
-              label="TITLE"
+              label="Title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Music Producer"
@@ -68,18 +66,7 @@ export function StepIdentity() {
             />
           </div>
 
-          <TextArea
-            label="Short bio"
-            optional
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            placeholder="Open to brand deals and collabs."
-            maxChars={240}
-            helper="Two sentences at most. Set the tone for what reaches you."
-            style={{ resize: "none", height: "120px" }}
-          />
-
-          <div className="flex items-center gap-4">
+          <div className="mt-10 flex items-center gap-4">
             <Button
               size="lg"
               trailingArrow
@@ -116,6 +103,8 @@ function AvatarUploader({
   onChange: (v?: string) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState<string | undefined>(undefined);
+  const [buttonKey, setButtonKey] = useState(0);
   // The initial is locked to the handle (claimed in step 1) so it
   // doesn't flicker as the user types in the display name field.
   const initialSource = handle.trim();
@@ -142,10 +131,15 @@ function AvatarUploader({
       <div className="flex flex-col items-start gap-2">
         <div className="flex items-center gap-2">
           <Button
+            key={buttonKey}
             variant="outline"
             size="sm"
             leadingIcon={<Camera size={14} strokeWidth={1.6} />}
-            onClick={() => input.current?.click()}
+            onClick={() => {
+              setUploadError(undefined);
+              if (input.current) input.current.value = "";
+              input.current?.click();
+            }}
             type="button"
           >
             {value ? "Replace photo" : "Upload photo"}
@@ -162,9 +156,17 @@ function AvatarUploader({
             </Button>
           )}
         </div>
-        <p className="text-[12px] text-[hsl(var(--ink-subtle))]">
-          A square crop, ideally 800 × 800. Up to 1 MB.
+        <p className="text-[12.5px] text-[hsl(var(--ink-subtle))]">
+          A square crop, ideally 800 × 800.
         </p>
+        {uploadError && (
+          <p
+            role="alert"
+            className="text-[12.5px] leading-[1.55] text-[hsl(var(--danger))]"
+          >
+            {uploadError}
+          </p>
+        )}
       </div>
       <input
         ref={input}
@@ -174,8 +176,15 @@ function AvatarUploader({
         onChange={async (e) => {
           const f = e.target.files?.[0];
           if (!f) return;
+          if (f.size > 1024 * 1024) {
+            setUploadError("File is too large. Please upload an image under 1 MB.");
+            e.target.value = "";
+            return;
+          }
+          setUploadError(undefined);
           const url = await readFileAsDataURL(f);
           onChange(url);
+          setButtonKey((k) => k + 1);
         }}
       />
     </div>

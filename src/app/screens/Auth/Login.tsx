@@ -5,7 +5,6 @@ import { Button } from "../../ui/Button";
 import { Reveal } from "../../ui/Reveal";
 import { Link, useRouter } from "../../router";
 import { setAccount, useAccount } from "../../store/session";
-import { useToast } from "../../ui/Toast";
 
 /**
  * Login.
@@ -20,7 +19,6 @@ import { useToast } from "../../ui/Toast";
 export function Login() {
   const account = useAccount();
   const { navigate } = useRouter();
-  const toast = useToast();
   const [email, setEmail] = useState(account?.email ?? "");
   const [submitting, setSubmitting] = useState(false);
 

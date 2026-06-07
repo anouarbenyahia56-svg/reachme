@@ -1,13 +1,17 @@
 import type { Category } from "../types";
 
 /** Default catalogue offered during onboarding. The owner can
- *  add/remove and reorder. Persisted on the profile. */
+ *  add/remove and reorder. Persisted on the profile.
+ *
+ *  Deliberately excludes broad, low-signal categories like
+ *  "General inquiry" and "Business opportunity" — the platform's
+ *  pitch is high-signal requests, and suggesting vagueness
+ *  contradicts that. Owners who want a custom equivalent can
+ *  type it in "Add your own". */
 export const DEFAULT_CATEGORIES: readonly Category[] = [
-  { id: "business", label: "Business opportunity" },
   { id: "partnership", label: "Partnership" },
   { id: "intro", label: "Intro request" },
   { id: "advice", label: "Advice request" },
-  { id: "general", label: "General inquiry" },
 ];
 
 export const SUGGESTED_EXTRAS: readonly Category[] = [

@@ -6,7 +6,6 @@ import { AppHeader } from "../../ui/AppHeader";
 import { Button } from "../../ui/Button";
 import { TextField, TextArea } from "../../ui/Field";
 import { Avatar } from "../../ui/Avatar";
-import { VerifiedBadge } from "../../ui/VerifiedBadge";
 import { Pill } from "../../ui/Pill";
 import { Reveal } from "../../ui/Reveal";
 import { findInDirectory } from "../../store/directory";
@@ -17,27 +16,20 @@ import { useToast } from "../../ui/Toast";
 import { useAccount, useProfile } from "../../store/session";
 
 /**
- * Send-a-request flow.
+ * Send-a-request flow — for people reaching out to a ReachMe
+ * owner. Five fluid steps, one page, blur-reveal between panels.
  *
- * Five fluid steps presented inside a single page that swaps
- * panels with the same blur-reveal motion. The recipient stays
- * in view at the top of the page — the sender never forgets who
- * they're reaching out to.
- *
- *   1. About you (name, email, organization)
+ *   1. About you (name, email, context)
  *   2. Category
  *   3. Subject + message
- *   4. Amount (enforces the recipient's floor)
+ *   4. Amount (enforces the owner's floor)
  *   5. Review and submit
  *
  * On success, an outcome screen replaces the form with a quiet
- * confirmation and the next-step ask.
+ * confirmation.
  *
- * Preview mode: when the page owner opens their own send flow, the
- * whole experience is walkable but read-only at the finish — they
- * can't send a request to themselves. A quiet "Preview" marker
- * runs from the first step so nothing is hidden, and the final
- * action is replaced by a calm explanation.
+ * The request form is for anyone reaching out — including the
+ * page owner testing their own flow.
  */
 export function SendRequest({ handle }: { handle: string }) {
   const profile = findInDirectory(handle);
@@ -90,10 +82,10 @@ export function SendRequest({ handle }: { handle: string }) {
             That page doesn't exist.
           </h1>
           <Link
-            href="/find"
+            href="/"
             className="mt-7 inline-flex rounded-full border border-[hsl(var(--rule-strong))] px-5 py-2.5 text-[13px] text-[hsl(var(--ink))] transition-colors hover:border-[hsl(var(--ink))]"
           >
-            Find someone
+            Go home
           </Link>
         </main>
       </div>
@@ -132,11 +124,6 @@ export function SendRequest({ handle }: { handle: string }) {
     "Review",
   ] as const;
 
-  // The owner walking their own page: full preview, no send.
-  const isPreview =
-    Boolean(ownerProfile) &&
-    ownerProfile?.handle.toLowerCase() === profile.handle.toLowerCase();
-
   const validators: Array<() => string | null> = [
     () => {
       if (!name.trim()) return "Add your name.";
@@ -153,7 +140,7 @@ export function SendRequest({ handle }: { handle: string }) {
     },
     () => {
       if (amountCents < profile.minAmountCents)
-        return `${profile.displayName.split(" ")[0]}'s minimum is ${formatMoney(profile.minAmountCents)}.`;
+        return `${profile.displayName.split(" ")[0]}'s floor is ${formatMoney(profile.minAmountCents)}.`;
       return null;
     },
     () => null,
@@ -209,8 +196,8 @@ export function SendRequest({ handle }: { handle: string }) {
       <AppHeader />
 
       <main className="mx-auto max-w-[760px] px-5 pb-32 pt-12 md:px-6 md:pt-16">
-        <Reveal>
-          <RecipientHeader profile={profile} preview={isPreview} />
+        <Reveal blur={5} duration={0.4}>
+          <RecipientHeader profile={profile} />
         </Reveal>
 
         {!done ? (
@@ -325,11 +312,6 @@ export function SendRequest({ handle }: { handle: string }) {
                 >
                   Continue
                 </Button>
-              ) : isPreview ? (
-                <p className="max-w-[34ch] text-right text-[12.5px] leading-[1.55] text-[hsl(var(--ink-muted))]">
-                  This is a preview of what senders see. You can't send a
-                  request to your own page.
-                </p>
               ) : (
                 <Button
                   size="lg"
@@ -358,26 +340,17 @@ export function SendRequest({ handle }: { handle: string }) {
 
 function RecipientHeader({
   profile,
-  preview,
 }: {
   profile: ReturnType<typeof findInDirectory>;
-  preview?: boolean;
 }) {
   if (!profile) return null;
   return (
     <div className="flex items-center gap-4 rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-5 py-4 sm:px-6">
       <Avatar src={profile.avatarUrl} name={profile.displayName} size="lg" />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2.5">
-          <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-            You're reaching out to
-          </p>
-          {preview && (
-            <span className="inline-flex items-center rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--page))] px-2.5 py-[3px] text-[10px] font-medium uppercase tracking-[0.18em] text-[hsl(var(--ink-muted))]">
-              Preview
-            </span>
-          )}
-        </div>
+        <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
+          You're reaching out to
+        </p>
         <div className="mt-1 flex items-center gap-2">
           <p
             className="font-serif text-[hsl(var(--ink))]"
@@ -389,10 +362,9 @@ function RecipientHeader({
           >
             {profile.displayName}
           </p>
-          {profile.verified && <VerifiedBadge size={14} />}
         </div>
         <p className="text-[12.5px] text-[hsl(var(--ink-muted))]">
-          {profile.title} · Minimum {formatMoney(profile.minAmountCents)}
+          {profile.title} · Floor {formatMoney(profile.minAmountCents)}
         </p>
       </div>
     </div>
@@ -539,7 +511,7 @@ function StepAbout({
           label="Context"
           value={context}
           onChange={(e) => onContext(e.target.value)}
-          placeholder="Founder, writer, designer, researcher…"
+          placeholder="Creator, artist, founder, advisor…"
           helper="A line about who you are. Specific is better than impressive."
         />
       </div>
@@ -617,7 +589,7 @@ function StepMessage({
       <PanelTitle
         eyebrow="Your message"
         title="What's the request?"
-        description="Be specific. Lead with the ask. Recipients reply to clarity."
+        description="Be specific. Lead with the ask."
       />
       <TextField
         label="Subject"
@@ -662,7 +634,7 @@ interface AmountTier {
  *  default. */
 function buildAmountTiers(minCents: number): AmountTier[] {
   const minD = minCents / 100;
-  const tiers: AmountTier[] = [{ cents: minCents, label: "Minimum" }];
+  const tiers: AmountTier[] = [{ cents: minCents, label: "Floor" }];
   const specs: Array<{ mult: number; label: string }> = [
     { mult: 1.5, label: "Recommended" },
     { mult: 2.5, label: "Strong signal" },
@@ -696,7 +668,7 @@ function StepAmount({
       <PanelTitle
         eyebrow="Attach amount"
         title="Show that you mean it."
-        description={`The amount is held until ${profile.displayName.split(" ")[0]} replies. If they decline or don't respond within 7 days, it returns to you in full.`}
+        description={`The amount is held until ${profile.displayName.split(" ")[0]} replies. If they decline or don't respond within ${profile.replyWindowDays} days, it returns to you in full.`}
       />
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
@@ -751,7 +723,7 @@ function StepAmount({
           />
         </div>
         <p className="mt-3 text-[12.5px] text-[hsl(var(--ink-subtle))]">
-          Minimum is {formatMoney(min)}. A higher amount can signal priority —
+          Floor is {formatMoney(min)}. A higher amount can signal priority —
           it never replaces the message.
         </p>
       </div>
@@ -801,9 +773,8 @@ function StepReview({
             <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
               To
             </p>
-            <p className="mt-1 flex items-center gap-1.5 text-[15px] font-medium text-[hsl(var(--ink))]">
+            <p className="mt-1 text-[15px] font-medium text-[hsl(var(--ink))]">
               {profile.displayName}
-              {profile.verified && <VerifiedBadge size={14} />}
             </p>
           </div>
         </div>
@@ -923,7 +894,7 @@ function SuccessPanel({
           Reference · {id.slice(0, 8)}
         </p>
         <div className="mt-3 inline-flex">
-          <Pill size="sm">{formatMoney(profile.minAmountCents)}+ minimum</Pill>
+          <Pill size="sm">{formatMoney(profile.minAmountCents)}+ floor</Pill>
         </div>
       </div>
     </Reveal>

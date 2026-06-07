@@ -6,9 +6,8 @@ const COLUMNS = [
     label: "Product",
     items: [
       ["How it works", "#mechanic"],
-      ["Who it’s for", "#audience"],
+      ["Who it's for", "#audience"],
       ["Pricing", "#pricing"],
-      ["Reach someone", "/find"],
     ],
   },
   {
@@ -21,8 +20,8 @@ const COLUMNS = [
   {
     label: "Legal",
     items: [
-      ["Terms", "#"],
-      ["Privacy", "#"],
+      ["Terms", "/terms"],
+      ["Privacy", "/privacy"],
     ],
   },
 ] as const;

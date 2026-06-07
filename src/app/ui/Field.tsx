@@ -19,7 +19,7 @@ const inputBase =
   "w-full rounded-2xl border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-4 py-3.5 text-[15px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] transition-[border-color,background-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus:border-[hsl(var(--ink))] focus:outline-none focus-visible:outline-none";
 
 const fieldLabel =
-  "mb-2.5 block text-[11px] font-medium uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]";
+  "mb-2.5 block text-[12px] font-medium uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]";
 
 export function Label({
   children,
@@ -36,8 +36,8 @@ export function Label({
     <label htmlFor={htmlFor} className={cn(fieldLabel, className)}>
       {children}
       {optional && (
-        <span className="ml-2 normal-case tracking-normal text-[hsl(var(--ink-subtle))]">
-          — optional
+        <span className="ml-2 text-[hsl(var(--ink-subtle))]">
+          (optional)
         </span>
       )}
     </label>
@@ -81,7 +81,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
         <div
           className={cn(
             "relative flex items-stretch rounded-2xl border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] transition-[border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus-within:border-[hsl(var(--ink))]",
-            errorText && "border-[hsl(var(--ink))]",
+            errorText && "border-[hsl(var(--danger))] focus-within:border-[hsl(var(--danger))]",
           )}
         >
           {prefix && (
@@ -109,9 +109,9 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
         {(helper || errorText) && (
           <p
             className={cn(
-              "mt-2.5 text-[12.5px] leading-[1.55]",
+              "mt-2.5 text-[13.5px] leading-[1.55]",
               errorText
-                ? "text-[hsl(var(--ink))]"
+                ? "text-[hsl(var(--danger))]"
                 : "text-[hsl(var(--ink-subtle))]",
             )}
           >
@@ -151,7 +151,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           ref={ref}
           value={value}
           maxLength={maxChars}
-          className={cn(inputBase, "min-h-[120px] resize-y leading-[1.55]", errorText && "border-[hsl(var(--ink))]")}
+          className={cn(inputBase, "min-h-[120px] resize-none leading-[1.55]", errorText && "border-[hsl(var(--danger))] focus:border-[hsl(var(--danger))]")}
           {...rest}
         />
         <div className="mt-2.5 flex items-baseline justify-between gap-3">
@@ -159,7 +159,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
             className={cn(
               "text-[12.5px] leading-[1.55]",
               errorText
-                ? "text-[hsl(var(--ink))]"
+                ? "text-[hsl(var(--danger))]"
                 : "text-[hsl(var(--ink-subtle))]",
             )}
           >

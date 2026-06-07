@@ -1,5 +1,5 @@
 import { motion, type HTMLMotionProps } from "framer-motion";
-import { ArrowRight, Check, X } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { forwardRef, type ReactNode } from "react";
 import { EASE } from "@/components/motion";
 import { cn } from "@/lib/utils";
@@ -26,11 +26,11 @@ const variantClasses: Record<Variant, string> = {
   solid:
     "bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:bg-[hsl(var(--ink))]/92 disabled:bg-[hsl(var(--rule-strong))] disabled:text-[hsl(var(--ink-subtle))]",
   outline:
-    "border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))] disabled:opacity-50",
+    "border border-rule-strong bg-[hsl(var(--surface))] text-[hsl(var(--ink))] disabled:opacity-50",
   ghost:
     "text-[hsl(var(--ink))] hover:text-[hsl(var(--ink))]/70 disabled:opacity-50",
   danger:
-    "border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))] hover:bg-[hsl(var(--ink))] hover:text-[hsl(var(--page))] disabled:opacity-50",
+    "border border-rule-strong bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:bg-[hsl(var(--ink))] hover:text-[hsl(var(--page))] disabled:opacity-50",
 };
 
 export interface ButtonProps
@@ -62,12 +62,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <motion.button
         ref={ref}
-        whileHover={isDisabled ? undefined : { y: -1 }}
+        whileHover={isDisabled ? undefined : { y: -1, borderColor: "hsl(var(--ink))" }}
         whileTap={isDisabled ? undefined : { y: 0 }}
         transition={{ duration: 0.25, ease: EASE }}
         disabled={isDisabled}
         className={cn(
-          "group inline-flex items-center justify-center gap-2 rounded-full font-medium tracking-[-0.005em] transition-[transform,background-color,color,border-color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] disabled:cursor-not-allowed",
+          "group inline-flex items-center justify-center gap-2 rounded-full font-medium tracking-[-0.005em] transition-[transform,background-color,color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] disabled:cursor-not-allowed focus-visible:outline-none",
           sizeClasses[size],
           variantClasses[variant],
           className,
@@ -99,40 +99,5 @@ function Spinner() {
       aria-hidden="true"
       className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-[1.5px] border-current border-r-transparent opacity-70"
     />
-  );
-}
-
-/** Compact inline action — used for "approve / decline" rows. */
-export function InlineAction({
-  intent,
-  children,
-  onClick,
-  disabled,
-}: {
-  intent: "approve" | "decline";
-  children: ReactNode;
-  onClick?: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors duration-300",
-        intent === "approve"
-          ? "border border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:bg-[hsl(var(--ink))]/90"
-          : "border border-[hsl(var(--rule-strong))] text-[hsl(var(--ink-muted))] hover:border-[hsl(var(--ink))] hover:text-[hsl(var(--ink))]",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-      )}
-    >
-      {intent === "approve" ? (
-        <Check size={12} strokeWidth={2} aria-hidden="true" />
-      ) : (
-        <X size={12} strokeWidth={2} aria-hidden="true" />
-      )}
-      {children}
-    </button>
   );
 }

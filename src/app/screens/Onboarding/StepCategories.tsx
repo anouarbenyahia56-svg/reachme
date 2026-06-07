@@ -16,7 +16,7 @@ import {
 import type { Category } from "../../types";
 
 /**
- * Step 4 — What you're open to.
+ * Step 5 — What you're open to.
  *
  * Curated suggestions, an "add custom" affordance. Min 1, max 6.
  * Everything is fluid — categories animate in/out with the same
@@ -58,17 +58,18 @@ export function StepCategories() {
 
   const canContinue = items.length >= 1;
 
-  const remaining = SUGGESTED_EXTRAS.filter((s) => !has(s.id));
+  const remaining = [...DEFAULT_CATEGORIES, ...SUGGESTED_EXTRAS].filter(
+    (s) => !has(s.id),
+  );
 
   return (
-    <OnboardingShell step={5} total={7} back="/claim/floor">
+    <OnboardingShell step={5} total={8} back="/claim/floor">
       <OnboardingTitle
-        eyebrow="Categories"
-        title="What deserves your attention?"
+        title="Choose what reaches you."
         description="People reaching out pick a category before they send. Choose the ones you're genuinely open to. Everything else self-selects out."
       />
 
-      <Reveal delay={0.32} duration={0.85} axis="x">
+      <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
         <div className="mt-14 max-w-[780px]">
           <Label>Your categories</Label>
           <div className="rounded-2xl border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] p-4">
@@ -84,7 +85,7 @@ export function StepCategories() {
                     transition={{
                       duration: 0.2,
                       ease: EASE,
-                      layout: { type: "spring", stiffness: 1500, damping: 50, mass: 0.25 },
+                      layout: { duration: 0.3, ease: EASE },
                     }}
                   >
                     <span className="group inline-flex items-center gap-2 rounded-full bg-[hsl(var(--ink))] py-1.5 pl-4 pr-1.5 text-[12.5px] font-medium text-[hsl(var(--page))]">
@@ -108,7 +109,7 @@ export function StepCategories() {
               )}
             </ul>
 
-            <div className="mt-4 border-t border-[hsl(var(--rule))] pt-4">
+            <div className="mt-7 border-t border-[hsl(var(--rule))] pt-6">
               <p className="mb-3 text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
                 Suggestions
               </p>
@@ -129,7 +130,7 @@ export function StepCategories() {
               </ul>
             </div>
 
-            <div className="mt-5 border-t border-[hsl(var(--rule))] pt-4">
+            <div className="mt-7 border-t border-[hsl(var(--rule))] pt-6">
               <p className="mb-3 text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
                 Add your own
               </p>
@@ -162,7 +163,7 @@ export function StepCategories() {
           </div>
 
           <p className="mt-3 text-[12.5px] text-[hsl(var(--ink-subtle))]">
-            Up to 6 categories. The same minimum signal applies to all of them.
+            Up to 6 categories. The same floor applies to all of them.
           </p>
 
           <div className="mt-10 flex items-center gap-4">
@@ -170,7 +171,7 @@ export function StepCategories() {
               size="lg"
               trailingArrow
               disabled={!canContinue}
-              onClick={() => navigate("/claim/visibility")}
+              onClick={() => navigate("/claim/socials")}
             >
               Continue
             </Button>

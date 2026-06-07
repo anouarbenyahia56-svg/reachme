@@ -43,34 +43,3 @@ export function Pill({
     </span>
   );
 }
-
-/** Small, dot + label status indicator. */
-export function StatusDot({
-  tone = "live",
-  children,
-  className,
-}: {
-  tone?: "live" | "paused" | "muted";
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-3 py-1 text-[11.5px] font-medium text-[hsl(var(--ink))]",
-        className,
-      )}
-    >
-      <span
-        aria-hidden="true"
-        className={cn(
-          "inline-block h-1.5 w-1.5 rounded-full",
-          tone === "live" && "bg-[hsl(var(--ink))]",
-          tone === "paused" && "bg-[hsl(var(--ink-subtle))]",
-          tone === "muted" && "bg-[hsl(var(--ink-subtle))]",
-        )}
-      />
-      {children}
-    </span>
-  );
-}

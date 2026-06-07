@@ -9,12 +9,16 @@ import { cn } from "@/lib/utils";
 export function Card({
   children,
   className,
+  variant = "default",
   ...rest
-}: HTMLAttributes<HTMLDivElement>) {
+}: HTMLAttributes<HTMLDivElement> & { variant?: "default" | "dark" }) {
   return (
     <div
       className={cn(
-        "rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))]",
+        "overflow-hidden rounded-3xl border",
+        variant === "dark"
+          ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
+          : "border-[hsl(var(--rule))] bg-[hsl(var(--surface))]",
         className,
       )}
       {...rest}

@@ -1,26 +1,37 @@
 import { motion, AnimatePresence, type HTMLMotionProps } from "framer-motion";
-import { useEffect, useState } from "react";
-import { Copy, Check, ArrowUpRight, Inbox } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Copy, Check } from "lucide-react";
 import { EASE } from "@/components/motion";
 import { useProfile } from "../../store/session";
-import { useReceived, useSent } from "../../store/requests";
+import { useReceived } from "../../store/requests";
 import { Card } from "../../ui/Card";
-import { Pill, StatusDot } from "../../ui/Pill";
 import { Link, useRouter } from "../../router";
 import { Button } from "../../ui/Button";
 import { useToast } from "../../ui/Toast";
-import { formatMoney, timeAgo } from "../../store/format";
-import { Avatar } from "../../ui/Avatar";
+import { formatMoney } from "../../store/format";
 
 /**
- * Overview — what greets the owner every visit. Page status,
- * shareable link, and the day's pulse: pending requests, this
- * week's signal, recent activity.
+ * Overview — the owner's command center.
+ *
+ * The first question on opening the dashboard is not "what
+ * does my page look like?" — it is "what needs me right now?".
+ * The only thing that actually costs the owner money if
+ * ignored is a pending request (amount held, reply
+ * window counting down). So the hero answers that question
+ * first, the stats fill in the financial and deadline
+ * picture, and the public link sits at the bottom — always
+ * one tap away, never the headline.
+ *
+ * No recent-activity feed: that duplicates the Received tab.
+ * No page-status card: the link section implies the page is
+ * live; a paused page swaps the hero for a calm "paused"
+ * state with a resume action.
  */
+const MS_PER_HOUR = 60 * 60 * 1000;
+
 export function Overview() {
   const profile = useProfile();
   const received = useReceived();
-  const sent = useSent();
   const { navigate } = useRouter();
   const toast = useToast();
   const [copied, setCopied] = useState(false);
@@ -32,7 +43,6 @@ export function Overview() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("welcome") === "1") {
       setShowWelcome(true);
-      // Strip the query so it doesn't re-fire on refresh.
       window.history.replaceState(null, "", window.location.pathname);
     }
   }, []);
@@ -43,15 +53,34 @@ export function Overview() {
     (r) => r.toHandle.toLowerCase() === profile.handle.toLowerCase(),
   );
   const pending = inbox.filter((r) => r.status === "pending");
-  const repliedThisWeek = inbox.filter((r) => {
-    if (r.status !== "replied") return false;
-    if (!r.reply) return false;
-    return Date.now() - new Date(r.reply.repliedAt).getTime() < 7 * 24 * 60 * 60 * 1000;
+
+  // Held — total amount held across pending requests.
+  const inEscrowCents = pending.reduce((sum, r) => sum + r.amountCents, 0);
+
+  // Expiring within 48 hours — the real deadline pressure.
+  const now = Date.now();
+  const expiringSoon = pending.filter((r) => {
+    const expiresAt = new Date(r.expiresAt).getTime();
+    return expiresAt - now < 48 * MS_PER_HOUR;
   });
-  const earnings = repliedThisWeek.reduce(
+
+  // Released this month — net of the 5% platform fee.
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+  const releasedThisMonth = inbox.filter((r) => {
+    if (r.status !== "replied" || !r.reply) return false;
+    return new Date(r.reply.repliedAt).getTime() >= startOfMonth.getTime();
+  });
+  const releasedCents = releasedThisMonth.reduce(
     (sum, r) => sum + r.amountCents - (r.escrow.feeCents ?? 0),
     0,
   );
+
+  // Total earned — cumulative net (after fee) of every reply since joining.
+  const totalEarnedCents = inbox
+    .filter((r) => r.status === "replied" && r.reply)
+    .reduce((sum, r) => sum + r.amountCents - (r.escrow.feeCents ?? 0), 0);
 
   const link = `reachme.com/${profile.handle}`;
 
@@ -68,176 +97,143 @@ export function Overview() {
 
   return (
     <div className="grid gap-6 lg:grid-cols-12">
-      <Card className="overflow-hidden lg:col-span-8">
-        <div className="px-7 pt-7 md:px-9 md:pt-9">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-                Page status
-              </p>
-              <h2
-                className="mt-2 font-serif text-[hsl(var(--ink))]"
-                style={{
-                  fontSize: "clamp(1.6rem, 2.6vw, 2.2rem)",
-                  fontWeight: 500,
-                  letterSpacing: "-0.03em",
-                  lineHeight: 1.1,
-                  fontOpticalSizing: "auto",
-                }}
-              >
-                {profile.visibility === "paused"
-                  ? "Your page is paused."
-                  : "Your ReachMe page is live."}
-              </h2>
-              <p className="mt-3 max-w-[52ch] text-[hsl(var(--ink-muted))]">
-                {profile.visibility === "paused"
-                  ? "It's still visible, but no one can submit a request right now."
-                  : "People can reach you when their request meets your rules."}
-              </p>
-            </div>
-            <StatusDot
-              tone={profile.visibility === "paused" ? "paused" : "live"}
-            >
-              {profile.visibility === "paused" ? "Paused" : "Active"}
-            </StatusDot>
+      {/* ── Hero: only when no pending requests ── */}
+      {pending.length === 0 && (
+        <Card className="lg:col-span-12">
+          <div className="px-7 py-10 md:px-12 md:py-14">
+            {profile.visibility === "paused" ? (
+              <PausedHero onResume={() => navigate("/dashboard/page")} />
+            ) : inbox.length > 0 ? (
+              <CalmHero />
+            ) : (
+              <FreshHero />
+            )}
           </div>
+        </Card>
+      )}
 
-          <div className="mt-7 flex flex-wrap items-center gap-3 rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--page))] px-5 py-4">
+      {/* ── People: who's waiting ── */}
+      {pending.length > 0 && (
+        <>
+          <Card className="lg:col-span-6">
+            <div className="px-7 py-8 md:px-9 md:py-10">
+              <Stat
+                label="Pending"
+                value={pending.length}
+                caption={
+                  pending.length === 1
+                    ? "1 person awaiting your reply."
+                    : `${pending.length} people awaiting your reply.`
+                }
+                action={
+                  <Link href="/dashboard/received">
+                    <Button size="md" trailingArrow>
+                      Review
+                    </Button>
+                  </Link>
+                }
+              />
+            </div>
+          </Card>
+          <Card
+            className="lg:col-span-6"
+            variant={expiringSoon.length > 0 ? "dark" : "default"}
+          >
+            <div className="px-7 py-8 md:px-9 md:py-10">
+              <Stat
+                label="Expiring soon"
+                value={expiringSoon.length}
+                caption={
+                  expiringSoon.length === 0
+                    ? "Nothing within 48 hours."
+                    : expiringSoon.length === 1
+                      ? "1 request expiring within 48 hours."
+                      : `${expiringSoon.length} requests expiring within 48 hours.`
+                }
+                dark={expiringSoon.length > 0}
+                action={
+                  expiringSoon.length > 0 ? (
+                    <Link href="/dashboard/received">
+                      <Button size="md" variant="outline" trailingArrow>
+                        Reply now
+                      </Button>
+                    </Link>
+                  ) : undefined
+                }
+              />
+            </div>
+          </Card>
+        </>
+      )}
+
+      {/* ── Money: what's at stake ── */}
+      <Card className="lg:col-span-4">
+        <div className="px-7 py-8 md:px-9 md:py-10">
+          <Stat
+            label="Held"
+            value={formatMoney(inEscrowCents, { withCents: true })}
+            caption={
+              pending.length === 0
+                ? "Nothing held."
+                : `${pending.length} ${pending.length === 1 ? "request" : "requests"} holding.`
+            }
+          />
+        </div>
+      </Card>
+      <Card className="lg:col-span-4">
+        <div className="px-7 py-8 md:px-9 md:py-10">
+          <Stat
+            label="Released this month"
+            value={formatMoney(releasedCents, { withCents: true })}
+            caption={
+              releasedThisMonth.length === 0
+                ? "No replies yet."
+                : `${releasedThisMonth.length} ${releasedThisMonth.length === 1 ? "reply" : "replies"} this month.`
+            }
+          />
+        </div>
+      </Card>
+      <Card className="lg:col-span-4">
+        <div className="px-7 py-8 md:px-9 md:py-10">
+          <Stat
+            label="Total earned"
+            value={formatMoney(totalEarnedCents, { withCents: true })}
+            caption="Since you joined."
+          />
+        </div>
+      </Card>
+
+      {/* ── Your link — always one tap away, never the headline ── */}
+      <Card className="lg:col-span-12">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-4 px-7 py-6 md:px-9">
+          <div className="min-w-0 flex-1">
             <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-              Public link
+              Your page link
             </p>
-            <p className="flex-1 truncate text-[14px] text-[hsl(var(--ink))]">
+            <p className="mt-1.5 truncate text-[15px] text-[hsl(var(--ink))]">
               {link}
             </p>
-            <button
-              type="button"
-              onClick={copy}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-3 py-1.5 text-[12px] font-medium text-[hsl(var(--ink))] transition-colors hover:border-[hsl(var(--ink))]"
-            >
-              {copied ? (
-                <Check size={11} strokeWidth={1.8} aria-hidden="true" />
-              ) : (
-                <Copy size={11} strokeWidth={1.6} aria-hidden="true" />
-              )}
-              {copied ? "Copied" : "Copy"}
-            </button>
           </div>
-
-          <div className="mt-6 flex flex-wrap gap-3 pb-7 md:pb-9">
-            <Link
-              href={`/${profile.handle}`}
-              className="inline-flex items-center gap-2 rounded-full bg-[hsl(var(--ink))] px-5 py-2.5 text-[13.5px] font-medium text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92"
-            >
-              View public page
-              <ArrowUpRight size={13} strokeWidth={1.6} aria-hidden="true" />
-            </Link>
-            <Link
-              href="/dashboard/page"
-              className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-5 py-2.5 text-[13.5px] font-medium text-[hsl(var(--ink))] transition-colors duration-300 hover:border-[hsl(var(--ink))]"
-            >
-              Edit page
-            </Link>
-          </div>
-        </div>
-      </Card>
-
-      <Card className="lg:col-span-4">
-        <div className="px-7 pt-7 md:px-9 md:pt-9">
-          <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-            This week
-          </p>
-
-          <div className="mt-6 space-y-7">
-            <Stat
-              label="Pending"
-              value={pending.length}
-              caption={
-                pending.length === 0
-                  ? "Nothing waiting on you."
-                  : pending.length === 1
-                    ? "One request needs your attention."
-                    : `${pending.length} requests need your attention.`
-              }
-              actionLabel={pending.length ? "Review" : undefined}
-              actionHref="/dashboard/received"
-            />
-            <Stat
-              label="Replied"
-              value={repliedThisWeek.length}
-              caption="Replies in the last 7 days."
-            />
-            <Stat
-              label="Released"
-              value={formatMoney(earnings, { withCents: true })}
-              caption="Net of platform fee."
-            />
-          </div>
-          <div className="mt-7 pb-7 md:pb-9" />
-        </div>
-      </Card>
-
-      <Card className="lg:col-span-12">
-        <div className="flex items-end justify-between gap-4 px-7 pt-7 md:px-9 md:pt-9">
-          <div>
-            <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-              Recent activity
-            </p>
-            <h3
-              className="mt-2 font-serif text-[hsl(var(--ink))]"
-              style={{
-                fontSize: "1.35rem",
-                fontWeight: 500,
-                letterSpacing: "-0.025em",
-              }}
-            >
-              The last things that arrived.
-            </h3>
-          </div>
-          <Link
-            href="/dashboard/received"
-            className="text-[12.5px] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
+          <button
+            type="button"
+            onClick={copy}
+            className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-4 py-2 text-[12.5px] font-medium text-[hsl(var(--ink))] transition-colors duration-300 hover:border-[hsl(var(--ink))]"
           >
-            See all
+            {copied ? (
+              <Check size={12} strokeWidth={1.8} aria-hidden="true" />
+            ) : (
+              <Copy size={12} strokeWidth={1.6} aria-hidden="true" />
+            )}
+            {copied ? "Copied" : "Copy"}
+          </button>
+          <Link
+            href={`/${profile.handle}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center rounded-full bg-[hsl(var(--ink))] px-4 py-2 text-[12.5px] font-medium text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92"
+          >
+            View live
           </Link>
-        </div>
-
-        <div className="px-7 pb-7 pt-6 md:px-9 md:pb-9">
-          {inbox.length === 0 ? (
-            <EmptyInbox onShare={copy} link={link} />
-          ) : (
-            <ul className="divide-y divide-[hsl(var(--rule))]">
-              {inbox.slice(0, 5).map((r) => (
-                <li key={r.id}>
-                  <Link
-                    href={`/dashboard/received/${r.id}`}
-                    className="flex items-center gap-4 py-4 transition-colors duration-300 hover:bg-[hsl(var(--rule))]/30"
-                  >
-                    <Avatar size="sm" name={r.from.name} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-[14px] font-medium text-[hsl(var(--ink))]">
-                          {r.from.name}
-                        </p>
-                        <span className="text-[12px] text-[hsl(var(--ink-subtle))]">
-                          ·
-                        </span>
-                        <p className="truncate text-[12px] text-[hsl(var(--ink-subtle))]">
-                          {timeAgo(r.createdAt)}
-                        </p>
-                      </div>
-                      <p className="truncate text-[13.5px] text-[hsl(var(--ink-muted))]">
-                        {r.subject}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-2">
-                      <Pill size="sm">{formatMoney(r.amountCents)}</Pill>
-                      <StatusBadge status={r.status} />
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </Card>
 
@@ -255,105 +251,137 @@ export function Overview() {
   );
 }
 
-function Stat({
-  label,
-  value,
-  caption,
-  actionLabel,
-  actionHref,
-}: {
-  label: string;
-  value: number | string;
-  caption: string;
-  actionLabel?: string;
-  actionHref?: string;
-}) {
+// ─── Hero variants ─────────────────────────────────────────────
+
+function CalmHero() {
   return (
     <div>
       <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-        {label}
+        Waiting on you
       </p>
       <p
-        className="mt-1.5 font-serif text-[hsl(var(--ink))]"
+        className="mt-5 font-serif text-[hsl(var(--ink))]"
         style={{
-          fontSize: "2.1rem",
+          fontSize: "clamp(1.9rem, 3.8vw, 2.8rem)",
           fontWeight: 500,
-          letterSpacing: "-0.025em",
-          lineHeight: 1,
-          fontVariantNumeric: "tabular-nums",
+          letterSpacing: "-0.03em",
+          lineHeight: 1.15,
+          textWrap: "balance",
         }}
       >
-        {value}
+        Nothing needs you right now.
       </p>
-      <p className="mt-1.5 text-[12.5px] text-[hsl(var(--ink-muted))]">
-        {caption}
+      <p className="mt-3 max-w-[52ch] text-[15px] text-[hsl(var(--ink-muted))]">
+        Your inbox is clear. The next request will be here when it
+        arrives.
       </p>
-      {actionLabel && actionHref && (
-        <Link
-          href={actionHref}
-          className="mt-2 inline-flex items-center gap-1 text-[12px] font-medium text-[hsl(var(--ink))] transition-colors duration-300 hover:text-[hsl(var(--ink))]/80"
-        >
-          {actionLabel}
-          <ArrowUpRight size={11} strokeWidth={1.6} aria-hidden="true" />
-        </Link>
-      )}
     </div>
   );
 }
 
-function StatusBadge({
-  status,
-}: {
-  status: "pending" | "replied" | "declined" | "expired";
-}) {
-  const map = {
-    pending: { label: "Pending", tone: "ink" as const },
-    replied: { label: "Replied", tone: "neutral" as const },
-    declined: { label: "Declined", tone: "muted" as const },
-    expired: { label: "Expired", tone: "muted" as const },
-  };
-  const cfg = map[status];
+function FreshHero() {
   return (
-    <Pill size="sm" tone={cfg.tone}>
-      {cfg.label}
-    </Pill>
+    <div>
+      <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
+        Your page
+      </p>
+      <p
+        className="mt-5 font-serif text-[hsl(var(--ink))]"
+        style={{
+          fontSize: "clamp(1.9rem, 3.8vw, 2.8rem)",
+          fontWeight: 500,
+          letterSpacing: "-0.03em",
+          lineHeight: 1.15,
+          textWrap: "balance",
+        }}
+      >
+        You're live.
+      </p>
+      <p className="mt-3 max-w-[52ch] text-[15px] text-[hsl(var(--ink-muted))]">
+        Share your link where the right people will find it. The
+        first request is the hardest — the rest follow.
+      </p>
+    </div>
   );
 }
 
-function EmptyInbox({
-  onShare,
-  link,
-}: {
-  onShare: () => void;
-  link: string;
-}) {
+function PausedHero({ onResume }: { onResume: () => void }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[hsl(var(--rule-strong))] bg-[hsl(var(--page))] px-6 py-12 text-center">
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[hsl(var(--surface))] text-[hsl(var(--ink-muted))] ring-1 ring-[hsl(var(--rule))]">
-        <Inbox size={18} strokeWidth={1.6} aria-hidden="true" />
-      </span>
-      <h4
+    <div>
+      <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
+        Page status
+      </p>
+      <p
         className="mt-5 font-serif text-[hsl(var(--ink))]"
         style={{
-          fontSize: "1.5rem",
+          fontSize: "clamp(1.9rem, 3.8vw, 2.8rem)",
           fontWeight: 500,
-          letterSpacing: "-0.025em",
+          letterSpacing: "-0.03em",
+          lineHeight: 1.15,
+          textWrap: "balance",
         }}
       >
-        Nothing yet.
-      </h4>
-      <p className="mx-auto mt-2 max-w-[44ch] text-[13.5px] text-[hsl(var(--ink-muted))]">
-        Share your page where the right people will find it. The amount
-        you set filters out the rest.
+        Your page is paused.
       </p>
-      <div className="mt-6 flex flex-wrap justify-center gap-2">
-        <Button onClick={onShare} variant="outline" size="sm">
-          Copy {link}
+      <p className="mt-3 max-w-[52ch] text-[15px] text-[hsl(var(--ink-muted))]">
+        No new requests can come in. Pending requests — if any —
+        are still waiting on you.
+      </p>
+      <div className="mt-7">
+        <Button onClick={onResume} size="md" trailingArrow>
+          Resume page
         </Button>
       </div>
     </div>
   );
 }
+
+// ─── Stat ──────────────────────────────────────────────────────
+
+function Stat({
+  label,
+  value,
+  caption,
+  action,
+  dark = false,
+}: {
+  label: string;
+  value: number | string;
+  caption: string;
+  action?: ReactNode;
+  dark?: boolean;
+}) {
+  const captionClass = `text-[12.5px] leading-[1.5] ${dark ? "text-[hsl(var(--page))]/60" : "text-[hsl(var(--ink-muted))]"}`;
+  return (
+    <div>
+      <p className={`text-[10.5px] font-medium uppercase tracking-[0.22em] ${dark ? "text-[hsl(var(--page))]/50" : "text-[hsl(var(--ink-subtle))]"}`}>
+        {label}
+      </p>
+      <p
+        className={`mt-3 font-serif ${dark ? "text-[hsl(var(--page))]" : "text-[hsl(var(--ink))]"}`}
+        style={{
+          fontSize: "clamp(1.9rem, 3.4vw, 2.3rem)",
+          fontWeight: 500,
+          letterSpacing: "-0.03em",
+          lineHeight: 1.05,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
+        {value}
+      </p>
+      {action != null ? (
+        <div className="mt-2 flex items-center justify-between gap-4">
+          <p className={captionClass}>{caption}</p>
+          {action}
+        </div>
+      ) : (
+        <p className={`mt-2 ${captionClass}`}>{caption}</p>
+      )}
+    </div>
+  );
+}
+
+// ─── Welcome overlay (unchanged) ───────────────────────────────
 
 function WelcomeOverlay({
   onDismiss,
@@ -372,7 +400,7 @@ function WelcomeOverlay({
         initial: { opacity: 0 },
         animate: { opacity: 1 },
         exit: { opacity: 0 },
-        transition: { duration: 0.5, ease: EASE },
+        transition: { duration: 0.3, ease: EASE },
       } as HTMLMotionProps<"div">)}
       className="fixed inset-0 z-[80] flex items-center justify-center px-4"
     >
@@ -383,10 +411,10 @@ function WelcomeOverlay({
       />
       <motion.div
         {...({
-          initial: { opacity: 0, y: 16, filter: "blur(10px)" },
-          animate: { opacity: 1, y: 0, filter: "blur(0px)" },
-          exit: { opacity: 0, y: 8, filter: "blur(8px)" },
-          transition: { duration: 0.85, ease: EASE },
+          initial: { opacity: 0, y: 12 },
+          animate: { opacity: 1, y: 0 },
+          exit: { opacity: 0, y: 6 },
+          transition: { duration: 0.4, ease: EASE },
         } as HTMLMotionProps<"div">)}
         className="relative w-full max-w-[560px] rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-8 py-10 text-center sm:px-12 sm:py-14"
       >

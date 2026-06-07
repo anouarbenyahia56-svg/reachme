@@ -5,7 +5,7 @@ import {
 } from "framer-motion";
 import { X } from "lucide-react";
 import { type ReactNode, useEffect } from "react";
-import { EASE } from "@/components/motion";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 /**
@@ -14,6 +14,12 @@ import { cn } from "@/lib/utils";
  * close on escape. The blur on the backdrop is part of the
  * platform's vocabulary — content behind always blurs, never just
  * dims.
+ *
+ * Portaled to document.body so it renders outside any parent
+ * filter/transform stacks (e.g. a <Reveal> wrapper with
+ * `filter: blur()`). Without the portal, typing in a textarea
+ * inside the modal triggers a re-paint of the entire filtered
+ * subtree on every keystroke — visible as input lag.
  */
 export function Modal({
   open,
@@ -46,31 +52,32 @@ export function Modal({
     };
   }, [open, onClose, dismissable]);
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
-          {...({
-            initial: { opacity: 0 },
-            animate: { opacity: 1 },
-            exit: { opacity: 0 },
-            transition: { duration: 0.4, ease: EASE },
-          } as HTMLMotionProps<"div">)}
+          initial={false}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0, transition: { duration: 0.18, ease: "easeOut" } }}
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-[90] flex items-center justify-center px-4 py-8"
         >
           <motion.div
             onClick={dismissable ? onClose : undefined}
-            className="absolute inset-0 bg-[hsl(var(--ink))]/30 backdrop-blur-md"
+            initial={false}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.18, ease: "easeOut" } }}
+            className="absolute inset-0 bg-[hsl(var(--ink))]/30 backdrop-blur-sm"
+            style={{ willChange: "opacity" }}
             aria-hidden="true"
           />
           <motion.div
             {...({
-              initial: { opacity: 0, y: 14, filter: "blur(8px)" },
-              animate: { opacity: 1, y: 0, filter: "blur(0px)" },
-              exit: { opacity: 0, y: 6, filter: "blur(6px)" },
-              transition: { duration: 0.55, ease: EASE },
+              initial: { opacity: 0, y: 6, scale: 0.985 },
+              animate: { opacity: 1, y: 0, scale: 1 },
+              exit: { opacity: 0, y: 4, scale: 0.99 },
+              transition: { duration: 0.2, ease: [0.22, 1, 0.36, 1] },
             } as HTMLMotionProps<"div">)}
             className={cn(
               "relative w-full overflow-hidden rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))]",
@@ -78,6 +85,7 @@ export function Modal({
               size === "md" && "max-w-[560px]",
               size === "lg" && "max-w-[720px]",
             )}
+            style={{ willChange: "transform, opacity" }}
           >
             {dismissable && (
               <button
@@ -119,6 +127,7 @@ export function Modal({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

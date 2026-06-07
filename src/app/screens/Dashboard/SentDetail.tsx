@@ -9,7 +9,7 @@ import { dateLong, formatMoney, timeAgo, timeUntil } from "../../store/format";
 
 /**
  * Sent detail — read-only view from the sender's perspective.
- * The recipient stays at the top, the message they sent and the
+ * The owner stays at the top, the message they sent and the
  * reply (if any) sit below, and the escrow card spells out
  * exactly where the money is.
  */
@@ -44,7 +44,7 @@ export function SentDetail({ id }: { id: string }) {
   }
 
   return (
-    <Reveal>
+    <Reveal duration={0.4} blur={4}>
       <button
         type="button"
         onClick={() => navigate("/dashboard/sent")}

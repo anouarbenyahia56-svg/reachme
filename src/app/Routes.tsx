@@ -8,6 +8,7 @@ import { StepEmail } from "./screens/Onboarding/StepEmail";
 import { StepIdentity } from "./screens/Onboarding/StepIdentity";
 import { StepFloor } from "./screens/Onboarding/StepFloor";
 import { StepCategories } from "./screens/Onboarding/StepCategories";
+import { StepSocials } from "./screens/Onboarding/StepSocials";
 import { StepVisibility } from "./screens/Onboarding/StepVisibility";
 import { StepFinish } from "./screens/Onboarding/StepFinish";
 
@@ -18,20 +19,22 @@ import { RequestDetail } from "./screens/Dashboard/RequestDetail";
 import { Sent } from "./screens/Dashboard/Sent";
 import { SentDetail } from "./screens/Dashboard/SentDetail";
 import { MyPage } from "./screens/Dashboard/MyPage";
+import { Earnings } from "./screens/Dashboard/Earnings";
 import { Settings } from "./screens/Dashboard/Settings";
 
 import { Login } from "./screens/Auth/Login";
-import { Find } from "./screens/Find/Find";
 import { PublicProfile } from "./screens/Public/PublicProfile";
 import { SendRequest } from "./screens/Send/SendRequest";
 
 import { LandingApp } from "./LandingApp";
+import { Terms } from "./screens/Legal/Terms";
+import { Privacy } from "./screens/Legal/Privacy";
 
 /**
  * Routes — the single dispatch surface the app renders.
  *
  * Order matters:
- *   1. Static, app-owned paths (claim, login, dashboard, find).
+ *   1. Static, app-owned paths (claim, login, dashboard).
  *   2. Public profile and its send flow at /:handle and /:handle/send.
  *   3. Fallback to landing for the root.
  */
@@ -41,11 +44,13 @@ export function Routes() {
   const profile = useProfile();
 
   // A returning, fully onboarded person should never be sent
-  // back through the front door. /login and /claim become quiet
-  // redirects to their dashboard.
+  // back through the front door. /login and any /claim/* step
+  // become quiet redirects to their dashboard. Without the prefix
+  // match, a leftover draft could be committed by /claim/finish
+  // and silently overwrite the live profile.
   useEffect(() => {
     if (!account || !profile) return;
-    if (path === "/login" || path === "/claim") {
+    if (path === "/login" || path === "/claim" || path.startsWith("/claim/")) {
       navigate("/dashboard", { replace: true });
     }
   }, [path, account, profile, navigate]);
@@ -58,15 +63,17 @@ export function Routes() {
 
   if (path === "/login") return <Login />;
 
-  if (path === "/find") return <Find />;
-
   if (path === "/claim") return <StepHandle />;
   if (path === "/claim/email") return <StepEmail />;
   if (path === "/claim/identity") return <StepIdentity />;
   if (path === "/claim/floor") return <StepFloor />;
   if (path === "/claim/categories") return <StepCategories />;
+  if (path === "/claim/socials") return <StepSocials />;
   if (path === "/claim/visibility") return <StepVisibility />;
   if (path === "/claim/finish") return <StepFinish />;
+
+  if (path === "/terms") return <Terms />;
+  if (path === "/privacy") return <Privacy />;
 
   if (path.startsWith("/dashboard")) {
     return <DashboardRoutes path={path} hasProfile={Boolean(profile)} hasAccount={Boolean(account)} />;
@@ -156,7 +163,6 @@ function DashboardRoutes({
             <span className="italic text-[hsl(var(--ink-subtle))]">on your terms</span>.
           </>
         }
-        description="Reply releases the amount. Decline refunds it. Do nothing and it expires after seven days."
       >
         <Received />
       </DashboardShell>
@@ -172,7 +178,6 @@ function DashboardRoutes({
             <span className="italic text-[hsl(var(--ink-subtle))]">sent</span>.
           </>
         }
-        description="Every request you've made from this account, and the state of every amount."
       >
         <Sent />
       </DashboardShell>
@@ -188,9 +193,23 @@ function DashboardRoutes({
             <span className="italic text-[hsl(var(--ink-subtle))]">public</span> page.
           </>
         }
-        description="What senders see before they reach out — and the rules that decide who gets through."
       >
         <MyPage />
+      </DashboardShell>
+    );
+  }
+
+  if (path === "/dashboard/earnings") {
+    return (
+      <DashboardShell
+        title={
+          <>
+            What you've{" "}
+            <span className="italic text-[hsl(var(--ink-subtle))]">earned</span>.
+          </>
+        }
+      >
+        <Earnings />
       </DashboardShell>
     );
   }
@@ -203,7 +222,6 @@ function DashboardRoutes({
             <span className="italic text-[hsl(var(--ink-subtle))]">Settings</span>.
           </>
         }
-        description="Account, notifications, and session controls."
       >
         <Settings />
       </DashboardShell>
@@ -215,11 +233,10 @@ function DashboardRoutes({
     <DashboardShell
       title={
         <>
-          Your inbox,{" "}
-          <span className="italic text-[hsl(var(--ink-subtle))]">on your terms</span>.
+          Your day,{" "}
+          <span className="italic text-[hsl(var(--ink-subtle))]">at a glance</span>.
         </>
       }
-      description="A daily look at what's arrived, what you've replied to, and what's still in escrow."
     >
       <Overview />
     </DashboardShell>

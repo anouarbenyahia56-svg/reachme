@@ -8,7 +8,6 @@ import {
   type ReactNode,
   useCallback,
   useContext,
-  useEffect,
   useRef,
   useState,
 } from "react";
@@ -99,13 +98,4 @@ export function useToast(): ToastValue {
     };
   }
   return ctx;
-}
-
-/** Hook to auto-clear local "just happened" flags. */
-export function useTimeout(fn: () => void, ms: number, dep: unknown) {
-  useEffect(() => {
-    const t = window.setTimeout(fn, ms);
-    return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dep]);
 }

@@ -1,13 +1,10 @@
 import { useMemo, useState } from "react";
-import { motion } from "framer-motion";
 import { Search, Send } from "lucide-react";
-import { EASE } from "@/components/motion";
 import { Card } from "../../ui/Card";
 import { Pill } from "../../ui/Pill";
 import { useSent } from "../../store/requests";
 import { Avatar } from "../../ui/Avatar";
 import { Link } from "../../router";
-import { Button } from "../../ui/Button";
 import { Reveal } from "../../ui/Reveal";
 import { formatMoney, timeAgo, timeUntil } from "../../store/format";
 import type { RequestStatus } from "../../types";
@@ -24,7 +21,7 @@ const FILTERS: ReadonlyArray<{ id: RequestStatus | "all"; label: string }> = [
 /**
  * Sent — outbox for requests this account has sent. Mirrors the
  * received view in shape, but the framing is different: each row
- * is the recipient (not the sender), and the helpful label below
+ * is the owner (not the sender), and the helpful label below
  * the status describes what's happening to the sender's money.
  */
 export function Sent() {
@@ -98,8 +95,8 @@ export function Sent() {
             <Search size={13} strokeWidth={1.6} />
           </span>
           <input
-            type="search"
-            placeholder="Search recipients, subjects"
+            type="text"
+            placeholder="Search names, subjects"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-[260px] bg-transparent px-3 py-2 text-[13px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
@@ -111,12 +108,9 @@ export function Sent() {
         <Empty filter={filter} />
       ) : (
         <ul>
-          {visible.map((r, i) => (
-            <motion.li
+          {visible.map((r) => (
+            <li
               key={r.id}
-              initial={{ opacity: 0, y: 6, filter: "blur(6px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 0.5, delay: i * 0.04, ease: EASE }}
               className="border-b border-[hsl(var(--rule))] last:border-b-0"
             >
               <Link
@@ -149,7 +143,7 @@ export function Sent() {
                   </span>
                 </div>
               </Link>
-            </motion.li>
+            </li>
           ))}
         </ul>
       )}
@@ -159,7 +153,7 @@ export function Sent() {
 
 function moneyState(r: import("../../types").RequestRecord): string {
   if (r.status === "pending") return "Held — awaiting reply";
-  if (r.status === "replied") return "Released to recipient";
+  if (r.status === "replied") return "Released to owner";
   if (r.status === "declined") return "Refunded to you";
   return "Refunded to you";
 }
@@ -172,24 +166,24 @@ function Empty({ filter }: { filter: string }) {
     },
     replied: {
       title: "No replies received yet.",
-      body: "Replies you receive will appear here, with the recipient's response.",
+      body: "Replies you receive will appear here, with the owner's response.",
     },
     declined: {
       title: "Nothing declined.",
-      body: "If a recipient declines, the full amount comes back to you here.",
+      body: "If an owner declines, the full amount comes back to you here.",
     },
     expired: {
       title: "Nothing expired.",
-      body: "If a recipient doesn't reply in 7 days, the request expires and refunds.",
+      body: "If an owner doesn't reply within their reply window, the request expires and refunds.",
     },
     all: {
       title: "No sent requests yet.",
-      body: "Find someone whose attention is worth the effort. Reach out properly.",
+      body: "When you send a request, it'll show up here.",
     },
   };
   const m = messages[filter] ?? messages.all;
   return (
-    <Reveal>
+    <Reveal duration={0.3} blur={0}>
       <div className="px-7 py-20 text-center md:px-9">
         <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[hsl(var(--page))] text-[hsl(var(--ink-muted))] ring-1 ring-[hsl(var(--rule))]">
           <Send size={18} strokeWidth={1.6} aria-hidden="true" />
@@ -207,14 +201,6 @@ function Empty({ filter }: { filter: string }) {
         <p className="mx-auto mt-2 max-w-[44ch] text-[13.5px] text-[hsl(var(--ink-muted))]">
           {m.body}
         </p>
-        <div className="mt-6">
-          <Link
-            href="/find"
-            className="inline-flex items-center gap-2 rounded-full bg-[hsl(var(--ink))] px-5 py-2.5 text-[13.5px] font-medium text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92"
-          >
-            Find someone
-          </Link>
-        </div>
       </div>
     </Reveal>
   );

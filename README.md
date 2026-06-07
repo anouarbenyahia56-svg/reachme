@@ -40,10 +40,23 @@ The production bundle is emitted to `dist/`.
 
 ```
 src/
-├─ components/      Wordmark, CTA, SectionLabel, motion primitives
+├─ app/             router, routes, screens, store, UI primitives
+│  ├─ router.tsx        tiny pushState router
+│  ├─ Routes.tsx        path dispatch
+│  ├─ screens/
+│  │  ├─ Landing/       Nav, Hero, Thesis, Mechanic, Audience, Pricing, FAQ, Closing, Footer (see /sections)
+│  │  ├─ Auth/          Login
+│  │  ├─ Onboarding/    Steps 1–7 (handle → email → identity → floor → categories → visibility → finish)
+│  │  ├─ Dashboard/     Overview, Received, Sent, MyPage, Settings, VerifyEmailBanner
+│  │  ├─ Find/          public directory
+│  │  ├─ Public/        public profile + preview card
+│  │  └─ Send/          five-step send-a-request flow
+│  ├─ store/        localStorage-backed stores (session, draft, directory, requests, verification, format, categories)
+│  ├─ ui/           Button, Avatar, Card, Field, Pill, Modal, Toast, Reveal, AppHeader, VerifiedBadge
+├─ components/      marketing primitives (Wordmark, CTA, motion)
 ├─ sections/        Nav, Hero, Thesis, Mechanic, Audience, Pricing, FAQ, Closing, Footer
 ├─ lib/             utilities (cn)
-├─ App.tsx          composes the page
+├─ App.tsx          composes the providers and routes
 ├─ main.tsx         entry
 └─ index.css        design tokens, type, base layer
 ```

@@ -4,9 +4,8 @@ import { EASE } from "@/components/motion";
 
 const PRIMARY_LINKS = [
   { label: "How it works", href: "#mechanic" },
-  { label: "Who it’s for", href: "#audience" },
+  { label: "Who it's for", href: "#audience" },
   { label: "Pricing", href: "#pricing" },
-  { label: "Reach someone", href: "/find" },
 ] as const;
 
 /**

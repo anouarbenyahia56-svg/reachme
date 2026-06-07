@@ -16,6 +16,7 @@
   --color-rule: hsl(var(--rule));
   --color-rule-strong: hsl(var(--rule-strong));
   --color-surface: hsl(var(--surface));
+  --color-danger: hsl(var(--danger));
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     sans-serif;
@@ -31,6 +32,7 @@
   --rule: 36 8% 88%;
   --rule-strong: 36 6% 78%;
   --surface: 0 0% 100%;
+  --danger: 0 72% 45%;
 }
 
 /* Dark-world — same token names, inverted values. The wrapper
@@ -43,6 +45,7 @@
   --rule: 0 0% 14%;
   --rule-strong: 0 0% 22%;
   --surface: 0 0% 9%;
+  --danger: 0 70% 62%;
 
   background: hsl(var(--page));
   color: hsl(var(--ink));
@@ -64,13 +67,31 @@
     /* No global Fraunces stylistic sets here — `cv11` swaps in
        wonky alternate glyph forms in Fraunces, which we don't want
        on body copy. Headings opt in to 'ss01' explicitly below. */
-    /* Hide the visual scrollbar across browsers — keep scrolling. */
     scrollbar-width: none;
     -ms-overflow-style: none;
+    /* Section overflows are intentional inside their own boxes;
+       page-level overflow is clipped so a misjudged headline never
+       creates a horizontal scroll. Clipped on html (the viewport)
+       rather than body so position: sticky on descendants still
+       works — clip on body would create a scroll container and
+       trap sticky elements inside it. */
+    overflow-x: clip;
   }
 
   html::-webkit-scrollbar,
   body::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+
+  /* Utility: hide scrollbar on inner scrollable elements */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
     width: 0;
     height: 0;
     display: none;
@@ -81,10 +102,6 @@
     color: hsl(var(--ink));
     font-family: var(--font-sans);
     letter-spacing: -0.005em;
-    /* Section overflows are intentional inside their own boxes;
-       page-level overflow is clipped so a misjudged headline never
-       creates a horizontal scroll. */
-    overflow-x: clip;
   }
 
   /* Display type — Fraunces. Renders identically to the wordmark:
@@ -171,21 +188,11 @@ body::after {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Breathing glow — a calm, slow pulse for the launch preview.
-   Rests at a soft ink glow, recedes to nothing, returns.
-   Respects prefers-reduced-motion (the global base-layer override
-   collapses it to a static frame).
+   Shimmer — used for loading placeholders. A soft gradient sweeps left
+   to right across a low-contrast block. Respects reduced-motion via the
+   global media query at the bottom of @layer base.
    ──────────────────────────────────────────────────────────────────────────── */
-@keyframes breathing {
-  0%,
-  100% {
-    box-shadow: 0 0 32px 0 hsl(var(--ink) / 0.09);
-  }
-  50% {
-    box-shadow: 0 0 0 0 hsl(var(--ink) / 0);
-  }
-}
-
-.breathing {
-  animation: breathing 3s ease-in-out infinite;
+@keyframes shimmer-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }

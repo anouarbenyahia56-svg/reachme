@@ -16,26 +16,26 @@ const STATE_OPTIONS: ReadonlyArray<{
 }> = [
   {
     value: "public",
-    label: "Active",
+    label: "Open",
     helper: "Your page is live and accepting requests.",
   },
   {
     value: "paused",
-    label: "Paused",
+    label: "Closed",
     helper: "Your page is visible, but not accepting requests.",
   },
 ];
 
 const REPLY_WINDOWS: ReadonlyArray<{ days: number; label: string }> = [
   { days: 3, label: "3 days" },
+  { days: 5, label: "5 days" },
   { days: 7, label: "7 days" },
-  { days: 14, label: "14 days" },
 ];
 
 /**
- * Step 5 — Visibility and reply window.
+ * Step 6 — Visibility and reply window.
  *
- * Two binary states for visibility (Active or Paused) and a
+ * Two binary states for visibility (Open or Closed) and a
  * three-way selector for the reply window. Both write through
  * to the draft on change so a refresh never loses the choice.
  */
@@ -44,7 +44,7 @@ export function StepVisibility() {
   const draft = useDraft();
   const [v, setV] = useState<Visibility>(draft.visibility ?? "public");
   const [replyDays, setReplyDays] = useState<number>(
-    draft.replyWindowDays ?? 7,
+    draft.replyWindowDays ?? 5,
   );
 
   useEffect(() => {
@@ -56,14 +56,13 @@ export function StepVisibility() {
   }, [replyDays]);
 
   return (
-    <OnboardingShell step={6} total={7} back="/claim/categories">
+    <OnboardingShell step={7} total={8} back="/claim/socials">
       <OnboardingTitle
-        eyebrow="Availability"
-        title="Decide if you're open."
-        description="Change this whenever you like. Being active doesn't mean being open to everyone — your rules still decide what reaches you."
+        title="Control who can reach you."
+        description="Change this whenever you like. Being open doesn't mean accepting everyone — your rules still decide what reaches you."
       />
 
-      <Reveal delay={0.32} duration={0.85} axis="x">
+      <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
         <div className="mt-14 max-w-[780px]">
           <Label>Status</Label>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -120,7 +119,7 @@ export function StepVisibility() {
                   transition={{ duration: 0.25, ease: EASE }}
                   className="-mt-1 overflow-hidden text-[12px] leading-[1.5] text-[hsl(var(--ink-subtle))]"
                 >
-                  Active when you're accepting requests.
+                  Open when you're accepting requests.
                 </motion.p>
               )}
             </AnimatePresence>
@@ -141,12 +140,14 @@ export function StepVisibility() {
                       onClick={() => setReplyDays(w.days)}
                       disabled={disabled}
                       aria-pressed={active}
-                      className={[
-                        "rounded-2xl border px-4 py-4 text-center transition-[border-color,background-color,color] duration-300 disabled:cursor-not-allowed",
-                        active
-                          ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
-                          : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
-                      ].join(" ")}
+                  className={[
+                    "rounded-2xl border px-4 py-4 text-center transition-[border-color,background-color,color] duration-300 disabled:cursor-not-allowed",
+                    active
+                      ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
+                      : disabled
+                        ? "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))]"
+                        : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
+                  ].join(" ")}
                     >
                       <span
                         className="font-serif"

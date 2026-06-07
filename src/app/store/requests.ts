@@ -11,7 +11,7 @@ import { getProfile } from "./session";
 import { useExternal } from "./useExternal";
 
 /**
- * Requests store — receiver inbox and sender outbox.
+ * Requests store — owner's inbox and sender's outbox.
  *
  * The amount-as-escrow lifecycle is enforced here:
  *
@@ -27,11 +27,15 @@ import { useExternal } from "./useExternal";
 const RECEIVED_KEY = "received";
 const SENT_KEY = "sent";
 
-const PLATFORM_FEE_BPS = 500; // 5% on completed reply
+export const PLATFORM_FEE_BPS = 500; // 5% on completed reply
 
-function platformFee(amountCents: number): number {
+/** Platform fee in cents for a given gross amount. Applied on
+ *  release only; declined and expired requests are fully refunded. */
+export function platformFeeCents(amountCents: number): number {
   return Math.round((amountCents * PLATFORM_FEE_BPS) / 10_000);
 }
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function uid(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -110,28 +114,17 @@ export interface SubmitInput {
 export function submitRequest(
   input: SubmitInput,
 ): { ok: true; record: RequestRecord } | { ok: false; reason: string } {
-  const recipient = findInDirectory(input.toHandle);
-  if (!recipient) {
+  const owner = findInDirectory(input.toHandle);
+  if (!owner) {
     return { ok: false, reason: "Page not found." };
   }
-  // A page owner can never send a request to their own page. The
-  // send flow renders for them as a read-only preview; this is the
-  // hard guard so a self-request can never be written even if the
-  // UI is bypassed.
-  const owner = getProfile();
-  if (owner && owner.handle.toLowerCase() === recipient.handle.toLowerCase()) {
-    return {
-      ok: false,
-      reason: "This is a preview of your own page — you can't send a request to yourself.",
-    };
-  }
-  if (recipient.visibility === "paused") {
+  if (owner.visibility === "paused") {
     return { ok: false, reason: "This page is not currently accepting requests." };
   }
-  if (input.amountCents < recipient.minAmountCents) {
+  if (input.amountCents < owner.minAmountCents) {
     return { ok: false, reason: "Below the minimum signal." };
   }
-  const cat = recipient.categories.find((c) => c.id === input.category);
+  const cat = owner.categories.find((c) => c.id === input.category);
   if (!cat) {
     return { ok: false, reason: "Choose a request category." };
   }
@@ -144,14 +137,14 @@ export function submitRequest(
 
   const now = new Date();
   const expires = new Date(
-    now.getTime() + recipient.replyWindowDays * 24 * 60 * 60 * 1000,
+    now.getTime() + owner.replyWindowDays * MS_PER_DAY,
   );
 
   const record: RequestRecord = {
     id: uid(),
-    toHandle: recipient.handle,
-    toDisplayName: recipient.displayName,
-    toAvatarUrl: recipient.avatarUrl,
+    toHandle: owner.handle,
+    toDisplayName: owner.displayName,
+    toAvatarUrl: owner.avatarUrl,
     from: input.from,
     category: input.category,
     subject: input.subject.trim(),
@@ -163,15 +156,15 @@ export function submitRequest(
     escrow: { heldAt: now.toISOString() },
   };
 
-  // Receiver-side delivery.
+  // Owner-side delivery.
   //
-  // In a real backend, the request lands in the recipient's
-  // server-side inbox. Locally, we only persist it into this
-  // device's `received` list when the recipient *is* this device's
-  // page owner — otherwise the local inbox would fill with noise
-  // every time the same person tested another handle.
-  const profile = getProfile();
-  if (profile && profile.handle.toLowerCase() === recipient.handle.toLowerCase()) {
+  // In a real backend, the request lands in the owner's server-side
+  // inbox. Locally, we only persist it into this device's `received`
+  // list when the owner *is* this device's logged-in user — otherwise
+  // the local inbox would fill with noise every time the same person
+  // tested another handle.
+  const me = getProfile();
+  if (me && me.handle.toLowerCase() === owner.handle.toLowerCase()) {
     setReceived([record, ...getReceived()]);
   }
 
@@ -185,38 +178,42 @@ export function submitRequest(
 export function replyToRequest(id: string, body: string): boolean {
   if (!body.trim()) return false;
   const now = new Date().toISOString();
-  const update = <T extends RequestRecord>(r: T): T =>
-    r.id === id && r.status === "pending"
-      ? ({
-          ...r,
-          status: "replied",
-          reply: { body: body.trim(), repliedAt: now },
-          escrow: {
-            ...r.escrow,
-            releasedAt: now,
-            feeCents: platformFee(r.amountCents),
-          },
-        } as T)
-      : r;
+  let changed = false;
+  const update = <T extends RequestRecord>(r: T): T => {
+    if (r.id !== id || r.status !== "pending") return r;
+    changed = true;
+    return {
+      ...r,
+      status: "replied",
+      reply: { body: body.trim(), repliedAt: now },
+      escrow: {
+        ...r.escrow,
+        releasedAt: now,
+        feeCents: platformFeeCents(r.amountCents),
+      },
+    } as T;
+  };
   setReceived(getReceived().map(update));
   setSent(getSent().map(update));
-  return true;
+  return changed;
 }
 
 export function declineRequest(id: string, reason?: string): boolean {
   const now = new Date().toISOString();
-  const update = <T extends RequestRecord>(r: T): T =>
-    r.id === id && r.status === "pending"
-      ? ({
-          ...r,
-          status: "declined",
-          decline: { reason: reason?.trim() || undefined, declinedAt: now },
-          escrow: { ...r.escrow, refundedAt: now },
-        } as T)
-      : r;
+  let changed = false;
+  const update = <T extends RequestRecord>(r: T): T => {
+    if (r.id !== id || r.status !== "pending") return r;
+    changed = true;
+    return {
+      ...r,
+      status: "declined",
+      decline: { reason: reason?.trim() || undefined, declinedAt: now },
+      escrow: { ...r.escrow, refundedAt: now },
+    } as T;
+  };
   setReceived(getReceived().map(update));
   setSent(getSent().map(update));
-  return true;
+  return changed;
 }
 
 // ─── Reactive bindings ────────────────────────────────────────────
@@ -235,15 +232,6 @@ export function useSent(): SentRequest[] {
   });
 }
 
-// ─── Receiver helpers (filtering by recipient) ─────────────────────
-
-export function inboxFor(profile: Profile): ReceivedRequest[] {
-  const target = profile.handle.toLowerCase();
-  return getReceived().filter(
-    (r) => r.toHandle.toLowerCase() === target,
-  );
-}
-
 // ─── Demo seeding ─────────────────────────────────────────────────
 //
 // First-time profile owners get a single, gentle "welcome" request
@@ -257,7 +245,7 @@ export function seedDemoForOwner(profile: Profile): void {
 
   const now = new Date();
   const expires = new Date(
-    now.getTime() + profile.replyWindowDays * 24 * 60 * 60 * 1000,
+    now.getTime() + profile.replyWindowDays * MS_PER_DAY,
   );
   const cat = profile.categories[0];
   if (!cat) return;
@@ -268,14 +256,14 @@ export function seedDemoForOwner(profile: Profile): void {
     toDisplayName: profile.displayName,
     toAvatarUrl: profile.avatarUrl,
     from: {
-      name: "ReachMe",
-      email: "hello@reachme.com",
-      organization: "ReachMe",
+      name: "Sarah Chen",
+      email: "sarah@meridianventures.com",
+      organization: "Meridian Ventures",
     },
     category: cat.id,
-    subject: "Welcome to your inbox",
+    subject: "Partnership conversation",
     message:
-      "This is what a serious request looks like. Reply, decline, or let it sit — the choice is yours. The amount is held until you decide.",
+      "Hi — I've been following your work for a while and I think there's a strong alignment between what you're building and where our portfolio is heading. We're backing a few companies in this space and I'd love to explore whether there's a fit for a closer collaboration.\n\nWould you be open to a 30-minute call sometime this week? Happy to work around your schedule.",
     amountCents: profile.minAmountCents,
     status: "pending",
     createdAt: now.toISOString(),

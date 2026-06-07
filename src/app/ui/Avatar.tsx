@@ -1,10 +1,8 @@
-import { CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
  * Avatar — circular, neutral, with a serif initial when no
- * image is provided. The verified mark is the same simple
- * filled-check used across the platform.
+ * image is provided.
  */
 
 const sizes = {
@@ -13,6 +11,7 @@ const sizes = {
   md: "h-12 w-12 text-[16px]",
   lg: "h-16 w-16 text-[20px]",
   xl: "h-24 w-24 text-[28px]",
+  "2xl": "h-32 w-32 text-[36px]",
 } as const;
 
 type Size = keyof typeof sizes;
@@ -44,7 +43,7 @@ export function Avatar({
         <img
           src={src}
           alt=""
-          className="h-full w-full object-cover"
+          className="h-full w-full border-0 object-cover"
           draggable={false}
         />
       ) : (
@@ -53,22 +52,5 @@ export function Avatar({
         </span>
       )}
     </span>
-  );
-}
-
-export function VerifiedMark({
-  className,
-  size = 14,
-}: {
-  className?: string;
-  size?: number;
-}) {
-  return (
-    <CheckCircle2
-      className={cn("text-[hsl(var(--ink))]", className)}
-      size={size}
-      strokeWidth={1.6}
-      aria-label="Verified"
-    />
   );
 }

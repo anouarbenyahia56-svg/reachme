@@ -288,7 +288,3 @@ export function CountTo({
     />
   );
 }
-
-// ─── Backwards-compatible alias ────────────────────────────────────────────
-
-export const Reveal = BlurReveal;

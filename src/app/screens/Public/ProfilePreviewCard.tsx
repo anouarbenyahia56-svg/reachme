@@ -1,179 +1,355 @@
-import { Link as LinkIcon } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
+import { EASE } from "@/components/motion";
+import { Link } from "../../router";
 import { Avatar } from "../../ui/Avatar";
-import { VerifiedBadge } from "../../ui/VerifiedBadge";
-import { Pill } from "../../ui/Pill";
+import { Reveal } from "../../ui/Reveal";
+import { SocialIcons } from "../../ui/SocialIcons";
 import { formatMoney } from "../../store/format";
 import type { Profile } from "../../types";
-import { Button } from "../../ui/Button";
-import { Link } from "../../router";
+import { cn } from "@/lib/utils";
 
 /**
- * The card that represents an owner's page — used in two contexts:
+ * The public profile card.
  *
- *   • variant="preview"  — inside onboarding and the dashboard,
- *                          where the owner is looking at themselves.
- *   • variant="public"   — on the actual /:handle route, where a
- *                          sender is deciding whether to reach out.
+ * Rendered on the live /:handle route. The CTA is a real link
+ * into the send flow for every visitor, including the page
+ * owner.
  *
- * Same component for both because the visual must be identical.
+ * Vertical rhythm (top → bottom):
+ *   88  photo
+ *   24  photo → name            ← identity unit, close
+ *   6   name → title
+ *   22  title → socials         ← socials still read with the
+ *                                identity, not a new section
+ *   72  socials → stats         ← the intentional, generous
+ *                                beat; space alone separates
+ *   10  stat header → value
+ *   48  stats → CTA
+ *
+ * The card is the layout. Whitespace is the only structure.
+ * No rules, no dividers, no decorative marks.
+ *
+ * Type scale:
+ *   name         — fluid 22 → 40 px (longer names shrink)
+ *   title        — 11 px tracked caps
+ *   stat header  — 10 px tracked caps
+ *   stat value   — 28 px serif
+ *   social icon  — 18 px monochrome
+ *   CTA          — 14.5 px
+ *
+ * `animate` controls the staggered blur-reveal entrance. The
+ * public route wants the polish on first paint; the dashboard
+ * editor preview is a live mirror of the owner's edits, so any
+ * blur-in on tab swap reads as lag — the editor passes
+ * `animate={false}` and the card commits instantly.
  */
 export function ProfilePreviewCard({
   profile,
   variant,
-  onCopyLink,
-  onShare,
+  fill = false,
+  animate = true,
 }: {
   profile: Profile;
   variant: "preview" | "public";
-  onCopyLink?: () => void;
-  onShare?: () => void;
+  /** When true, the card becomes the entire mobile viewport
+   *  (no rounded corners, no shadow, no max-width) — used on
+   *  the public route so a visitor on a phone gets a full-page
+   *  experience rather than a floating card. The dashboard
+   *  preview keeps the default card-in-a-frame look. */
+  fill?: boolean;
+  /** When false, the card skips its blur-reveal entrance and
+   *  renders in its final state. Use this in any context that
+   *  mounts the card repeatedly (dashboard tabs, onboarding
+   *  steps) where the entrance animation would feel like lag. */
+  animate?: boolean;
 }) {
+  const reduced = useReducedMotion();
   const isPaused = profile.visibility === "paused";
+  const fullName = profile.displayName || profile.handle;
+  const replyValue = `${profile.replyWindowDays}-day`;
+
+  const avatarInitial = reduced
+    ? { opacity: 1, scale: 1, filter: "blur(0px)" }
+    : { opacity: 0, scale: 0.94, filter: "blur(8px)" };
+
+  // Static wrapper — used when `animate` is false. Renders a plain
+  // div with the same spacing/classes, so layout is identical.
+  const Static = ({
+    className,
+    children,
+  }: {
+    className?: string;
+    children: ReactNode;
+  }) => <div className={className}>{children}</div>;
+
   return (
-    <article className="overflow-hidden rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))]">
-      <div className="relative px-7 pb-9 pt-6 sm:px-10 sm:pb-11">
-        <div>
-          <Avatar
-            src={profile.avatarUrl}
-            name={profile.displayName || profile.handle}
-            size="xl"
-            ring
-          />
-        </div>
-
-        <div className="mt-7 flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2.5">
-              <h2
-                className="font-serif text-[hsl(var(--ink))]"
-                style={{
-                  fontSize: "1.85rem",
-                  fontWeight: 600,
-                  letterSpacing: "-0.03em",
-                  lineHeight: 1.05,
-                  fontOpticalSizing: "auto",
-                }}
-              >
-                {profile.displayName}
-              </h2>
-              <VerifiedBadge size={20} className="translate-y-[1px]" />
-            </div>
-            <p className="mt-2 text-[14.5px] tracking-[-0.005em] text-[hsl(var(--ink-muted))]">
-              {profile.title}
-            </p>
-            <button
-              type="button"
-              onClick={onCopyLink}
-              className="mt-3 inline-flex items-center gap-1.5 text-[12.5px] tracking-[0.01em] text-[hsl(var(--ink-subtle))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
+    <div
+      className={cn(
+        "relative w-full bg-white text-center",
+        fill &&
+          "min-h-[calc(100vh-68px)] min-h-[calc(100dvh-68px)] flex flex-col justify-center md:min-h-0",
+        "md:mx-auto md:my-10 md:max-w-[480px] md:rounded-[20px] md:shadow-[0_1px_1px_rgba(15,15,15,0.04),0_2px_6px_rgba(15,15,15,0.04),0_28px_56px_-20px_rgba(15,15,15,0.12)]",
+      )}
+    >
+      <div className="px-7 pb-14 pt-14 md:px-11 md:pb-16 md:pt-16">
+        {animate ? (
+          <Reveal as="div" delay={0} className="flex justify-center">
+            <motion.div
+              initial={avatarInitial}
+              animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+              transition={{ duration: 1.0, ease: EASE }}
             >
-              reachme.com/{profile.handle}
-              <LinkIcon size={11} strokeWidth={1.6} aria-hidden="true" />
-            </button>
-          </div>
+              <Avatar
+                src={profile.avatarUrl}
+                name={fullName}
+                size="xl"
+                className={cn(
+                  "h-[88px] w-[88px] text-[26px]",
+                  profile.avatarUrl && "bg-[hsl(var(--rule-strong))]",
+                )}
+              />
+            </motion.div>
+          </Reveal>
+        ) : (
+          <Static className="flex justify-center">
+            <Avatar
+              src={profile.avatarUrl}
+              name={fullName}
+              size="xl"
+              className={cn(
+                "h-[88px] w-[88px] text-[26px]",
+                profile.avatarUrl && "bg-[hsl(var(--rule-strong))]",
+              )}
+            />
+          </Static>
+        )}
 
-          {variant === "public" && onShare && (
-            <Button
-              variant="outline"
-              size="sm"
-              leadingIcon={<LinkIcon size={13} strokeWidth={1.6} />}
-              onClick={onShare}
-              className="mt-1 shrink-0"
-            >
-              Share
-            </Button>
-          )}
-        </div>
-
-        {profile.bio && (
-          <div className="mt-10">
-            <Eyebrow>About</Eyebrow>
-            <p
-              className="mt-3.5 text-[hsl(var(--ink))]"
+        {animate ? (
+          <Reveal as="div" delay={0.05} className="mt-6">
+            <h1
+              className="font-serif text-[hsl(var(--ink))]"
               style={{
-                fontSize: "14.5px",
-                lineHeight: 1.6,
-                fontWeight: 400,
-                letterSpacing: "-0.005em",
+                fontSize: `${nameFontSize(profile.displayName)}px`,
+                fontWeight: 500,
+                letterSpacing: "-0.035em",
+                lineHeight: 1.05,
+                fontOpticalSizing: "auto",
+                fontFeatureSettings: "'ss01', 'kern'",
                 textWrap: "balance",
               }}
             >
-              {profile.bio}
+              {profile.displayName}
+            </h1>
+          </Reveal>
+        ) : (
+          <Static className="mt-6">
+            <h1
+              className="font-serif text-[hsl(var(--ink))]"
+              style={{
+                fontSize: `${nameFontSize(profile.displayName)}px`,
+                fontWeight: 500,
+                letterSpacing: "-0.035em",
+                lineHeight: 1.05,
+                fontOpticalSizing: "auto",
+                fontFeatureSettings: "'ss01', 'kern'",
+                textWrap: "balance",
+              }}
+            >
+              {profile.displayName}
+            </h1>
+          </Static>
+        )}
+
+        {animate ? (
+          <Reveal as="div" delay={0.1} className="mt-1.5">
+            <p
+              className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
+              style={{ fontSize: "11px", letterSpacing: "0.24em" }}
+            >
+              {profile.title}
             </p>
-          </div>
+          </Reveal>
+        ) : (
+          <Static className="mt-1.5">
+            <p
+              className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
+              style={{ fontSize: "11px", letterSpacing: "0.24em" }}
+            >
+              {profile.title}
+            </p>
+          </Static>
         )}
 
-        {profile.categories.length > 0 && (
-          <div className="mt-10">
-            <Eyebrow>Open to</Eyebrow>
-            <ul className="mt-3.5 flex flex-wrap gap-2">
-              {profile.categories.map((c) => (
-                <li key={c.id}>
-                  <Pill size="sm">{c.label}</Pill>
-                </li>
-              ))}
-            </ul>
-          </div>
+        {animate ? (
+          <Reveal as="div" delay={0.16} className="mt-[22px] flex justify-center">
+            <SocialIcons
+              socials={profile.socials}
+              ownerName={fullName}
+              inert={variant === "preview"}
+            />
+          </Reveal>
+        ) : (
+          <Static className="mt-[22px] flex justify-center">
+            <SocialIcons
+              socials={profile.socials}
+              ownerName={fullName}
+              inert={variant === "preview"}
+            />
+          </Static>
         )}
 
-        <div className="mt-10">
-          <Eyebrow>Terms</Eyebrow>
-          <ul className="mt-3.5 flex flex-wrap gap-2">
-            <li>
-              <Pill size="sm">{formatMoney(profile.minAmountCents)} minimum</Pill>
-            </li>
-            <li>
-              <Pill size="sm">{profile.replyWindowDays}-day reply window</Pill>
-            </li>
-          </ul>
-        </div>
+        {animate ? (
+          <Reveal
+            as="div"
+            delay={0.26}
+            className="mt-[72px] grid grid-cols-2 gap-x-10"
+          >
+            <div>
+              <p
+                className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
+                style={{ fontSize: "10px", letterSpacing: "0.22em" }}
+              >
+                Floor
+              </p>
+              <p
+                className="mt-2.5 font-serif text-[hsl(var(--ink))]"
+                style={{
+                  fontSize: "28px",
+                  fontWeight: 500,
+                  letterSpacing: "-0.03em",
+                  lineHeight: 1.1,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {formatMoney(profile.minAmountCents)}
+              </p>
+            </div>
+            <div>
+              <p
+                className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
+                style={{ fontSize: "10px", letterSpacing: "0.22em" }}
+              >
+                Reply window
+              </p>
+              <p
+                className="mt-2.5 font-serif text-[hsl(var(--ink))]"
+                style={{
+                  fontSize: "28px",
+                  fontWeight: 500,
+                  letterSpacing: "-0.03em",
+                  lineHeight: 1.1,
+                }}
+              >
+                {replyValue}
+              </p>
+            </div>
+          </Reveal>
+        ) : (
+          <Static className="mt-[72px] grid grid-cols-2 gap-x-10">
+            <div>
+              <p
+                className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
+                style={{ fontSize: "10px", letterSpacing: "0.22em" }}
+              >
+                Floor
+              </p>
+              <p
+                className="mt-2.5 font-serif text-[hsl(var(--ink))]"
+                style={{
+                  fontSize: "28px",
+                  fontWeight: 500,
+                  letterSpacing: "-0.03em",
+                  lineHeight: 1.1,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {formatMoney(profile.minAmountCents)}
+              </p>
+            </div>
+            <div>
+              <p
+                className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
+                style={{ fontSize: "10px", letterSpacing: "0.22em" }}
+              >
+                Reply window
+              </p>
+              <p
+                className="mt-2.5 font-serif text-[hsl(var(--ink))]"
+                style={{
+                  fontSize: "28px",
+                  fontWeight: 500,
+                  letterSpacing: "-0.03em",
+                  lineHeight: 1.1,
+                }}
+              >
+                {replyValue}
+              </p>
+            </div>
+          </Static>
+        )}
 
-        <div className="mt-11">
-          {variant === "public" ? (
-            isPaused ? (
-              <div className="rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--page))] px-7 py-4 text-center text-[14px] text-[hsl(var(--ink-muted))]">
+        {animate ? (
+          <Reveal as="div" delay={0.34} className="mt-12">
+            {isPaused ? (
+              <div
+                role="status"
+                className="flex h-[50px] w-full items-center justify-center rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-muted))]"
+              >
                 Not accepting requests right now.
               </div>
             ) : (
               <Link
                 href={`/${profile.handle}/send`}
-                className="block w-full rounded-full bg-[hsl(var(--ink))] px-7 py-[18px] text-center text-[15px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92"
+                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92 focus-visible:outline-none"
               >
                 Send a request
               </Link>
-            )
-          ) : isPaused ? (
-            <div className="rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--page))] px-7 py-4 text-center text-[14px] text-[hsl(var(--ink-muted))]">
-              Not accepting requests right now.
-            </div>
-          ) : (
-            <button
-              type="button"
-              disabled
-              className="block w-full cursor-default rounded-full bg-[hsl(var(--ink))] px-7 py-[18px] text-center text-[15px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] opacity-90"
-            >
-              Send a request
-            </button>
-          )}
-        </div>
-
-        {variant === "public" && !isPaused && (
-          <p className="mx-auto mt-5 max-w-[42ch] text-center text-[12.5px] leading-[1.6] text-[hsl(var(--ink-subtle))]">
-            The amount is held until {profile.displayName.split(" ")[0]} replies.
-            Declined or expired requests are refunded automatically.
-          </p>
+            )}
+          </Reveal>
+        ) : (
+          <Static className="mt-12">
+            {isPaused ? (
+              <div
+                role="status"
+                className="flex h-[50px] w-full items-center justify-center rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-muted))]"
+              >
+                Not accepting requests right now.
+              </div>
+            ) : (
+              <Link
+                href={`/${profile.handle}/send`}
+                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92 focus-visible:outline-none"
+              >
+                Send a request
+              </Link>
+            )}
+          </Static>
         )}
       </div>
-    </article>
+    </div>
   );
 }
 
-/** Section eyebrow — one consistent treatment for every label on
- *  the card, matching the landing page's 0.22em uppercase rhythm. */
-function Eyebrow({ children }: { children: ReactNode }) {
-  return (
-    <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-      {children}
-    </p>
-  );
+/**
+ * Name scales fluidly with length — shorter names render
+ * larger, longer names shrink, so the line never feels
+ * cramped on one end or sparse on the other.
+ *
+ *   ≤ 8 chars  → 40 px   (e.g. "Ada Wong")
+ *   9 – 12     → 34 px   (e.g. "Mara Wright")
+ *   13 – 18    → 30 px   (e.g. "Youssef Benyahia")
+ *   19 – 24    → 26 px
+ *   > 24       → 22 px
+ *
+ * Keeps the name on a single line at every step inside the
+ * 480 px card with its internal padding.
+ */
+function nameFontSize(name: string): number {
+  const len = name.trim().length;
+  if (len <= 8) return 40;
+  if (len <= 12) return 34;
+  if (len <= 18) return 30;
+  if (len <= 24) return 26;
+  return 22;
 }

@@ -1,70 +1,49 @@
-import { useEffect, useState } from "react";
 import { AppHeader } from "../../ui/AppHeader";
 import { Reveal } from "../../ui/Reveal";
 import { Link } from "../../router";
 import { findInDirectory } from "../../store/directory";
 import { useProfile } from "../../store/session";
 import { ProfilePreviewCard } from "./ProfilePreviewCard";
-import { useToast } from "../../ui/Toast";
 
 /**
  * Public profile route — what every visitor sees on
- * reachme.com/:handle. Quiet, focused, identical in voice to the
- * marketing page; no chrome competes with the person.
+ * reachme.com/:handle. The card is the page; the type does the
+ * work; whitespace is the structure.
+ *
+ * Uses `variant="auto"` so the header adapts to who's looking:
+ *   • Authed visitor — wordmark + "Back to dashboard" (when on
+ *                      their own page) or "View public page"
+ *                      (when on someone else's) + the profile
+ *                      pill on the right.
+ *   • Anonymous visitor — wordmark + the marketing controls.
  *
  * "Get your own ReachMe page" sits below the card only for people
  * who don't already own one. Anyone who has a ReachMe page (a
- * profile in session) never sees it — their return path to the
- * dashboard lives in the AppHeader, which switches its right-side
- * link to "Back to dashboard" on their own handle and in the send
- * flow.
+ * profile in session) never sees it.
  */
 export function PublicProfile({ handle }: { handle: string }) {
   const profile = findInDirectory(handle);
   const ownerProfile = useProfile();
   const hasOwnPage = Boolean(ownerProfile);
-  const toast = useToast();
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!copied) return;
-    const t = window.setTimeout(() => setCopied(false), 1500);
-    return () => window.clearTimeout(t);
-  }, [copied]);
 
   if (!profile) {
     return <NotFound handle={handle} />;
   }
 
-  const link = `reachme.com/${profile.handle}`;
-
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(`https://${link}`);
-      setCopied(true);
-      toast.show("Link copied.", link);
-    } catch {
-      toast.show("Couldn't copy. Try again.");
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
-      <AppHeader />
+      <AppHeader variant="auto" />
 
-      <main className="mx-auto max-w-[600px] px-5 pb-36 pt-20 md:px-6 md:pt-28">
-        <Reveal delay={0.05}>
-          <ProfilePreviewCard
-            profile={profile}
-            variant="public"
-            onCopyLink={copy}
-            onShare={copy}
-          />
-        </Reveal>
+      <main className="md:px-6 md:pb-32 md:pt-16">
+        <ProfilePreviewCard
+          profile={profile}
+          variant="public"
+          fill
+        />
 
         {!hasOwnPage && (
-          <Reveal delay={0.3}>
-            <div className="mt-10 text-center">
+          <Reveal delay={0.7}>
+            <div className="hidden text-center md:mt-14 md:block">
               <Link
                 href="/claim"
                 className="group inline-flex items-center gap-1.5 text-[12.5px] tracking-[0.01em] text-[hsl(var(--ink-subtle))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
@@ -88,7 +67,7 @@ export function PublicProfile({ handle }: { handle: string }) {
 function NotFound({ handle }: { handle: string }) {
   return (
     <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
-      <AppHeader />
+      <AppHeader variant="minimal" />
       <main className="mx-auto flex min-h-[70vh] max-w-[760px] flex-col items-center justify-center px-6 text-center">
         <Reveal>
           <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
@@ -119,12 +98,6 @@ function NotFound({ handle }: { handle: string }) {
               className="rounded-full bg-[hsl(var(--ink))] px-6 py-3 text-[14px] font-medium text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92"
             >
               Claim it
-            </Link>
-            <Link
-              href="/find"
-              className="rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-6 py-3 text-[14px] font-medium text-[hsl(var(--ink))] transition-colors duration-300 hover:border-[hsl(var(--ink))]"
-            >
-              Find someone
             </Link>
           </div>
         </Reveal>
