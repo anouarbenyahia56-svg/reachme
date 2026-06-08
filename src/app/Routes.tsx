@@ -219,7 +219,8 @@ function DashboardRoutes({
       <DashboardShell
         title={
           <>
-            <span className="italic text-[hsl(var(--ink-subtle))]">Settings</span>.
+            Your account,{" "}
+            <span className="italic text-[hsl(var(--ink-subtle))]">your rules</span>.
           </>
         }
       >
