@@ -3,7 +3,7 @@ import { Inbox } from "lucide-react";
 import { Card } from "../../ui/Card";
 import { Button } from "../../ui/Button";
 import { Modal } from "../../ui/Modal";
-import { Label, TextField } from "../../ui/Field";
+import { Label } from "../../ui/Field";
 import { Reveal } from "../../ui/Reveal";
 import { useRouter } from "../../router";
 import { useReceived, platformFeeCents } from "../../store/requests";
@@ -14,7 +14,6 @@ import {
 } from "../../store/withdrawals";
 import {
   usePayoutMethod,
-  savePayoutMethod,
   clearPayoutMethod,
 } from "../../store/payoutMethod";
 import { useProfile } from "../../store/session";
@@ -74,9 +73,6 @@ export function Earnings() {
 
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [payoutOpen, setPayoutOpen] = useState(false);
-  const [bankName, setBankName] = useState("");
-  const [lastFour, setLastFour] = useState("");
   const [removeOpen, setRemoveOpen] = useState(false);
 
   if (!profile) return null;
@@ -173,17 +169,8 @@ export function Earnings() {
     setWithdrawOpen(true);
   };
 
-  const openPayoutModal = () => {
-    setBankName(payoutMethod?.label ?? "");
-    setLastFour(payoutMethod?.lastFour ?? "");
-    setPayoutOpen(true);
-  };
-
-  // TODO: wire to backend — open Plaid Link (or equivalent hosted
-  // onboarding), then POST /payout-methods with the result.
-  const handleConnectBank = () => {
-    openPayoutModal();
-  };
+  // TODO: Initiate Stripe Connect OAuth flow when backend is connected
+  const handleConnectBank = () => {};
 
   // TODO: wire to backend — POST /withdrawals, then poll the result
   // or subscribe to a webhook before refreshing the balance.
@@ -191,18 +178,12 @@ export function Earnings() {
     openWithdrawModal();
   };
 
-  // TODO: wire to backend — open Plaid Link with the existing method
-  // preselected, then PATCH /payout-methods/:id with the new details.
-  const handleChangePayoutMethod = () => {
-    openPayoutModal();
-  };
-
   const onConfirmWithdraw = () => {
     const cents = Math.round(parseFloat(withdrawAmount || "0") * 100);
     if (!cents || cents <= 0) return toast.show("Add an amount.");
     if (cents < MIN_PAYOUT_CENTS)
       return toast.show(
-        `Minimum withdrawal is ${formatMoney(MIN_PAYOUT_CENTS)}.`,
+        `Minimum withdrawal is ${formatMoney(MIN_PAYOUT_CENTS, { withCents: true })}.`,
       );
     if (cents > availableBalance)
       return toast.show("That exceeds your available balance.");
@@ -220,23 +201,10 @@ export function Earnings() {
 
     toast.show(
       "Withdrawal requested.",
-      `${formatMoney(cents)} → ${payoutMethod.label} ··${payoutMethod.lastFour}`,
+      `${formatMoney(cents, { withCents: true })} → ${payoutMethod.label} ··${payoutMethod.lastFour}`,
     );
     setWithdrawOpen(false);
     setWithdrawAmount("");
-  };
-
-  const onSavePayout = () => {
-    const trimmedBank = bankName.trim();
-    const trimmedLast = lastFour.trim();
-    if (!trimmedBank) return toast.show("Add a bank name.");
-    if (!/^\d{4}$/.test(trimmedLast))
-      return toast.show("Last 4 digits must be numbers.");
-    savePayoutMethod({ label: trimmedBank, lastFour: trimmedLast });
-    toast.show("Payout method saved.");
-    setBankName("");
-    setLastFour("");
-    setPayoutOpen(false);
   };
 
   const onRemovePayout = () => {
@@ -282,7 +250,6 @@ export function Earnings() {
           withdrawals={withdrawalsHistory}
           loading={loading}
           onConnectBank={handleConnectBank}
-          onChangePayoutMethod={handleChangePayoutMethod}
         />
       </Reveal>
 
@@ -294,21 +261,6 @@ export function Earnings() {
         amount={withdrawAmount}
         onAmountChange={setWithdrawAmount}
         onConfirm={onConfirmWithdraw}
-      />
-
-      <PayoutMethodModal
-        open={payoutOpen}
-        onClose={() => {
-          setPayoutOpen(false);
-          setBankName("");
-          setLastFour("");
-        }}
-        payoutMethod={payoutMethod}
-        bankName={bankName}
-        onBankNameChange={setBankName}
-        lastFour={lastFour}
-        onLastFourChange={setLastFour}
-        onSave={onSavePayout}
       />
 
       <RemovePayoutModal
@@ -404,7 +356,7 @@ function StatementCard({
                 fontVariantNumeric: "tabular-nums",
               }}
             >
-              {formatMoney(availableBalance)}
+              {formatMoney(availableBalance, { withCents: true })}
             </p>
           )}
           <p className="mt-5 max-w-[58ch] text-[13.5px] leading-[1.6] text-[hsl(var(--ink-muted))]">
@@ -421,7 +373,7 @@ function StatementCard({
           <StatementStat
             label="This month"
             loading={loading}
-            value={formatMoney(thisMonthEarnings)}
+            value={formatMoney(thisMonthEarnings, { withCents: true })}
             caption={
               thisMonthEarnings === 0
                 ? `No replies yet in ${currentMonthName}.`
@@ -429,9 +381,9 @@ function StatementCard({
             }
           />
           <StatementStat
-            label="Pending in escrow"
+            label="Held"
             loading={loading}
-            value={formatMoney(pendingEscrow)}
+            value={formatMoney(pendingEscrow, { withCents: true })}
             caption={
               pendingRequestCount === 0
                 ? "Nothing held right now."
@@ -441,7 +393,7 @@ function StatementCard({
           <StatementStat
             label="Withdrawn"
             loading={loading}
-            value={formatMoney(totalWithdrawn)}
+            value={formatMoney(totalWithdrawn, { withCents: true })}
             caption={
               totalWithdrawn === 0
                 ? "Nothing moved yet."
@@ -472,9 +424,9 @@ function statementHelper({
     return "Everything you've earned has been moved to your bank.";
   }
   if (!hasMethod) {
-    return `${formatMoney(lifetimeNetCents)} earned across ${lifetimeReplyCount} ${lifetimeReplyCount === 1 ? "reply" : "replies"}. Add a payout method to withdraw.`;
+    return `${formatMoney(lifetimeNetCents, { withCents: true })} earned across ${lifetimeReplyCount} ${lifetimeReplyCount === 1 ? "reply" : "replies"}. Add a payout method to withdraw.`;
   }
-  return `${formatMoney(lifetimeNetCents)} earned across ${lifetimeReplyCount} ${lifetimeReplyCount === 1 ? "reply" : "replies"}.`;
+  return `${formatMoney(lifetimeNetCents, { withCents: true })} earned across ${lifetimeReplyCount} ${lifetimeReplyCount === 1 ? "reply" : "replies"}.`;
 }
 
 function StatementStat({
@@ -596,7 +548,7 @@ function EarningRow({
             letterSpacing: "-0.015em",
           }}
         >
-          +{formatMoney(entry.amountCents)}
+          +{formatMoney(entry.amountCents, { withCents: true })}
         </p>
       </button>
     </li>
@@ -635,7 +587,6 @@ interface BankCardProps {
   withdrawals: WithdrawalEntry[];
   loading: boolean;
   onConnectBank: () => void;
-  onChangePayoutMethod: () => void;
 }
 
 function BankCard({
@@ -644,7 +595,6 @@ function BankCard({
   withdrawals,
   loading,
   onConnectBank,
-  onChangePayoutMethod,
 }: BankCardProps) {
   return (
     <div className="grid gap-6 lg:gap-8">
@@ -670,14 +620,6 @@ function BankCard({
                 </span>
               </p>
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onChangePayoutMethod}
-              disabled={loading}
-            >
-              Change
-            </Button>
           </div>
         </Card>
       ) : (
@@ -764,7 +706,7 @@ function WithdrawalRow({ w }: { w: WithdrawalEntry }) {
             letterSpacing: "-0.015em",
           }}
         >
-          {formatMoney(w.amountCents)}
+          {formatMoney(w.amountCents, { withCents: true })}
         </p>
         <p className="mt-1 text-[11.5px] tabular-nums text-[hsl(var(--ink-muted))]">
           ··{w.lastFour}
@@ -831,8 +773,8 @@ function WithdrawModal({
       title="Withdraw to your bank"
       description={
         payoutMethod
-          ? `${formatMoney(availableCents)} available · transfers to ${payoutMethod.label} ··${payoutMethod.lastFour} in 1–2 business days.`
-          : `${formatMoney(availableCents)} available.`
+          ? `${formatMoney(availableCents, { withCents: true })} available · transfers to ${payoutMethod.label} ··${payoutMethod.lastFour} in 1–2 business days.`
+          : `${formatMoney(availableCents, { withCents: true })} available.`
       }
       size="sm"
     >
@@ -859,7 +801,7 @@ function WithdrawModal({
           </button>
         </div>
         <p className="mt-3 text-[12px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
-          Minimum withdrawal {formatMoney(MIN_PAYOUT_CENTS)} · No transfer fee.
+          Minimum withdrawal {formatMoney(MIN_PAYOUT_CENTS, { withCents: true })} · No transfer fee.
         </p>
         <div className="mt-7 flex items-center justify-end gap-3">
           <Button variant="ghost" onClick={onClose}>
@@ -874,64 +816,6 @@ function WithdrawModal({
   );
 }
 
-function PayoutMethodModal({
-  open,
-  onClose,
-  payoutMethod,
-  bankName,
-  onBankNameChange,
-  lastFour,
-  onLastFourChange,
-  onSave,
-}: {
-  open: boolean;
-  onClose: () => void;
-  payoutMethod: PayoutMethod | null;
-  bankName: string;
-  onBankNameChange: (s: string) => void;
-  lastFour: string;
-  onLastFourChange: (s: string) => void;
-  onSave: () => void;
-}) {
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={payoutMethod ? "Change payout method" : "Add a payout method"}
-      description="Your earnings will transfer here via ACH in 1–2 business days."
-      size="sm"
-    >
-      <div className="space-y-5">
-        <TextField
-          label="Bank name"
-          value={bankName}
-          onChange={(e) => onBankNameChange(e.target.value)}
-          placeholder="Chase Bank"
-          maxLength={48}
-          autoFocus
-        />
-        <TextField
-          label="Last 4 digits of account"
-          value={lastFour}
-          onChange={(e) =>
-            onLastFourChange(e.target.value.replace(/\D/g, "").slice(0, 4))
-          }
-          placeholder="2847"
-          inputMode="numeric"
-          maxLength={4}
-        />
-        <div className="flex items-center justify-end gap-3">
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={onSave} trailingArrow>
-            Save
-          </Button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
 
 function RemovePayoutModal({
   open,

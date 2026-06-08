@@ -10,7 +10,7 @@ const TABS = [
   { label: "Received", href: "/dashboard/received" },
   { label: "Sent", href: "/dashboard/sent" },
   { label: "Earnings", href: "/dashboard/earnings" },
-  { label: "My page", href: "/dashboard/page" },
+  { label: "Page", href: "/dashboard/page" },
   { label: "Settings", href: "/dashboard/settings" },
 ] as const;
 

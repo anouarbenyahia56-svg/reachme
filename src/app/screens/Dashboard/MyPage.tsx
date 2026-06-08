@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowUpRight, Camera, Plus, Trash2, X } from "lucide-react";
+import { Camera, Plus, Trash2, X } from "lucide-react";
 import { EASE } from "@/components/motion";
 import { Card } from "../../ui/Card";
 import { Button } from "../../ui/Button";
@@ -142,30 +142,6 @@ export function MyPage() {
             Discard
           </Button>
         )}
-        <AnimatePresence>
-          {hasChanges && (
-            <motion.span
-              key="dirty"
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.3, ease: EASE }}
-              className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--ink))] px-3 py-1 text-[11.5px] font-medium text-[hsl(var(--ink))]"
-            >
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[hsl(var(--ink))]" />
-              Unsaved changes
-            </motion.span>
-          )}
-        </AnimatePresence>
-        <a
-          href={`https://reachme.com/${profile.handle}`}
-          target="_blank"
-          rel="noreferrer"
-          className="ml-auto inline-flex items-center gap-1.5 text-[13px] font-medium text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
-        >
-          View live page
-          <ArrowUpRight size={14} strokeWidth={1.8} />
-        </a>
       </div>
     </div>
   );
@@ -556,7 +532,7 @@ function FloorField({
                   : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
               ].join(" ")}
             >
-              <span className="font-serif text-[1.75rem] font-medium tracking-[-0.025em]">
+              <span className="font-serif text-[1.25rem] font-medium tracking-[-0.025em]">
                 {p.label}
               </span>
               <span
@@ -575,10 +551,10 @@ function FloorField({
       </div>
       <div
         className={[
-          "mt-4 flex items-center rounded-2xl border bg-[hsl(var(--surface))] transition-[border-color] duration-300 focus-within:border-[hsl(var(--ink))]",
+          "mt-4 flex items-center rounded-2xl border bg-[hsl(var(--surface))] transition-[border-color] duration-300",
           belowFloor
-            ? "border-[hsl(var(--danger))]"
-            : "border-[hsl(var(--rule-strong))]",
+            ? "border-[hsl(var(--danger))] focus-within:border-[hsl(var(--danger))]"
+            : "border-[hsl(var(--rule-strong))] focus-within:border-[hsl(var(--ink))]",
         ].join(" ")}
       >
         <span className="pl-4 text-[15px] text-[hsl(var(--ink-muted))]">$</span>
@@ -604,7 +580,9 @@ function FloorField({
             : "text-[hsl(var(--ink-subtle))]",
         ].join(" ")}
       >
-        Floor must be at least $10.
+        {belowFloor
+          ? "Floor must be at least $10."
+          : "You can change this any time. Anyone reaching out can attach more — they cannot attach less."}
       </p>
     </div>
   );
@@ -718,12 +696,12 @@ function CategoriesField({
 const VIS: ReadonlyArray<{ value: Visibility; label: string; helper: string }> = [
   {
     value: "public",
-    label: "Open",
+    label: "Live",
     helper: "Live and accepting requests.",
   },
   {
     value: "paused",
-    label: "Closed",
+    label: "Paused",
     helper: "Visible, but not accepting new requests.",
   },
 ];
@@ -792,7 +770,7 @@ function VisibilityField({
                 onClick={() => onChangeReplyWindow(w.days)}
                 aria-pressed={active}
                 className={[
-                  "rounded-2xl border px-4 py-5 text-center transition-[border-color,background-color,color] duration-300",
+                  "rounded-2xl border px-4 py-3.5 text-center transition-[border-color,background-color,color] duration-300",
                   active
                     ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
                     : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
@@ -801,7 +779,7 @@ function VisibilityField({
                 <span
                   className="font-serif"
                   style={{
-                    fontSize: "1.75rem",
+                    fontSize: "1.1rem",
                     fontWeight: 500,
                     letterSpacing: "-0.025em",
                   }}

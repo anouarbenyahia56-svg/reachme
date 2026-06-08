@@ -16,12 +16,12 @@ const STATE_OPTIONS: ReadonlyArray<{
 }> = [
   {
     value: "public",
-    label: "Open",
+    label: "Live",
     helper: "Your page is live and accepting requests.",
   },
   {
     value: "paused",
-    label: "Closed",
+    label: "Paused",
     helper: "Your page is visible, but not accepting requests.",
   },
 ];

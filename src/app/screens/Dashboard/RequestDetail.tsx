@@ -152,7 +152,7 @@ export function RequestDetail({ id }: { id: string }) {
       <div className="grid items-start gap-6 lg:grid-cols-12">
         <motion.div
           layout
-          transition={{ duration: 0.55, ease: EASE }}
+          transition={{ duration: 0.28, ease: EASE }}
           className={cn(
             "flex sticky top-24",
             focusMode ? "lg:col-span-12" : "lg:col-span-8",
@@ -391,10 +391,10 @@ export function RequestDetail({ id }: { id: string }) {
           {!focusMode && (
             <motion.div
               key="sidebar"
-              initial={{ opacity: 0, filter: "blur(8px)" }}
-              animate={{ opacity: 1, filter: "blur(0px)" }}
-              exit={{ opacity: 0, filter: "blur(8px)", scale: 0.98 }}
-              transition={{ duration: 0.5, ease: EASE }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              transition={{ duration: 0.22, ease: EASE }}
               className={cn(
                 "flex flex-col gap-6 sticky top-24",
                 "lg:col-span-4",
