@@ -7,15 +7,8 @@ import { Reveal } from "../../ui/Reveal";
 import { useRouter } from "../../router";
 import { OnboardingShell, OnboardingTitle } from "./OnboardingShell";
 import { patchDraft, useDraft } from "../../store/draft";
-import { formatMoney, parseMoneyToCents } from "../../store/format";
+import { formatMoney, parseMoneyToCents, FLOOR_PRESETS } from "../../store/format";
 import { platformFeeCents } from "../../store/requests";
-
-const PRESETS = [
-  { cents: 5000, label: "$50", helper: "Light filter" },
-  { cents: 15000, label: "$150", helper: "Recommended" },
-  { cents: 50000, label: "$500", helper: "High signal" },
-    { cents: 150000, label: "$1,500", helper: "Very high signal" },
-] as const;
 
 /**
  * Step 4 — Set your floor.
@@ -54,10 +47,10 @@ export function StepFloor() {
 
       <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
         <div className="mt-14 max-w-[780px]">
-          <Label>Amount</Label>
+          <Label>Floor</Label>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {PRESETS.map((p) => {
+            {FLOOR_PRESETS.map((p) => {
               const active = cents === p.cents;
               return (
                 <motion.button
@@ -183,7 +176,7 @@ function EscrowExplainer({ cents }: { cents: number }) {
       <Row
         eyebrow="Refunded"
         title="On decline or expiry"
-        body="Decline or let it expire. The person reaching out is refunded automatically. We earn nothing."
+        body="Decline or let it expire. The person reaching out is refunded automatically."
       />
     </div>
   );

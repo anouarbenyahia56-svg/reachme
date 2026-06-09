@@ -48,7 +48,7 @@ export function Avatar({
         />
       ) : (
         <span style={{ letterSpacing: "-0.02em" }}>
-          {name.trim().charAt(0).toUpperCase()}
+          {name.trim().charAt(0).toUpperCase() || "?"}
         </span>
       )}
     </span>

@@ -107,7 +107,7 @@ export function Login() {
               </div>
 
               {error && (
-                <p className="mt-3 text-[12.5px] leading-[1.55] text-[hsl(var(--danger))]">
+                <p className="mt-3 text-[12.5px] leading-[1.55] text-[hsl(var(--danger))]" aria-live="assertive">
                   {error}
                 </p>
               )}

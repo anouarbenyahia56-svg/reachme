@@ -144,6 +144,30 @@ export function remove(key: string): void {
   notify(key);
 }
 
+/** Remove every key in the current namespace. Used by signOut
+ *  and account deletion so stale data never leaks across sessions. */
+export function clearAll(): void {
+  try {
+    if (typeof window === "undefined") return;
+    const ls = window.localStorage;
+    const stale: string[] = [];
+    for (let i = 0; i < ls.length; i++) {
+      const key = ls.key(i);
+      if (key && key.startsWith(PREFIX)) {
+        stale.push(key);
+      }
+    }
+    stale.forEach((k) => ls.removeItem(k));
+    stale.forEach((k) => {
+      const short = k.slice(PREFIX.length);
+      cache.delete(short);
+      notify(short);
+    });
+  } catch {
+    /* private mode / quota — nothing to clean up */
+  }
+}
+
 export function subscribe(key: string, fn: Listener): () => void {
   let set = listeners.get(key);
   if (!set) {

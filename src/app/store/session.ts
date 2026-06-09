@@ -1,5 +1,5 @@
 import type { Account, Profile } from "../types";
-import { read, write, remove } from "./storage";
+import { read, write, remove, clearAll } from "./storage";
 import { upsertDirectory } from "./directory";
 import { useExternal } from "./useExternal";
 
@@ -48,8 +48,7 @@ export function setProfile(profile: Profile | null): void {
 }
 
 export function signOut(): void {
-  remove(ACCOUNT_KEY);
-  remove(PROFILE_KEY);
+  clearAll();
 }
 
 // ─── Reactive bindings ────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { EASE } from "@/components/motion";
 import { Reveal } from "../../ui/Reveal";
 import { useRouter } from "../../router";
@@ -9,6 +9,7 @@ import { setAccount, setProfile } from "../../store/session";
 import { seedDemoForOwner } from "../../store/requests";
 import { ProfilePreviewCard } from "../Public/ProfilePreviewCard";
 import type { Profile } from "../../types";
+import { Check } from "lucide-react";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -25,6 +26,7 @@ export function StepFinish() {
   const { navigate } = useRouter();
   const draft = useDraft();
   const [submitting, setSubmitting] = useState(false);
+  const [launched, setLaunched] = useState(false);
 
   // If essential pieces are missing, kick back to the first
   // missing step rather than render a half-built preview.
@@ -76,6 +78,8 @@ export function StepFinish() {
     seedDemoForOwner(profile);
     clearDraft();
 
+    setLaunched(true);
+    await new Promise((r) => setTimeout(r, 600));
     navigate("/dashboard?welcome=1", { replace: true });
   };
 
@@ -127,21 +131,42 @@ export function StepFinish() {
         <div className="mt-12 mx-auto max-w-[480px]">
           <motion.button
             type="button"
-            disabled={submitting}
-            whileHover={submitting ? undefined : { y: -1 }}
-            whileTap={submitting ? undefined : { y: 0 }}
+            disabled={submitting || launched}
+            whileHover={submitting || launched ? undefined : { y: -1 }}
+            whileTap={submitting || launched ? undefined : { y: 0 }}
             transition={{ duration: 0.25, ease: EASE }}
             onClick={launch}
-            className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-[background-color] duration-300 hover:bg-[hsl(var(--ink))]/92 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-[background-color] duration-300 hover:bg-[hsl(var(--ink))]/85 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {submitting ? (
-              <span
-                aria-hidden="true"
-                className="inline-block h-4 w-4 animate-spin rounded-full border-[1.5px] border-current border-r-transparent opacity-70"
-              />
-            ) : (
-              "Go live"
-            )}
+            <AnimatePresence mode="wait">
+              {launched ? (
+                <motion.span
+                  key="check"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.3, ease: EASE }}
+                  className="inline-flex items-center justify-center"
+                >
+                  <Check size={20} strokeWidth={2} />
+                </motion.span>
+              ) : submitting ? (
+                <motion.span
+                  key="spinner"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  aria-hidden="true"
+                  className="inline-block h-4 w-4 animate-spin rounded-full border-[1.5px] border-current border-r-transparent opacity-70"
+                />
+              ) : (
+                <motion.span
+                  key="label"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                >
+                  Go live
+                </motion.span>
+              )}
+            </AnimatePresence>
           </motion.button>
           <p className="mt-4 text-center text-[12.5px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
             You can pause or change your settings anytime from your dashboard.

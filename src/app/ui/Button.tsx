@@ -24,7 +24,7 @@ const sizeClasses: Record<Size, string> = {
 
 const variantClasses: Record<Variant, string> = {
   solid:
-    "bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:bg-[hsl(var(--ink))]/92 disabled:bg-[hsl(var(--rule-strong))] disabled:text-[hsl(var(--ink-subtle))]",
+    "bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:bg-[hsl(var(--ink))]/85 disabled:bg-[hsl(var(--rule-strong))] disabled:text-[hsl(var(--ink-subtle))]",
   outline:
     "border border-rule-strong bg-[hsl(var(--surface))] text-[hsl(var(--ink))] disabled:opacity-50",
   ghost:
@@ -66,6 +66,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         whileTap={isDisabled ? undefined : { y: 0 }}
         transition={{ duration: 0.25, ease: EASE }}
         disabled={isDisabled}
+        aria-busy={loading || undefined}
         className={cn(
           "group inline-flex items-center justify-center gap-2 rounded-full font-medium tracking-[-0.005em] transition-[transform,background-color,color,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] disabled:cursor-not-allowed focus-visible:outline-none",
           sizeClasses[size],

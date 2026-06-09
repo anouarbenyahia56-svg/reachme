@@ -96,6 +96,7 @@ export function WordReveal({
   stagger = 0.05,
   inView = true,
   duration = 0.9,
+  once = false,
 }: {
   text: string;
   as?: ElementType;
@@ -105,6 +106,8 @@ export function WordReveal({
   stagger?: number;
   inView?: boolean;
   duration?: number;
+  /** When true, the animation only plays on the very first mount. */
+  once?: boolean;
 }) {
   const reduced = useReducedMotion();
   const words = text.split(" ");
@@ -112,13 +115,14 @@ export function WordReveal({
     ? { opacity: 1, y: 0, filter: BLUR_RESOLVED }
     : { opacity: 0, y: 22, filter: BLUR_INITIAL };
   const resolved = { opacity: 1, y: 0, filter: BLUR_RESOLVED };
+  const skipInitial = once && !inView;
 
   return (
     <Tag className={className} style={style} aria-label={text}>
       {words.map((word, i) => (
         <motion.span
           key={`${word}-${i}`}
-          initial={initial}
+          initial={skipInitial ? false : initial}
           {...(inView
             ? { whileInView: resolved, viewport: VIEWPORT }
             : { animate: resolved })}

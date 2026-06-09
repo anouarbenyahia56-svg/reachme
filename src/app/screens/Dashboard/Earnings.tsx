@@ -166,7 +166,7 @@ export function Earnings() {
   // ─── Handlers (placeholder functions) ────────────────────────────
 
   const openWithdrawModal = () => {
-    setWithdrawAmount(String(Math.floor(availableBalance / 100)));
+    setWithdrawAmount((availableBalance / 100).toFixed(2));
     setWithdrawOpen(true);
   };
 
@@ -803,14 +803,14 @@ function WithdrawModal({
             inputMode="decimal"
             value={amount}
             onChange={(e) => onAmountChange(e.target.value)}
-            placeholder={String(Math.floor(availableCents / 100))}
+            placeholder={(availableCents / 100).toFixed(2)}
             autoFocus
             className="w-full bg-transparent px-3 py-3.5 text-[15px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
           />
           <button
             type="button"
             onClick={() =>
-              onAmountChange(String(Math.floor(availableCents / 100)))
+              onAmountChange((availableCents / 100).toFixed(2))
             }
             className="mr-2 rounded-full px-3 py-1.5 text-[12px] font-medium text-[hsl(var(--ink-muted))] transition-colors duration-200 hover:bg-[hsl(var(--rule))] hover:text-[hsl(var(--ink))]"
           >

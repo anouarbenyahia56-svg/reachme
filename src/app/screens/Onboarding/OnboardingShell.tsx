@@ -57,7 +57,14 @@ export function OnboardingShell({
           )}
         </div>
         {!bare && (
-          <div className="relative h-[3px] w-full bg-[hsl(var(--rule))]">
+          <div
+            role="progressbar"
+            aria-valuenow={Math.round(pct * 100)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Step ${step} of ${total}`}
+            className="relative h-[3px] w-full bg-[hsl(var(--rule))]"
+          >
             <motion.div
               initial={false}
               animate={{ scaleX: pct }}

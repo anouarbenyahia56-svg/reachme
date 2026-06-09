@@ -522,7 +522,7 @@ function NotificationsCard() {
         />
 
         {error && (
-          <div className="mt-8 rounded-2xl border border-[hsl(var(--danger))]/20 bg-[hsl(var(--danger))]/5 px-5 py-4 text-[13px] text-[hsl(var(--danger))]">
+          <div className="mt-8 rounded-2xl border border-[hsl(var(--danger))]/20 bg-[hsl(var(--danger))]/5 px-5 py-4 text-[13px] text-[hsl(var(--danger))]" aria-live="assertive">
             {error}
           </div>
         )}

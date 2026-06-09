@@ -4,7 +4,7 @@ import {
   type HTMLMotionProps,
 } from "framer-motion";
 import { X } from "lucide-react";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
@@ -38,29 +38,80 @@ export function Modal({
   size?: "sm" | "md" | "lg";
   dismissable?: boolean;
 }) {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  const getFocusableElements = useCallback(() => {
+    if (!dialogRef.current) return [];
+    return Array.from(
+      dialogRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      ),
+    ).filter(
+      (el) =>
+        !(el as HTMLButtonElement | HTMLInputElement).disabled &&
+        el.offsetParent !== null,
+    );
+  }, []);
+
   useEffect(() => {
     if (!open) return;
+
+    // Auto-focus the first focusable element after the entrance animation.
+    const timer = setTimeout(() => {
+      const els = getFocusableElements();
+      if (els.length > 0) {
+        els[0].focus();
+      }
+    }, 250);
+
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && dismissable) onClose();
+      if (e.key === "Escape" && dismissable) {
+        onClose();
+        return;
+      }
+      // Focus trap: Tab cycles within the modal.
+      if (e.key === "Tab") {
+        const els = getFocusableElements();
+        if (els.length === 0) return;
+        const first = els[0];
+        const last = els[els.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
     };
+
     document.addEventListener("keydown", onKey);
     const overflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
+      clearTimeout(timer);
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = overflow;
     };
-  }, [open, onClose, dismissable]);
+  }, [open, onClose, dismissable, getFocusableElements]);
 
   return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
+          ref={dialogRef}
           initial={false}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] } }}
           role="dialog"
           aria-modal="true"
+          aria-labelledby={title ? titleId : undefined}
+          aria-describedby={description ? `${titleId}-desc` : undefined}
           className="fixed inset-0 z-[90] flex items-center justify-center px-4 py-8"
         >
           <motion.div
@@ -101,6 +152,7 @@ export function Modal({
               <div className="px-7 pb-3 pt-9 md:px-9 md:pt-10">
                 {title && (
                   <h2
+                    id={titleId}
                     className="font-serif text-[hsl(var(--ink))]"
                     style={{
                       fontSize: "clamp(1.45rem, 2.4vw, 1.9rem)",
@@ -115,6 +167,7 @@ export function Modal({
                 )}
                 {description && (
                   <p
+                    id={`${titleId}-desc`}
                     className="mt-3 max-w-[58ch] text-[hsl(var(--ink-muted))]"
                     style={{ fontSize: "0.97rem", lineHeight: 1.6 }}
                   >

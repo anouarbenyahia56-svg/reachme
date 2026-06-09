@@ -1,4 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
+import { useRef } from "react";
 import { CTA } from "@/components/CTA";
 import { BlurReveal, EASE, WordReveal } from "@/components/motion";
 
@@ -10,8 +11,15 @@ import { BlurReveal, EASE, WordReveal } from "@/components/motion";
  *
  * Cascade: headline → sub-copy → CTA, 150 ms apart, each blur-reveal.
  */
+
+/** Tracks whether the hero has already animated in this session. */
+let heroHasAnimated = false;
+
 export function Hero() {
   const reduced = useReducedMotion();
+  const hasAnimated = useRef(heroHasAnimated);
+  const isFirstMount = !hasAnimated.current;
+  if (isFirstMount) heroHasAnimated = true;
 
   const headlineStyle = {
     fontSize: "clamp(2.7rem, 10vw, 7rem)",
@@ -44,6 +52,7 @@ export function Hero() {
               stagger={0.05}
               duration={0.7}
               as="span"
+              once
             />
           </span>
           <span className="block">
@@ -54,11 +63,12 @@ export function Hero() {
               stagger={0.05}
               duration={0.7}
               as="span"
+              once
             />
           </span>
           <motion.span
             initial={
-              reduced
+              reduced || !isFirstMount
                 ? { opacity: 1, y: 0, filter: "blur(0px)" }
                 : { opacity: 0, y: 16, filter: "blur(8px)" }
             }

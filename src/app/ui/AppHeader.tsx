@@ -3,7 +3,7 @@ import { Wordmark } from "@/components/Wordmark";
 import { Link, useRouter } from "../router";
 import { useAccount, useProfile, signOut } from "../store/session";
 import { Avatar } from "./Avatar";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -124,6 +124,72 @@ function AuthedHeaderRight({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const triggerId = useRef(
+    `menu-trigger-${Math.random().toString(36).slice(2, 8)}`,
+  ).current;
+
+  const focusItem = useCallback((index: number) => {
+    if (!menuRef.current) return;
+    const items = menuRef.current.querySelectorAll<HTMLElement>(
+      '[role="menuitem"]:not([disabled])',
+    );
+    if (items[index]) items[index].focus();
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!open) {
+        // Open on Enter, Space, or Down Arrow.
+        if (
+          e.key === "Enter" ||
+          e.key === " " ||
+          e.key === "ArrowDown"
+        ) {
+          e.preventDefault();
+          setOpen(true);
+        }
+        return;
+      }
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          focusItem(0);
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          if (menuRef.current) {
+            const items =
+              menuRef.current.querySelectorAll<HTMLElement>(
+                '[role="menuitem"]:not([disabled])',
+              );
+            focusItem(items.length - 1);
+          }
+          break;
+        case "Home":
+          e.preventDefault();
+          focusItem(0);
+          break;
+        case "End": {
+          e.preventDefault();
+          if (menuRef.current) {
+            const items =
+              menuRef.current.querySelectorAll<HTMLElement>(
+                '[role="menuitem"]:not([disabled])',
+              );
+            focusItem(items.length - 1);
+          }
+          break;
+        }
+        case "Escape":
+          e.preventDefault();
+          setOpen(false);
+          break;
+      }
+    },
+    [open, focusItem],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -145,11 +211,14 @@ function AuthedHeaderRight({
   return (
     <div className="flex items-center gap-3" ref={ref}>
       <button
+        id={triggerId}
         type="button"
         onClick={() => setOpen((v) => !v)}
+        onKeyDown={handleKeyDown}
         className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] py-1 pl-1 pr-3.5 text-[12.5px] text-[hsl(var(--ink))] transition-colors duration-300 hover:border-[hsl(var(--rule-strong))]"
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-controls={open ? menuRef.current?.id : undefined}
       >
         <Avatar size="xs" src={avatarUrl} name={displayName} />
         <span className="hidden max-w-[14ch] truncate sm:block">
@@ -158,6 +227,8 @@ function AuthedHeaderRight({
       </button>
 
       <div
+        ref={menuRef}
+        id={`${triggerId}-menu`}
         className={cn(
           "absolute right-6 top-[60px] z-50 w-[260px] origin-top-right rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] p-2 transition-[opacity,transform,filter] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] md:right-10",
           open
@@ -165,6 +236,7 @@ function AuthedHeaderRight({
             : "pointer-events-none -translate-y-1 scale-[0.98] opacity-0 blur-sm",
         )}
         role="menu"
+        aria-labelledby={triggerId}
       >
         <div className="px-3 py-2.5">
           <p className="truncate text-[13px] font-medium text-[hsl(var(--ink))]">
@@ -177,6 +249,7 @@ function AuthedHeaderRight({
         <div className="mx-2 my-1 h-px bg-[hsl(var(--rule))]" />
         <button
           type="button"
+          role="menuitem"
           onClick={() => {
             signOut();
             window.location.href = "/";

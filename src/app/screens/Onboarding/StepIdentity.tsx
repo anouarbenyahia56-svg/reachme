@@ -7,6 +7,7 @@ import { Reveal } from "../../ui/Reveal";
 import { useRouter } from "../../router";
 import { OnboardingShell, OnboardingTitle } from "./OnboardingShell";
 import { patchDraft, useDraft } from "../../store/draft";
+import { readFileAsDataURL } from "../../store/format";
 
 /**
  * Step 3 — Identity.
@@ -82,15 +83,6 @@ export function StepIdentity() {
   );
 }
 
-function readFileAsDataURL(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = reject;
-    r.readAsDataURL(file);
-  });
-}
-
 function AvatarUploader({
   value,
   displayName,
@@ -157,7 +149,7 @@ function AvatarUploader({
           )}
         </div>
         <p className="text-[12.5px] text-[hsl(var(--ink-subtle))]">
-          A square crop, ideally 800 × 800.
+          A square crop, ideally 800 × 800. Max 5MB.
         </p>
         {uploadError && (
           <p
@@ -182,9 +174,14 @@ function AvatarUploader({
             return;
           }
           setUploadError(undefined);
-          const url = await readFileAsDataURL(f);
-          onChange(url);
-          setButtonKey((k) => k + 1);
+          try {
+            const url = await readFileAsDataURL(f);
+            onChange(url);
+            setButtonKey((k) => k + 1);
+          } catch {
+            setUploadError("Something went wrong reading the file. Please try again.");
+            e.target.value = "";
+          }
         }}
       />
     </div>

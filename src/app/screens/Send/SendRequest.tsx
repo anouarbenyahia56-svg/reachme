@@ -676,7 +676,7 @@ function StepAmount({
       <PanelTitle
         eyebrow="Attach amount"
         title="Show that you mean it."
-        description={`The amount is held until ${profile.displayName.split(" ")[0]} replies. If they decline or don't respond within ${profile.replyWindowDays} days, it returns to you in full.`}
+        description={`The amount is held until ${profile.displayName.split(" ")[0]} replies. If they decline or don't respond within ${profile.replyWindowDays === 1 ? "1 day" : `${profile.replyWindowDays} days`}, it returns to you in full.`}
       />
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">

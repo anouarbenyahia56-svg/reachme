@@ -131,7 +131,7 @@ export function StepHandle() {
             </span>
           </div>
 
-          <div className="mt-2.5 min-h-[18px]">
+          <div className="mt-2.5 min-h-[18px]" aria-live="polite">
             <StatusMessage
               status={status}
               value={normalized}

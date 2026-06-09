@@ -42,8 +42,12 @@ export function PublicProfile({ handle }: { handle: string }) {
         /* user cancelled — silent */
       }
     } else {
-      await navigator.clipboard.writeText(url);
-      toast.show("Link copied.", url);
+      try {
+        await navigator.clipboard.writeText(url);
+        toast.show("Link copied.", url);
+      } catch {
+        toast.show("Couldn't copy. Try again.");
+      }
     }
   }, [profile, toast]);
 

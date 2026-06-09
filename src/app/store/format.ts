@@ -119,3 +119,21 @@ export const RESERVED: readonly string[] = [
   "www",
   "app",
 ];
+
+/** Floor amount presets — shared by onboarding and MyPage. */
+export const FLOOR_PRESETS = [
+  { cents: 5000, label: "$50", helper: "Light filter" },
+  { cents: 15000, label: "$150", helper: "Recommended" },
+  { cents: 50000, label: "$500", helper: "High signal" },
+  { cents: 150000, label: "$1,500", helper: "Very high signal" },
+] as const;
+
+/** Read a File as a data URL string. Rejects on FileReader error. */
+export function readFileAsDataURL(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}

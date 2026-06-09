@@ -108,6 +108,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
         </div>
         {(helper || errorText) && (
           <p
+            aria-live={errorText ? "assertive" : undefined}
             className={cn(
               "mt-2.5 text-[13.5px] leading-[1.55]",
               errorText
@@ -156,6 +157,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
         />
         <div className="mt-2.5 flex items-baseline justify-between gap-3">
           <p
+            aria-live={errorText ? "assertive" : undefined}
             className={cn(
               "text-[12.5px] leading-[1.55]",
               errorText

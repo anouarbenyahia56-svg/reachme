@@ -82,21 +82,29 @@ export function ProfilePreviewCard({
   const isPaused = profile.visibility === "paused";
   const fullName = profile.displayName || profile.handle;
 
-  const replyValue = `${profile.replyWindowDays} days`;
+  const replyValue = profile.replyWindowDays === 1 ? "1 day" : `${profile.replyWindowDays} days`;
 
   const avatarInitial = reduced
     ? { opacity: 1, scale: 1, filter: "blur(0px)" }
     : { opacity: 0, scale: 0.94, filter: "blur(8px)" };
 
-  // Static wrapper — used when `animate` is false. Renders a plain
-  // div with the same spacing/classes, so layout is identical.
-  const Static = ({
+  /** Wraps children in Reveal when animate is true, plain div otherwise. */
+  const Section = ({
+    delay,
     className,
     children,
   }: {
+    delay?: number;
     className?: string;
     children: ReactNode;
-  }) => <div className={className}>{children}</div>;
+  }) =>
+    animate ? (
+      <Reveal as="div" delay={delay} className={className}>
+        {children}
+      </Reveal>
+    ) : (
+      <div className={className}>{children}</div>
+    );
 
   return (
     <div
@@ -108,8 +116,8 @@ export function ProfilePreviewCard({
       )}
     >
       <div className="px-7 pb-14 pt-14 md:px-11 md:pb-16 md:pt-16">
-        {animate ? (
-          <Reveal as="div" delay={0} className="flex justify-center">
+        <Section delay={0} className="flex justify-center">
+          {animate ? (
             <motion.div
               initial={avatarInitial}
               animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
@@ -125,9 +133,7 @@ export function ProfilePreviewCard({
                 )}
               />
             </motion.div>
-          </Reveal>
-        ) : (
-          <Static className="flex justify-center">
+          ) : (
             <Avatar
               src={profile.avatarUrl}
               name={fullName}
@@ -137,240 +143,117 @@ export function ProfilePreviewCard({
                 profile.avatarUrl && "bg-[hsl(var(--rule-strong))]",
               )}
             />
-          </Static>
-        )}
+          )}
+        </Section>
 
-        {animate ? (
-          <Reveal as="div" delay={0.05} className="mt-6">
-            <h1
-              className="font-serif text-[hsl(var(--ink))]"
-              style={{
-                fontSize: `${nameFontSize(profile.displayName)}px`,
-                fontWeight: 500,
-                letterSpacing: "-0.035em",
-                lineHeight: 1.05,
-                fontOpticalSizing: "auto",
-                fontFeatureSettings: "'ss01', 'kern'",
-                textWrap: "balance",
-              }}
-            >
-              {profile.displayName}
-            </h1>
-          </Reveal>
-        ) : (
-          <Static className="mt-6">
-            <h1
-              className="font-serif text-[hsl(var(--ink))]"
-              style={{
-                fontSize: `${nameFontSize(profile.displayName)}px`,
-                fontWeight: 500,
-                letterSpacing: "-0.035em",
-                lineHeight: 1.05,
-                fontOpticalSizing: "auto",
-                fontFeatureSettings: "'ss01', 'kern'",
-                textWrap: "balance",
-              }}
-            >
-              {profile.displayName}
-            </h1>
-          </Static>
-        )}
-
-        {animate ? (
-          <Reveal as="div" delay={0.1} className="mt-1.5">
-            <p
-              className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
-              style={{ fontSize: "11px", letterSpacing: "0.24em" }}
-            >
-              {profile.title}
-            </p>
-          </Reveal>
-        ) : (
-          <Static className="mt-1.5">
-            <p
-              className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
-              style={{ fontSize: "11px", letterSpacing: "0.24em" }}
-            >
-              {profile.title}
-            </p>
-          </Static>
-        )}
-
-        {animate ? (
-          <Reveal as="div" delay={0.16} className="mt-[22px] flex justify-center">
-            <SocialIcons
-              socials={profile.socials}
-              ownerName={fullName}
-              inert={variant === "preview"}
-            />
-          </Reveal>
-        ) : (
-          <Static className="mt-[22px] flex justify-center">
-            <SocialIcons
-              socials={profile.socials}
-              ownerName={fullName}
-              inert={variant === "preview"}
-            />
-          </Static>
-        )}
-
-        {animate ? (
-          <Reveal
-            as="div"
-            delay={0.26}
-            className="mt-[48px] grid grid-cols-2 gap-x-10"
+        <Section delay={0.05} className="mt-6">
+          <h1
+            className="font-serif text-[hsl(var(--ink))]"
+            style={{
+              fontSize: `${nameFontSize(profile.displayName)}px`,
+              fontWeight: 500,
+              letterSpacing: "-0.035em",
+              lineHeight: 1.05,
+              fontOpticalSizing: "auto",
+              fontFeatureSettings: "'ss01', 'kern'",
+              textWrap: "balance",
+            }}
           >
-            <div>
-              <p
-                className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
-                style={{ fontSize: "10px", letterSpacing: "0.22em" }}
-              >
-                Floor
-              </p>
-              <p
-                className="mt-2.5 font-serif text-[hsl(var(--ink))]"
-                style={{
-                  fontSize: "28px",
-                  fontWeight: 500,
-                  letterSpacing: "-0.03em",
-                  lineHeight: 1.1,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {formatMoney(profile.minAmountCents)}
-              </p>
-            </div>
-            <div>
-              <p
-                className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
-                style={{ fontSize: "10px", letterSpacing: "0.22em" }}
-              >
-                Reply window
-              </p>
-              <p
-                className="mt-2.5 font-serif text-[hsl(var(--ink))]"
-                style={{
-                  fontSize: "28px",
-                  fontWeight: 500,
-                  letterSpacing: "-0.03em",
-                  lineHeight: 1.1,
-                }}
-              >
-                {replyValue}
-              </p>
-            </div>
-          </Reveal>
-        ) : (
-          <Static className="mt-[48px] grid grid-cols-2 gap-x-10">
-            <div>
-              <p
-                className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
-                style={{ fontSize: "10px", letterSpacing: "0.22em" }}
-              >
-                Floor
-              </p>
-              <p
-                className="mt-2.5 font-serif text-[hsl(var(--ink))]"
-                style={{
-                  fontSize: "28px",
-                  fontWeight: 500,
-                  letterSpacing: "-0.03em",
-                  lineHeight: 1.1,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {formatMoney(profile.minAmountCents)}
-              </p>
-            </div>
-            <div>
-              <p
-                className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
-                style={{ fontSize: "10px", letterSpacing: "0.22em" }}
-              >
-                Reply window
-              </p>
-              <p
-                className="mt-2.5 font-serif text-[hsl(var(--ink))]"
-                style={{
-                  fontSize: "28px",
-                  fontWeight: 500,
-                  letterSpacing: "-0.03em",
-                  lineHeight: 1.1,
-                }}
-              >
-                {replyValue}
-              </p>
-            </div>
-          </Static>
-        )}
+            {profile.displayName}
+          </h1>
+        </Section>
 
-        {animate ? (
-          <Reveal as="div" delay={0.34} className="mt-12">
-            {preview ? (
-              <div
-                role="status"
-                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--rule))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-subtle))]"
-              >
-                Send a request
-              </div>
-            ) : isPaused ? (
-              <div
-                role="status"
-                className="flex h-[50px] w-full items-center justify-center rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-muted))]"
-              >
-                Not accepting requests right now.
-              </div>
-            ) : isOwner ? (
-              <button
-                type="button"
-                onClick={() => setSelfRequestOpen(true)}
-                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92 focus-visible:outline-none"
-              >
-                Send a request
-              </button>
-            ) : (
-              <Link
-                href={`/${profile.handle}/send`}
-                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92 focus-visible:outline-none"
-              >
-                Send a request
-              </Link>
-            )}
-          </Reveal>
-        ) : (
-          <Static className="mt-12">
-            {preview ? (
-              <div
-                role="status"
-                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--rule))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-subtle))]"
-              >
-                Send a request
-              </div>
-            ) : isPaused ? (
-              <div
-                role="status"
-                className="flex h-[50px] w-full items-center justify-center rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-muted))]"
-              >
-                Not accepting requests right now.
-              </div>
-            ) : isOwner ? (
-              <button
-                type="button"
-                onClick={() => setSelfRequestOpen(true)}
-                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92 focus-visible:outline-none"
-              >
-                Send a request
-              </button>
-            ) : (
-              <Link
-                href={`/${profile.handle}/send`}
-                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92 focus-visible:outline-none"
-              >
-                Send a request
-              </Link>
-            )}
-          </Static>
-        )}
+        <Section delay={0.1} className="mt-1.5">
+          <p
+            className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
+            style={{ fontSize: "11px", letterSpacing: "0.24em" }}
+          >
+            {profile.title}
+          </p>
+        </Section>
+
+        <Section delay={0.16} className="mt-[22px] flex justify-center">
+          <SocialIcons
+            socials={profile.socials}
+            ownerName={fullName}
+            inert={variant === "preview"}
+          />
+        </Section>
+
+        <Section delay={0.26} className="mt-[48px] grid grid-cols-2 gap-x-10">
+          <div>
+            <p
+              className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
+              style={{ fontSize: "10px", letterSpacing: "0.22em" }}
+            >
+              Floor
+            </p>
+            <p
+              className="mt-2.5 font-serif text-[hsl(var(--ink))]"
+              style={{
+                fontSize: "28px",
+                fontWeight: 500,
+                letterSpacing: "-0.03em",
+                lineHeight: 1.1,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {formatMoney(profile.minAmountCents)}
+            </p>
+          </div>
+          <div>
+            <p
+              className="font-medium uppercase text-[hsl(var(--ink-subtle))]"
+              style={{ fontSize: "10px", letterSpacing: "0.22em" }}
+            >
+              Reply window
+            </p>
+            <p
+              className="mt-2.5 font-serif text-[hsl(var(--ink))]"
+              style={{
+                fontSize: "28px",
+                fontWeight: 500,
+                letterSpacing: "-0.03em",
+                lineHeight: 1.1,
+              }}
+            >
+              {replyValue}
+            </p>
+          </div>
+        </Section>
+
+        <Section delay={0.34} className="mt-12">
+          {preview ? (
+            <div
+              role="status"
+              className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--rule))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-subtle))]"
+            >
+              Send a request
+            </div>
+          ) : isPaused ? (
+            <div
+              role="status"
+              className="flex h-[50px] w-full items-center justify-center rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-muted))]"
+            >
+              Not accepting requests right now.
+            </div>
+          ) : isOwner ? (
+            <button
+              type="button"
+              onClick={() => setSelfRequestOpen(true)}
+              className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/85 focus-visible:outline-none"
+            >
+              Send a request
+            </button>
+          ) : (
+            <Link
+              href={`/${profile.handle}/send`}
+              className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/85 focus-visible:outline-none"
+            >
+              Send a request
+            </Link>
+          )}
+        </Section>
       </div>
 
       <Modal
