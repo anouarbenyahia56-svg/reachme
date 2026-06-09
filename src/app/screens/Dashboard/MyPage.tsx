@@ -29,14 +29,15 @@ import type {
 } from "../../types";
 import { useToast } from "../../ui/Toast";
 
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5MB
+
 /**
  * My page — the live editor.
  *
  * Centered single column of cards (identity, socials, amount,
  * categories, status). Changes don't commit until "Save changes"
- * is pressed; an unsaved-changes pill makes the state explicit.
- * The public page itself is the live preview — a "View live page"
- * link sits beside Save.
+ * is pressed; a Discard button appears when there are unsaved
+ * changes.
  */
 export function MyPage() {
   const profile = useProfile();
@@ -168,6 +169,7 @@ function AvatarField({
   onChange: (v?: string) => void;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const toast = useToast();
   return (
     <div className="flex items-center gap-7">
       <Avatar size="xl" src={value} name={displayName} />
@@ -198,7 +200,7 @@ function AvatarField({
           )}
         </div>
         <p className="text-[12px] text-[hsl(var(--ink-subtle))]">
-          A square crop, ideally 800 × 800.
+          A square crop, ideally 800 × 800. Max 5MB.
         </p>
       </div>
       <input
@@ -210,6 +212,11 @@ function AvatarField({
         onChange={async (e) => {
           const f = e.target.files?.[0];
           if (!f) return;
+          if (f.size > MAX_AVATAR_BYTES) {
+            toast.show("Image too large. Max 5MB.");
+            e.target.value = "";
+            return;
+          }
           const url = await readFileAsDataURL(f);
           onChange(url);
           e.target.value = "";
@@ -248,6 +255,7 @@ const EDITOR_PLATFORMS: SocialPlatform[] = [
   "tiktok",
   "youtube",
   "twitch",
+  "snapchat",
   "linkedin",
   "spotify",
   "facebook",
@@ -614,7 +622,12 @@ function CategoriesField({
 
   return (
     <div>
-      <Label>Your categories</Label>
+      <div className="flex items-baseline justify-between gap-4">
+        <Label>What you're open to</Label>
+        <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]">
+          {items.length} of 6
+        </span>
+      </div>
       <div className="space-y-6">
         <ul className="flex flex-wrap gap-2">
           <AnimatePresence initial={false} mode="popLayout">
@@ -706,11 +719,8 @@ const VIS: ReadonlyArray<{ value: Visibility; label: string; helper: string }> =
   },
 ];
 
-const REPLY_WINDOWS: ReadonlyArray<{ days: number; label: string }> = [
-  { days: 3, label: "3 days" },
-  { days: 5, label: "5 days" },
-  { days: 7, label: "7 days" },
-];
+const PRESET_DAYS = [1, 2, 3] as const;
+const MAX_REPLY_WINDOW = 7;
 
 function VisibilityField({
   value,
@@ -723,6 +733,29 @@ function VisibilityField({
   replyWindowDays: number;
   onChangeReplyWindow: (d: number) => void;
 }) {
+  const isCustomDay = !PRESET_DAYS.includes(replyWindowDays as 1 | 2 | 3);
+  const [customActive, setCustomActive] = useState(isCustomDay);
+  const [customStr, setCustomStr] = useState(
+    isCustomDay ? String(replyWindowDays) : "",
+  );
+  const customInputRef = useRef<HTMLInputElement>(null);
+
+  const onPreset = (days: number) => {
+    onChangeReplyWindow(days);
+    setCustomActive(false);
+    setCustomStr("");
+  };
+
+  const onCustomToggle = () => {
+    if (!customActive) {
+      const defaultVal = "4";
+      setCustomActive(true);
+      setCustomStr(defaultVal);
+      onChangeReplyWindow(4);
+      requestAnimationFrame(() => customInputRef.current?.focus());
+    }
+  };
+
   return (
     <div>
       <Label>Status</Label>
@@ -760,14 +793,14 @@ function VisibilityField({
 
       <div className="mt-10">
         <Label>Reply window</Label>
-        <div className="grid grid-cols-3 gap-3">
-          {REPLY_WINDOWS.map((w) => {
-            const active = replyWindowDays === w.days;
+        <div className="grid grid-cols-4 gap-3">
+          {PRESET_DAYS.map((d) => {
+            const active = replyWindowDays === d && !customActive;
             return (
               <button
-                key={w.days}
+                key={d}
                 type="button"
-                onClick={() => onChangeReplyWindow(w.days)}
+                onClick={() => onPreset(d)}
                 aria-pressed={active}
                 className={[
                   "rounded-2xl border px-4 py-3.5 text-center transition-[border-color,background-color,color] duration-300",
@@ -784,12 +817,91 @@ function VisibilityField({
                     letterSpacing: "-0.025em",
                   }}
                 >
-                  {w.label}
+                  {d === 1 ? "1 day" : `${d} days`}
                 </span>
               </button>
             );
           })}
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={customActive ? undefined : onCustomToggle}
+            aria-pressed={customActive}
+            className={[
+              "relative rounded-2xl border px-4 py-3.5 text-center transition-[border-color,background-color,color] duration-300",
+              customActive
+                ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
+                : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))] cursor-pointer",
+            ].join(" ")}
+          >
+            {customActive ? (
+              <span className="inline-flex items-center justify-center gap-1">
+                <input
+                  ref={customInputRef}
+                  inputMode="numeric"
+                  type="text"
+                  value={customStr}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, "");
+                    if (!digits) return;
+                    const last = parseInt(digits[digits.length - 1], 10);
+                    const clamped = Math.min(
+                      Math.max(last, 4),
+                      MAX_REPLY_WINDOW,
+                    );
+                    setCustomStr(String(clamped));
+                    onChangeReplyWindow(clamped);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setCustomActive(false);
+                      setCustomStr("");
+                      onChangeReplyWindow(3);
+                    }
+                  }}
+                  placeholder="days"
+                  className={[
+                    "w-8 bg-transparent text-center font-serif focus:outline-none",
+                    "placeholder:text-[hsl(var(--page))]/50",
+                  ].join(" ")}
+                  style={{
+                    fontSize: "1.1rem",
+                    fontWeight: 500,
+                    letterSpacing: "-0.025em",
+                  }}
+                />
+                {customStr && (
+                  <span
+                    className="font-serif"
+                    style={{
+                      fontSize: "1.1rem",
+                      fontWeight: 500,
+                      letterSpacing: "-0.025em",
+                    }}
+                  >
+                    days
+                  </span>
+                )}
+              </span>
+            ) : (
+              <span
+                className="font-serif"
+                style={{
+                  fontSize: "1.1rem",
+                  fontWeight: 500,
+                  letterSpacing: "-0.025em",
+                }}
+              >
+                Custom
+              </span>
+            )}
+          </div>
         </div>
+        {customActive && (
+          <p className="mt-2.5 text-[12px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
+            A tighter window signals attentiveness. Max {MAX_REPLY_WINDOW} days.
+          </p>
+        )}
       </div>
     </div>
   );

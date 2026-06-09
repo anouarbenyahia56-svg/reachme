@@ -61,7 +61,7 @@ export function PublicProfile({ handle }: { handle: string }) {
             type="button"
             onClick={handleShare}
             aria-label="Share this page"
-            className="absolute -top-14 right-0 inline-flex h-14 w-14 items-center justify-center rounded-full text-[hsl(var(--ink-subtle))] transition-colors duration-300 hover:bg-[hsl(var(--rule))]/40 hover:text-[hsl(var(--ink))]"
+            className="absolute -top-14 right-0 inline-flex h-14 w-14 items-center justify-center rounded-full text-[hsl(var(--ink-subtle))] transition-colors duration-300 hover:bg-[hsl(var(--rule))]/40 hover:text-[hsl(var(--ink))] md:hidden"
           >
             <svg
               width="26"

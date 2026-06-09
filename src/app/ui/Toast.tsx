@@ -41,7 +41,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((t) => [...t, { id, body, meta }]);
     window.setTimeout(() => {
       setToasts((t) => t.filter((x) => x.id !== id));
-    }, 3200);
+    }, 2800);
   }, []);
 
   return (
@@ -59,7 +59,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 initial: { opacity: 0, y: 14, filter: "blur(6px)" },
                 animate: { opacity: 1, y: 0, filter: "blur(0px)" },
                 exit: { opacity: 0, y: 8, filter: "blur(6px)" },
-                transition: { duration: 0.55, ease: EASE },
+                transition: { duration: 0.35, ease: EASE },
               } as HTMLMotionProps<"div">)}
               className="pointer-events-auto inline-flex max-w-[420px] items-center gap-3 rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-5 py-3 text-[13px] text-[hsl(var(--ink))] shadow-[0_2px_18px_rgba(0,0,0,0.04)]"
             >

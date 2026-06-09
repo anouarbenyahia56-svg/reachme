@@ -20,6 +20,7 @@ export const PLATFORM_URL_BASE: Record<SocialPlatform, string> = {
   youtube: "https://youtube.com/@",
   twitch: "https://twitch.tv/",
   kick: "https://kick.com/",
+  snapchat: "https://snapchat.com/add/",
   linkedin: "https://linkedin.com/in/",
   github: "https://github.com/",
   spotify: "https://open.spotify.com/user/",

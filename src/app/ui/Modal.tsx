@@ -58,7 +58,7 @@ export function Modal({
         <motion.div
           initial={false}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: { duration: 0.18, ease: "easeOut" } }}
+          exit={{ opacity: 0, transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] } }}
           role="dialog"
           aria-modal="true"
           className="fixed inset-0 z-[90] flex items-center justify-center px-4 py-8"
@@ -67,7 +67,7 @@ export function Modal({
             onClick={dismissable ? onClose : undefined}
             initial={false}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.18, ease: "easeOut" } }}
+            exit={{ opacity: 0, transition: { duration: 0.18, ease: [0.22, 1, 0.36, 1] } }}
             className="absolute inset-0 bg-[hsl(var(--ink))]/30 backdrop-blur-sm"
             style={{ willChange: "opacity" }}
             aria-hidden="true"

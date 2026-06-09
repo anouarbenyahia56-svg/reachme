@@ -6,7 +6,7 @@ import { useSent } from "../../store/requests";
 import { Avatar } from "../../ui/Avatar";
 import { Link } from "../../router";
 import { Reveal } from "../../ui/Reveal";
-import { formatMoney, timeAgo, timeUntil } from "../../store/format";
+import { formatMoney, timeAgo } from "../../store/format";
 import type { RequestStatus } from "../../types";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +50,8 @@ export function Sent() {
         (r) =>
           r.subject.toLowerCase().includes(q) ||
           r.toDisplayName.toLowerCase().includes(q) ||
-          r.toHandle.toLowerCase().includes(q),
+          r.toHandle.toLowerCase().includes(q) ||
+          r.message.toLowerCase().includes(q),
       );
     }
     return list;
@@ -96,7 +97,7 @@ export function Sent() {
           </span>
           <input
             type="text"
-            placeholder="Search names, subjects"
+            placeholder="Search names, subjects, messages"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-[260px] bg-transparent px-3 py-2 text-[13px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
@@ -115,7 +116,7 @@ export function Sent() {
             >
               <Link
                 href={`/dashboard/sent/${r.id}`}
-                className="group flex items-center gap-4 px-7 py-5 transition-colors duration-300 hover:bg-[hsl(var(--rule))]/30 md:px-9"
+                className="group flex items-center gap-4 px-7 py-5 transition-colors duration-300 hover:bg-[hsl(var(--rule))]/50 md:px-9"
               >
                 <Avatar size="sm" src={r.toAvatarUrl} name={r.toDisplayName} />
                 <div className="min-w-0 flex-1">
@@ -136,11 +137,7 @@ export function Sent() {
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
                   <Pill size="sm">{formatMoney(r.amountCents)}</Pill>
-                  <span className="text-[11px] uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]">
-                    {r.status === "pending"
-                      ? `Refunds ${timeUntil(r.expiresAt)}`
-                      : r.status}
-                  </span>
+                  <StatusPill status={r.status} />
                 </div>
               </Link>
             </li>
@@ -153,7 +150,7 @@ export function Sent() {
 
 function moneyState(r: import("../../types").RequestRecord): string {
   if (r.status === "pending") return "Held — awaiting reply";
-  if (r.status === "replied") return "Released to owner";
+  if (r.status === "replied") return `Released to ${r.toDisplayName}`;
   if (r.status === "declined") return "Refunded to you";
   return "Refunded to you";
 }
@@ -204,4 +201,15 @@ function Empty({ filter }: { filter: string }) {
       </div>
     </Reveal>
   );
+}
+
+function StatusPill({
+  status,
+}: {
+  status: "pending" | "replied" | "declined" | "expired";
+}) {
+  if (status === "pending") return <Pill size="sm" tone="ink">Pending</Pill>;
+  if (status === "replied") return <Pill size="sm">Replied</Pill>;
+  if (status === "declined") return <Pill size="sm" tone="muted">Declined</Pill>;
+  return <Pill size="sm" tone="muted">Expired</Pill>;
 }

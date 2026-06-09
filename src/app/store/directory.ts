@@ -17,7 +17,7 @@ const SEED_DIRECTORY: Profile[] = [
     displayName: "Youssef Benyahia",
     title: "Founder & Investor",
     minAmountCents: 9500,
-    replyWindowDays: 7,
+    replyWindowDays: 2,
     categories: [
       { id: "business", label: "Business opportunity" },
       { id: "partnership", label: "Partnership" },
@@ -30,7 +30,7 @@ const SEED_DIRECTORY: Profile[] = [
       github: "https://github.com/youssefby",
     },
     visibility: "public",
-    verified: true,
+    verified: false,
     createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -38,7 +38,7 @@ const SEED_DIRECTORY: Profile[] = [
     displayName: "Mara Wright",
     title: "Partner, Northline Capital",
     minAmountCents: 25000,
-    replyWindowDays: 7,
+    replyWindowDays: 2,
     categories: [
       { id: "business", label: "Business opportunity" },
       { id: "intro", label: "Intro request" },
@@ -51,7 +51,7 @@ const SEED_DIRECTORY: Profile[] = [
       linkedin: "https://www.linkedin.com/in/marawright",
     },
     visibility: "public",
-    verified: true,
+    verified: false,
     createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -59,7 +59,7 @@ const SEED_DIRECTORY: Profile[] = [
     displayName: "Jonas Lindberg",
     title: "Independent designer",
     minAmountCents: 12500,
-    replyWindowDays: 7,
+    replyWindowDays: 2,
     categories: [
       { id: "consulting", label: "Consulting" },
       { id: "collab", label: "Collaboration" },

@@ -21,17 +21,24 @@ export function OnboardingShell({
   step,
   total,
   back,
+  bare = false,
   children,
 }: {
-  step: number;
-  total: number;
+  step?: number;
+  total?: number;
   /** Top-left Back target — the path to navigate to. */
   back?: string;
+  /** Strips the progress bar and reduces top padding. Used for
+   *  the final "go live" screen, which is a gateway to the
+   *  dashboard rather than a real step in the sequence. */
+  bare?: boolean;
   children: ReactNode;
 }) {
   const { navigate } = useRouter();
 
-  const pct = Math.max(0, Math.min(1, step / total));
+  const pct = step != null && total != null
+    ? Math.max(0, Math.min(1, step / total))
+    : 1;
 
   return (
     <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
@@ -40,25 +47,29 @@ export function OnboardingShell({
           <Link href="/" aria-label="ReachMe" className="-mx-1 px-1">
             <Wordmark />
           </Link>
-          <span
-            className="sr-only"
-            aria-label={`Step ${step} of ${total}`}
-          >
-            Step {step} / {total}
-          </span>
+          {!bare && step != null && total != null && (
+            <span
+              className="sr-only"
+              aria-label={`Step ${step} of ${total}`}
+            >
+              Step {step} / {total}
+            </span>
+          )}
         </div>
-        <div className="relative h-[3px] w-full bg-[hsl(var(--rule))]">
-          <motion.div
-            initial={false}
-            animate={{ scaleX: pct }}
-            transition={{ duration: 0.4, ease: EASE }}
-            style={{ transformOrigin: "left", height: "3px" }}
-            className="absolute inset-y-0 left-0 w-full bg-[hsl(var(--ink))]"
-          />
-        </div>
+        {!bare && (
+          <div className="relative h-[3px] w-full bg-[hsl(var(--rule))]">
+            <motion.div
+              initial={false}
+              animate={{ scaleX: pct }}
+              transition={{ duration: 0.4, ease: EASE }}
+              style={{ transformOrigin: "left", height: "3px" }}
+              className="absolute inset-y-0 left-0 w-full bg-[hsl(var(--ink))]"
+            />
+          </div>
+        )}
       </header>
 
-      <main className="mx-auto max-w-[920px] overflow-x-clip px-6 pb-32 pt-12 md:px-10 md:pb-44 md:pt-16">
+      <main className={`mx-auto max-w-[920px] overflow-x-clip px-6 pb-32 md:px-10 md:pb-44 ${bare ? "pt-20 md:pt-24" : "pt-12 md:pt-16"}`}>
         {back && (
           <button
             type="button"
@@ -90,7 +101,7 @@ export function OnboardingTitle({
         <motion.p
           initial={{ opacity: 0, x: 28, filter: "blur(4px)" }}
           animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-          transition={{ duration: 0.85, ease: EASE }}
+          transition={{ duration: 0.5, ease: EASE }}
           className="mb-5 text-[11px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]"
         >
           {eyebrow}
@@ -99,7 +110,7 @@ export function OnboardingTitle({
       <motion.h1
         initial={{ opacity: 0, x: 36, filter: "blur(5px)" }}
         animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-        transition={{ duration: 0.95, delay: 0.05, ease: EASE }}
+        transition={{ duration: 0.55, delay: 0.05, ease: EASE }}
         className="font-serif text-[hsl(var(--ink))]"
         style={{
           fontSize: "clamp(2.6rem, 6vw, 4.4rem)",
@@ -116,7 +127,7 @@ export function OnboardingTitle({
         <motion.p
           initial={{ opacity: 0, x: 30, filter: "blur(4px)" }}
           animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
-          transition={{ duration: 0.9, delay: 0.18, ease: EASE }}
+          transition={{ duration: 0.5, delay: 0.12, ease: EASE }}
           className="mt-7 max-w-[52ch] text-[hsl(var(--ink-muted))]"
           style={{ fontSize: "1.1rem", lineHeight: 1.55 }}
         >

@@ -15,7 +15,7 @@ const ITEMS = [
   },
   {
     q: "What happens if I don’t reply?",
-    a: "Nothing on your side. The request expires after seven days, the sender is refunded automatically, and we take no fee. The default is friction-free for you.",
+    a: "Nothing on your side. The request expires after three days, the sender is refunded automatically, and we take no fee. The default is friction-free for you.",
   },
   {
     q: "How is this different from a paid DM or a Calendly?",
@@ -43,7 +43,7 @@ function ToggleMark({ open }: { open: boolean }) {
       <motion.span
         initial={false}
         animate={{ scaleY: open ? 0 : 1 }}
-        transition={{ duration: 0.6, ease: EASE }}
+        transition={{ duration: 0.3, ease: EASE }}
         style={{ transformOrigin: "center" }}
         className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-current"
       />
@@ -110,16 +110,16 @@ export function FAQ() {
                           height: "auto",
                           opacity: 1,
                           transition: {
-                            height: { duration: 0.6, ease: EASE },
-                            opacity: { duration: 0.6, delay: 0.15, ease: EASE },
+                            height: { duration: 0.35, ease: EASE },
+                            opacity: { duration: 0.35, delay: 0.08, ease: EASE },
                           },
                         }}
                         exit={{
                           height: 0,
                           opacity: 0,
                           transition: {
-                            height: { duration: 0.6, ease: EASE },
-                            opacity: { duration: 0.6, ease: EASE },
+                            height: { duration: 0.35, ease: EASE },
+                            opacity: { duration: 0.35, ease: EASE },
                           },
                         }}
                         className="overflow-hidden"

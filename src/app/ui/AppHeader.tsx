@@ -80,12 +80,12 @@ export function AppHeader({
             </div>
           )}
 
-          {mode === "authed" && account && (
+          {mode === "authed" && account && profile && (
             <AuthedHeaderRight
               email={account.email}
-              displayName={profile?.displayName ?? account.displayName}
-              avatarUrl={profile?.avatarUrl}
-              handle={profile?.handle}
+              displayName={profile.displayName}
+              avatarUrl={profile.avatarUrl}
+              handle={profile.handle}
               atDashboard={atDashboard}
               atSettings={atSettings}
               atOwnPublicPage={atOwnPublicPage}

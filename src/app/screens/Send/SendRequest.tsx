@@ -55,7 +55,7 @@ export function SendRequest({ handle }: { handle: string }) {
     expiresAt: string;
   } | null>(null);
 
-  const [name, setName] = useState(account?.displayName ?? "");
+  const [name, setName] = useState(profile?.displayName ?? "");
   const [email, setEmail] = useState(account?.email ?? "");
   const [organization, setOrganization] = useState("");
   const [context, setContext] = useState("");
@@ -242,7 +242,7 @@ export function SendRequest({ handle }: { handle: string }) {
                   initial="enter"
                   animate="center"
                   exit="exit"
-                  transition={{ duration: 0.55, ease: EASE }}
+                  transition={{ duration: 0.4, ease: EASE }}
                   className="rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-6 py-7 sm:px-8 sm:py-8"
                 >
                   {step === 0 && (

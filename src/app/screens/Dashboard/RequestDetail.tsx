@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, ArrowUp, Check, Clock, Maximize2, Mic, Minimize2, Paperclip, Camera, X } from "lucide-react";
+import { ArrowLeft, ArrowUp, Check, Clock, Maximize2, Mic, Minimize2, Paperclip, Camera, X, File, Play, Pause } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { EASE } from "@/components/motion";
@@ -9,7 +9,7 @@ import { Avatar } from "../../ui/Avatar";
 import { Button } from "../../ui/Button";
 import { Modal } from "../../ui/Modal";
 import { Link, useRouter } from "../../router";
-import { useReceived, replyToRequest, declineRequest, platformFeeCents } from "../../store/requests";
+import { useReceived, replyToRequest, declineRequest, platformFeeCents, markOpened } from "../../store/requests";
 import {
   dateLong,
   formatMoney,
@@ -19,6 +19,7 @@ import {
 import { useToast } from "../../ui/Toast";
 import { useProfile } from "../../store/session";
 import { cn } from "@/lib/utils";
+import type { RequestAttachment } from "../../types";
 
 /**
  * Request detail — the moment of decision. Sender block at top,
@@ -37,15 +38,23 @@ export function RequestDetail({ id }: { id: string }) {
   const toast = useToast();
   const [replying, setReplying] = useState(false);
   const [reply, setReply] = useState("");
+  const [attachments, setAttachments] = useState<RequestAttachment[]>([]);
   const [declineOpen, setDeclineOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!replying) return;
     const t = setTimeout(() => inputRef.current?.focus(), 350);
     return () => clearTimeout(t);
   }, [replying]);
+
+  useEffect(() => {
+    if (r && r.status === "pending" && !r.openedAt) {
+      markOpened(r.id);
+    }
+  }, [r]);
 
   useEffect(() => {
     const el = inputRef.current;
@@ -89,14 +98,18 @@ export function RequestDetail({ id }: { id: string }) {
   const cat = profile.categories.find((c) => c.id === r.category)?.label ?? "—";
 
   const onSendReply = () => {
-    if (!reply.trim()) return;
-    if (replyToRequest(r.id, reply.trim())) {
+    const hasBody = reply.trim().length > 0;
+    const hasAttachments = attachments.length > 0;
+    if (!hasBody && !hasAttachments) return;
+
+    if (replyToRequest(r.id, hasBody ? reply.trim() : undefined, hasAttachments ? attachments : undefined)) {
       toast.show(
         "Reply sent.",
         `Released ${formatMoney(r.amountCents - platformFeeCents(r.amountCents))}`,
       );
       setReplying(false);
       setReply("");
+      setAttachments([]);
     }
   };
 
@@ -107,7 +120,42 @@ export function RequestDetail({ id }: { id: string }) {
     }
   };
 
-  const canSend = reply.trim().length > 0;
+  const onAddFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const url = reader.result as string;
+        const type = file.type.startsWith("image/")
+          ? "image"
+          : file.type.startsWith("video/")
+            ? "video"
+            : file.type.startsWith("audio/")
+              ? "voice"
+              : "file";
+        setAttachments((prev) => [
+          ...prev,
+          { type, url, name: file.name },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset input so the same file can be selected again
+    e.target.value = "";
+  };
+
+  const onRemoveAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const canSend = reply.trim().length > 0 || attachments.length > 0;
 
   return (
     <div>
@@ -201,6 +249,33 @@ export function RequestDetail({ id }: { id: string }) {
               <div className="mt-4 shrink-0">
                 <Card>
                   <div className="px-5 py-4">
+                    {/* Attached files preview */}
+                    {attachments.length > 0 && (
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {attachments.map((a, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center gap-2 rounded-full bg-[hsl(var(--page))] px-3 py-1.5 ring-1 ring-[hsl(var(--rule))]"
+                          >
+                            {a.type === "image" && <Camera size={12} strokeWidth={1.6} />}
+                            {a.type === "voice" && <Mic size={12} strokeWidth={1.6} />}
+                            {a.type === "video" && <Play size={12} strokeWidth={1.6} />}
+                            {a.type === "file" && <File size={12} strokeWidth={1.6} />}
+                            <span className="max-w-[120px] truncate text-[11.5px] text-[hsl(var(--ink))]">
+                              {a.name || a.type}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => onRemoveAttachment(i)}
+                              className="text-[hsl(var(--ink-muted))] hover:text-[hsl(var(--ink))]"
+                            >
+                              <X size={12} strokeWidth={1.6} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="flex items-end gap-3">
                       {/* Text input — auto-grows with content */}
                       <div className="flex-1 rounded-2xl bg-[hsl(var(--page))] px-4 py-2.5 transition-colors duration-200 focus-within:ring-1 focus-within:ring-[hsl(var(--rule-strong))]">
@@ -220,19 +295,15 @@ export function RequestDetail({ id }: { id: string }) {
                         />
                       </div>
 
-                      {/* Action buttons — camera + mic collapse once user starts typing */}
+                      {/* Action buttons — always visible */}
                       <div className="flex items-center gap-0.5 pb-1.5">
-                        <ReplyIconBtn icon={<Paperclip size={19} strokeWidth={1.5} />} label="Attach file" />
-                        {!reply.trim() && (
-                          <>
-                            <ReplyIconBtn icon={<Camera size={19} strokeWidth={1.5} />} label="Add photo" />
-                            <ReplyIconBtn icon={<Mic size={19} strokeWidth={1.5} />} label="Voice message" />
-                          </>
-                        )}
+                        <ReplyIconBtn icon={<Paperclip size={19} strokeWidth={1.5} />} label="Attach file" onClick={onAddFile} />
+                        <ReplyIconBtn icon={<Camera size={19} strokeWidth={1.5} />} label="Add photo" onClick={onAddFile} />
+                        <ReplyIconBtn icon={<Mic size={19} strokeWidth={1.5} />} label="Voice message" />
                       </div>
 
-                      {/* Send button — appears once the user starts typing */}
-                      {reply.trim() && (
+                      {/* Send button — appears once the user starts typing or has attachments */}
+                      {canSend && (
                         <div className="pb-1.5">
                           <button
                             type="button"
@@ -254,15 +325,25 @@ export function RequestDetail({ id }: { id: string }) {
                   </div>
                 </Card>
 
-                  <div className="mt-4 flex items-center gap-3">
-                    <Button onClick={onSendReply} disabled={!canSend} trailingArrow>
-                      Send &amp; release {formatMoney(r.amountCents)}
-                    </Button>
-                    <Button variant="ghost" onClick={() => { setReplying(false); setReply(""); }}>
-                      Cancel
-                    </Button>
-                  </div>
+                {/* Hidden file input */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+                  className="hidden"
+                  onChange={onFileChange}
+                />
+
+                <div className="mt-4 flex items-center gap-3">
+                  <Button onClick={onSendReply} disabled={!canSend} trailingArrow>
+                    Send &amp; release {formatMoney(r.amountCents)}
+                  </Button>
+                  <Button variant="ghost" onClick={() => { setReplying(false); setReply(""); setAttachments([]); }}>
+                    Cancel
+                  </Button>
                 </div>
+              </div>
               </div>
             ) : (
               /* ── Default request view ── */
@@ -325,12 +406,33 @@ export function RequestDetail({ id }: { id: string }) {
                           <div className="flex items-end justify-end gap-2.5">
                             <div className="max-w-[78%]">
                               <div className="rounded-2xl rounded-tr-md bg-[hsl(var(--ink))] px-4 py-3 text-[hsl(var(--page))]">
-                                <p
-                                  className="whitespace-pre-line"
-                                  style={{ fontSize: "0.95rem", lineHeight: 1.7 }}
-                                >
-                                  {r.reply.body}
-                                </p>
+                                {r.reply.body && (
+                                  <p
+                                    className="whitespace-pre-line"
+                                    style={{ fontSize: "0.95rem", lineHeight: 1.7 }}
+                                  >
+                                    {r.reply.body}
+                                  </p>
+                                )}
+                                {/* Attachments */}
+                                {r.reply.attachments && r.reply.attachments.length > 0 && (
+                                  <div className={cn("flex flex-wrap gap-2", r.reply.body && "mt-2")}>
+                                    {r.reply.attachments.map((a, i) => (
+                                      <div
+                                        key={i}
+                                        className="flex items-center gap-2 rounded-full bg-[hsl(var(--page))]/20 px-3 py-1.5"
+                                      >
+                                        {a.type === "image" && <Camera size={12} strokeWidth={1.6} />}
+                                        {a.type === "voice" && <Mic size={12} strokeWidth={1.6} />}
+                                        {a.type === "video" && <Play size={12} strokeWidth={1.6} />}
+                                        {a.type === "file" && <File size={12} strokeWidth={1.6} />}
+                                        <span className="max-w-[120px] truncate text-[11.5px]">
+                                          {a.name || a.type}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                               <p className="mt-1.5 mr-1 text-right text-[10.5px] text-[hsl(var(--ink-subtle))]">
                                 {timeAgo(r.reply.repliedAt)}
@@ -412,7 +514,7 @@ export function RequestDetail({ id }: { id: string }) {
         open={declineOpen}
         onClose={() => setDeclineOpen(false)}
         title="Decline this request?"
-        description={`The full ${formatMoney(r.amountCents)} will be refunded to ${r.from.name.split(" ")[0]}. We earn nothing.`}
+        description={`The full ${formatMoney(r.amountCents)} will be refunded to ${r.from.name.split(" ")[0]}.`}
         size="sm"
       >
         <div className="mt-2 flex flex-wrap items-center justify-end gap-3">

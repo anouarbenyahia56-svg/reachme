@@ -23,6 +23,7 @@ import { Earnings } from "./screens/Dashboard/Earnings";
 import { Settings } from "./screens/Dashboard/Settings";
 
 import { Login } from "./screens/Auth/Login";
+import { ForgotPassword } from "./screens/Auth/ForgotPassword";
 import { PublicProfile } from "./screens/Public/PublicProfile";
 import { SendRequest } from "./screens/Send/SendRequest";
 
@@ -62,6 +63,7 @@ export function Routes() {
   }
 
   if (path === "/login") return <Login />;
+  if (path === "/forgot-password") return <ForgotPassword />;
 
   if (path === "/claim") return <StepHandle />;
   if (path === "/claim/email") return <StepEmail />;

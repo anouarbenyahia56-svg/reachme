@@ -57,11 +57,11 @@ export function Overview() {
   // Held — total amount held across pending requests.
   const inEscrowCents = pending.reduce((sum, r) => sum + r.amountCents, 0);
 
-  // Expiring within 48 hours — the real deadline pressure.
+  // Expiring within 24 hours — the real deadline pressure.
   const now = Date.now();
   const expiringSoon = pending.filter((r) => {
     const expiresAt = new Date(r.expiresAt).getTime();
-    return expiresAt - now < 48 * MS_PER_HOUR;
+    return expiresAt - now < 24 * MS_PER_HOUR;
   });
 
   // Released this month — net of the 5% platform fee.
@@ -145,10 +145,10 @@ export function Overview() {
                 value={expiringSoon.length}
                 caption={
                   expiringSoon.length === 0
-                    ? "Nothing within 48 hours."
+                    ? "Nothing within 24 hours."
                     : expiringSoon.length === 1
-                      ? "1 request expiring within 48 hours."
-                      : `${expiringSoon.length} requests expiring within 48 hours.`
+                      ? "1 request expiring within 24 hours."
+                      : `${expiringSoon.length} requests expiring within 24 hours.`
                 }
                 dark={expiringSoon.length > 0}
                 action={
@@ -257,7 +257,7 @@ function CalmHero() {
   return (
     <div>
       <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-        Waiting on you
+        All clear
       </p>
       <p
         className="mt-5 font-serif text-[hsl(var(--ink))]"

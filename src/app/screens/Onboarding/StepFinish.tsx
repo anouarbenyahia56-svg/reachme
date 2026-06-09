@@ -1,23 +1,25 @@
 import { useEffect, useState } from "react";
-import { Button } from "../../ui/Button";
+import { motion } from "framer-motion";
+import { EASE } from "@/components/motion";
 import { Reveal } from "../../ui/Reveal";
 import { useRouter } from "../../router";
-import { OnboardingShell, OnboardingTitle } from "./OnboardingShell";
+import { OnboardingShell } from "./OnboardingShell";
 import { clearDraft, useDraft } from "../../store/draft";
 import { setAccount, setProfile } from "../../store/session";
 import { seedDemoForOwner } from "../../store/requests";
+import { ProfilePreviewCard } from "../Public/ProfilePreviewCard";
 import type { Profile } from "../../types";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Step 7 — Launch.
+ * The gateway to the dashboard.
  *
- * The decisive ending. "Go live" is the absolute final action of
- * onboarding: it commits the account and the profile, seeds demo
- * data, clears the draft, and routes directly into the live
- * dashboard where the welcome overlay offers "View my public page"
- * — that's the moment the user actually sees their card.
+ * Not a step — a destination. No progress bar, no back button.
+ * The user arrives here after completing the sequence and sees
+ * a live preview of their card, centered on the page. One
+ * action: "Go live." It commits the account and routes into
+ * the dashboard where the welcome overlay picks up the story.
  */
 export function StepFinish() {
   const { navigate } = useRouter();
@@ -49,7 +51,7 @@ export function StepFinish() {
     title: draft.title,
     avatarUrl: draft.avatarUrl,
     minAmountCents: draft.minAmountCents ?? 15000,
-    replyWindowDays: draft.replyWindowDays ?? 5,
+    replyWindowDays: draft.replyWindowDays ?? 2,
     categories: draft.categories ?? [],
     socials: draft.socials,
     visibility: draft.visibility ?? "public",
@@ -67,8 +69,8 @@ export function StepFinish() {
     const profile: Profile = { ...previewProfile, verified: false };
     setAccount({
       email: draft.email!,
-      displayName: previewProfile.displayName,
       hasProfile: true,
+      hasPassword: false,
     });
     setProfile(profile);
     seedDemoForOwner(profile);
@@ -78,24 +80,72 @@ export function StepFinish() {
   };
 
   return (
-    <OnboardingShell step={8} total={8} back="/claim/visibility">
-      <OnboardingTitle
-        title="Go live."
-        description="Your page is set. When you're ready, launch it."
-      />
+    <OnboardingShell bare>
+      <Reveal delay={0.05} duration={0.6} axis="y" blur={5}>
+        <div className="flex flex-col items-center text-center">
+          <motion.h1
+            initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.5, delay: 0.04, ease: EASE }}
+            className="font-serif text-[hsl(var(--ink))]"
+            style={{
+              fontSize: "clamp(2.6rem, 6vw, 4.4rem)",
+              lineHeight: 1.02,
+              letterSpacing: "-0.04em",
+              fontWeight: 500,
+              textWrap: "balance",
+              maxWidth: "16ch",
+            }}
+          >
+            This is your page.
+          </motion.h1>
 
-      <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
-        <div className="mt-14 max-w-[640px]">
-          <div className="flex items-center gap-4">
-            <Button
-              size="lg"
-              trailingArrow
-              loading={submitting}
-              onClick={launch}
-            >
-              Launch my page
-            </Button>
-          </div>
+          <motion.p
+            initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            transition={{ duration: 0.5, delay: 0.1, ease: EASE }}
+            className="mt-6 max-w-[42ch] text-[hsl(var(--ink-muted))]"
+            style={{ fontSize: "1.1rem", lineHeight: 1.55 }}
+          >
+            Here's what people will see when they land on it.
+          </motion.p>
+        </div>
+      </Reveal>
+
+      <Reveal delay={0.2} duration={0.6} axis="y" blur={5}>
+        <div className="mt-12 mx-auto max-w-[480px]">
+          <ProfilePreviewCard
+            profile={previewProfile}
+            variant="preview"
+            animate={false}
+            preview
+          />
+        </div>
+      </Reveal>
+
+      <Reveal delay={0.35} duration={0.5} axis="y" blur={4}>
+        <div className="mt-12 mx-auto max-w-[480px]">
+          <motion.button
+            type="button"
+            disabled={submitting}
+            whileHover={submitting ? undefined : { y: -1 }}
+            whileTap={submitting ? undefined : { y: 0 }}
+            transition={{ duration: 0.25, ease: EASE }}
+            onClick={launch}
+            className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-[background-color] duration-300 hover:bg-[hsl(var(--ink))]/92 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting ? (
+              <span
+                aria-hidden="true"
+                className="inline-block h-4 w-4 animate-spin rounded-full border-[1.5px] border-current border-r-transparent opacity-70"
+              />
+            ) : (
+              "Go live"
+            )}
+          </motion.button>
+          <p className="mt-4 text-center text-[12.5px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
+            You can pause or change your settings anytime from your dashboard.
+          </p>
         </div>
       </Reveal>
     </OnboardingShell>

@@ -52,6 +52,7 @@ export function ProfilePreviewCard({
   variant,
   fill = false,
   animate = true,
+  preview = false,
 }: {
   profile: Profile;
   variant: "preview" | "public";
@@ -66,6 +67,11 @@ export function ProfilePreviewCard({
    *  mounts the card repeatedly (dashboard tabs, onboarding
    *  steps) where the entrance animation would feel like lag. */
   animate?: boolean;
+  /** When true, the CTA renders as a muted, non-interactive
+   *  pill — visually present but functionally inert. Used in
+   *  onboarding previews where the card is a mirror, not a
+   *  live page. */
+  preview?: boolean;
 }) {
   const reduced = useReducedMotion();
   const ownerProfile = useProfile();
@@ -300,7 +306,14 @@ export function ProfilePreviewCard({
 
         {animate ? (
           <Reveal as="div" delay={0.34} className="mt-12">
-            {isPaused ? (
+            {preview ? (
+              <div
+                role="status"
+                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--rule))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-subtle))]"
+              >
+                Send a request
+              </div>
+            ) : isPaused ? (
               <div
                 role="status"
                 className="flex h-[50px] w-full items-center justify-center rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-muted))]"
@@ -326,7 +339,14 @@ export function ProfilePreviewCard({
           </Reveal>
         ) : (
           <Static className="mt-12">
-            {isPaused ? (
+            {preview ? (
+              <div
+                role="status"
+                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--rule))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-subtle))]"
+              >
+                Send a request
+              </div>
+            ) : isPaused ? (
               <div
                 role="status"
                 className="flex h-[50px] w-full items-center justify-center rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-muted))]"

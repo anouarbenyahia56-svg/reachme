@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Inbox } from "lucide-react";
 import { Card } from "../../ui/Card";
+import { Pill } from "../../ui/Pill";
 import { Button } from "../../ui/Button";
 import { Modal } from "../../ui/Modal";
 import { Label } from "../../ui/Field";
@@ -14,9 +15,9 @@ import {
 } from "../../store/withdrawals";
 import {
   usePayoutMethod,
-  clearPayoutMethod,
 } from "../../store/payoutMethod";
-import { useProfile } from "../../store/session";
+import { useProfile, useAccount } from "../../store/session";
+import { requestVerification } from "../../store/verification";
 import { formatMoney, dateLong } from "../../store/format";
 import { useToast } from "../../ui/Toast";
 import { cn } from "@/lib/utils";
@@ -65,6 +66,7 @@ interface WithdrawalEntry {
 
 export function Earnings() {
   const profile = useProfile();
+  const account = useAccount();
   const received = useReceived();
   const withdrawals = useWithdrawals();
   const payoutMethod = usePayoutMethod();
@@ -73,7 +75,6 @@ export function Earnings() {
 
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [removeOpen, setRemoveOpen] = useState(false);
 
   if (!profile) return null;
 
@@ -207,17 +208,29 @@ export function Earnings() {
     setWithdrawAmount("");
   };
 
-  const onRemovePayout = () => {
-    clearPayoutMethod();
-    toast.show("Payout method removed.");
-    setRemoveOpen(false);
-  };
-
   // ─── Render ─────────────────────────────────────────────────────
 
   return (
     <div className="grid gap-6 lg:gap-8">
-      <Reveal duration={0.7} blur={6} delay={0}>
+      {!profile.verified && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-5 py-3.5"
+        >
+          <p className="text-[14px] leading-[1.55] text-[hsl(var(--ink-muted))]">
+            Verify your email to receive and withdraw money.
+          </p>
+          <button
+            type="button"
+            onClick={() => requestVerification(account!.email)}
+            className="text-[14px] text-[hsl(var(--ink-muted))] underline underline-offset-2 transition-colors duration-300 hover:text-[hsl(var(--ink))]"
+          >
+            Resend verification
+          </button>
+        </div>
+      )}
+
+      <Reveal duration={0.45} blur={5} delay={0}>
         <StatementCard
           availableBalance={availableBalance}
           lifetimeNetCents={lifetimeNetCents}
@@ -235,7 +248,7 @@ export function Earnings() {
         />
       </Reveal>
 
-      <Reveal duration={0.7} blur={6} delay={0.08}>
+      <Reveal duration={0.45} blur={5} delay={0.06}>
         <EarnedCard
           earnings={earningsHistory}
           loading={loading}
@@ -243,7 +256,7 @@ export function Earnings() {
         />
       </Reveal>
 
-      <Reveal duration={0.7} blur={6} delay={0.16}>
+      <Reveal duration={0.45} blur={5} delay={0.12}>
         <BankCard
           hasPayoutMethod={hasPayoutMethod}
           payoutMethod={payoutMethod}
@@ -261,12 +274,6 @@ export function Earnings() {
         amount={withdrawAmount}
         onAmountChange={setWithdrawAmount}
         onConfirm={onConfirmWithdraw}
-      />
-
-      <RemovePayoutModal
-        open={removeOpen}
-        onClose={() => setRemoveOpen(false)}
-        onConfirm={onRemovePayout}
       />
     </div>
   );
@@ -417,8 +424,11 @@ function statementHelper({
   lifetimeReplyCount: number;
   hasMethod: boolean;
 }): string {
+  if (lifetimeNetCents === 0 && !hasMethod) {
+    return "Reply to a pending request to receive your first payment. Add a payout method to withdraw.";
+  }
   if (lifetimeNetCents === 0) {
-    return "Reply to a pending request to receive your first payment.";
+    return "You haven't earned anything yet. Reply to requests to start earning.";
   }
   if (availableCents === 0) {
     return "Everything you've earned has been moved to your bank.";
@@ -712,13 +722,20 @@ function WithdrawalRow({ w }: { w: WithdrawalEntry }) {
           ··{w.lastFour}
         </p>
       </div>
-      <div className="shrink-0 text-right">
+      <div className="flex shrink-0 items-center gap-3">
+        <WithdrawalStatus status={w.status} />
         <p className="text-[11.5px] tabular-nums text-[hsl(var(--ink-subtle))]">
           {dateLong(w.date)}
         </p>
       </div>
     </li>
   );
+}
+
+function WithdrawalStatus({ status }: { status: Withdrawal["status"] }) {
+  if (status === "pending") return <Pill size="sm" tone="ink">Pending</Pill>;
+  if (status === "paid") return <Pill size="sm">Paid</Pill>;
+  return <Pill size="sm" tone="muted">Failed</Pill>;
 }
 
 // ─── Shimmer ─────────────────────────────────────────────────────
@@ -811,36 +828,6 @@ function WithdrawModal({
             Withdraw
           </Button>
         </div>
-      </div>
-    </Modal>
-  );
-}
-
-
-function RemovePayoutModal({
-  open,
-  onClose,
-  onConfirm,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Remove this payout method?"
-      description="You'll need to add one again before your next withdrawal."
-      size="sm"
-    >
-      <div className="flex items-center justify-end gap-3">
-        <Button variant="ghost" onClick={onClose}>
-          Keep
-        </Button>
-        <Button variant="danger" onClick={onConfirm}>
-          Remove
-        </Button>
       </div>
     </Modal>
   );

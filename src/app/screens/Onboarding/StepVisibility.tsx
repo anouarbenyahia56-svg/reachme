@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { EASE } from "@/components/motion";
 import { Button } from "../../ui/Button";
 import { Label } from "../../ui/Field";
@@ -26,11 +26,8 @@ const STATE_OPTIONS: ReadonlyArray<{
   },
 ];
 
-const REPLY_WINDOWS: ReadonlyArray<{ days: number; label: string }> = [
-  { days: 3, label: "3 days" },
-  { days: 5, label: "5 days" },
-  { days: 7, label: "7 days" },
-];
+const PRESET_DAYS = [1, 2, 3] as const;
+const MAX_REPLY_WINDOW = 7;
 
 /**
  * Step 6 — Visibility and reply window.
@@ -44,8 +41,14 @@ export function StepVisibility() {
   const draft = useDraft();
   const [v, setV] = useState<Visibility>(draft.visibility ?? "public");
   const [replyDays, setReplyDays] = useState<number>(
-    draft.replyWindowDays ?? 5,
+    draft.replyWindowDays ?? 2,
   );
+  const isCustomDay = !PRESET_DAYS.includes(replyDays as 1 | 2 | 3);
+  const [customActive, setCustomActive] = useState(isCustomDay);
+  const [customStr, setCustomStr] = useState(
+    isCustomDay ? String(replyDays) : "",
+  );
+  const customInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     patchDraft({ visibility: v });
@@ -54,6 +57,21 @@ export function StepVisibility() {
   useEffect(() => {
     patchDraft({ replyWindowDays: replyDays });
   }, [replyDays]);
+
+  const onPreset = (days: number) => {
+    setReplyDays(days);
+    setCustomActive(false);
+    setCustomStr("");
+  };
+
+  const onCustomToggle = () => {
+    if (!customActive) {
+      setCustomActive(true);
+      setCustomStr("4");
+      setReplyDays(4);
+      requestAnimationFrame(() => customInputRef.current?.focus());
+    }
+  };
 
   return (
     <OnboardingShell step={7} total={8} back="/claim/socials">
@@ -109,45 +127,24 @@ export function StepVisibility() {
 
           <div className="mt-10">
             <Label>Reply window</Label>
-            <AnimatePresence initial={false}>
-              {v === "paused" && (
-                <motion.p
-                  key="paused-hint"
-                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  animate={{ opacity: 1, height: "auto", marginBottom: 8 }}
-                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  transition={{ duration: 0.25, ease: EASE }}
-                  className="-mt-1 overflow-hidden text-[12px] leading-[1.5] text-[hsl(var(--ink-subtle))]"
-                >
-                  Open when you're accepting requests.
-                </motion.p>
-              )}
-            </AnimatePresence>
-            <motion.div
-              animate={{ opacity: v === "paused" ? 0.4 : 1 }}
-              transition={{ duration: 0.3, ease: EASE }}
-            >
-              <div className="grid grid-cols-3 gap-3">
-                {REPLY_WINDOWS.map((w) => {
-                  const active = replyDays === w.days;
-                  const disabled = v === "paused";
+            <div>
+              <div className="grid grid-cols-4 gap-3">
+                {PRESET_DAYS.map((d) => {
+                  const active = replyDays === d && !customActive;
                   return (
                     <motion.button
-                      key={w.days}
+                      key={d}
                       type="button"
-                      whileHover={disabled ? undefined : { y: -1 }}
+                      whileHover={{ y: -1 }}
                       transition={{ duration: 0.25, ease: EASE }}
-                      onClick={() => setReplyDays(w.days)}
-                      disabled={disabled}
+                      onClick={() => onPreset(d)}
                       aria-pressed={active}
-                  className={[
-                    "rounded-2xl border px-4 py-4 text-center transition-[border-color,background-color,color] duration-300 disabled:cursor-not-allowed",
-                    active
-                      ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
-                      : disabled
-                        ? "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))]"
-                        : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
-                  ].join(" ")}
+                      className={[
+                        "rounded-2xl border px-4 py-4 text-center transition-[border-color,background-color,color] duration-300",
+                        active
+                          ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
+                          : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
+                      ].join(" ")}
                     >
                       <span
                         className="font-serif"
@@ -157,17 +154,68 @@ export function StepVisibility() {
                           letterSpacing: "-0.025em",
                         }}
                       >
-                        {w.label}
+                        {d} day{d > 1 ? "s" : ""}
                       </span>
                     </motion.button>
                   );
                 })}
+                <motion.button
+                  type="button"
+                  whileHover={{ y: -1 }}
+                  transition={{ duration: 0.25, ease: EASE }}
+                  onClick={onCustomToggle}
+                  aria-pressed={customActive}
+                  className={[
+                    "rounded-2xl border px-4 py-4 text-center transition-[border-color,background-color,color] duration-300",
+                    customActive
+                      ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
+                      : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
+                  ].join(" ")}
+                >
+                  {customActive ? (
+                    <div className="flex items-center justify-center gap-1">
+                      <input
+                        ref={customInputRef}
+                        type="text"
+                        inputMode="numeric"
+                        className="w-10 bg-transparent text-center font-serif text-[1.3rem] font-medium tracking-[-0.025em] outline-none"
+                        value={customStr}
+                        onChange={(e) => {
+                          const raw = e.target.value.replace(/\D/g, "");
+                          const last = raw.replace(/^0+/, "").slice(-1);
+                          if (last === "") return;
+                          const n = Math.min(MAX_REPLY_WINDOW, Math.max(1, parseInt(last, 10)));
+                          setCustomStr(String(n));
+                          setReplyDays(n);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Backspace" || e.key === "Delete") {
+                            e.preventDefault();
+                          }
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Custom reply window days"
+                      />
+                      <span className="text-[12px] opacity-60">days</span>
+                    </div>
+                  ) : (
+                    <span
+                      className="font-serif"
+                      style={{
+                        fontSize: "1.3rem",
+                        fontWeight: 500,
+                        letterSpacing: "-0.025em",
+                      }}
+                    >
+                      Custom
+                    </span>
+                  )}
+                </motion.button>
               </div>
               <p className="mt-3 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
-                If you don't reply within your window, the request expires and
-                the amount is refunded automatically.
+                A tighter window signals attentiveness. Max {MAX_REPLY_WINDOW} days.
               </p>
-            </motion.div>
+            </div>
           </div>
 
           <div className="mt-10 flex items-center gap-4">

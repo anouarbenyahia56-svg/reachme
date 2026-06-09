@@ -71,7 +71,7 @@ export function StepCategories() {
 
       <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
         <div className="mt-14 max-w-[780px]">
-          <Label>Your categories</Label>
+          <Label>What you're open to</Label>
           <div className="rounded-2xl border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] p-4">
             <ul className="flex flex-wrap gap-2">
               <AnimatePresence initial={false} mode="popLayout">

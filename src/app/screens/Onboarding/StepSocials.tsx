@@ -23,6 +23,7 @@ const EDITOR_PLATFORMS: SocialPlatform[] = [
   "tiktok",
   "youtube",
   "twitch",
+  "snapchat",
   "linkedin",
   "spotify",
   "facebook",

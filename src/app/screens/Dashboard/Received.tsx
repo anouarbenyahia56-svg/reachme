@@ -105,7 +105,7 @@ export function Received() {
           </span>
           <input
             type="text"
-            placeholder="Search names, subjects"
+            placeholder="Search names, subjects, messages"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-[260px] bg-transparent px-3 py-2 text-[13px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
@@ -131,11 +131,14 @@ function Row({ r }: { r: ReceivedRequest }) {
     <li className="border-b border-[hsl(var(--rule))] last:border-b-0">
       <Link
         href={`/dashboard/received/${r.id}`}
-        className="group flex items-center gap-4 px-7 py-5 transition-colors duration-300 hover:bg-[hsl(var(--rule))]/30 md:px-9"
+        className="group flex items-center gap-4 px-7 py-5 transition-colors duration-300 hover:bg-[hsl(var(--rule))]/50 md:px-9"
       >
         <Avatar size="sm" name={r.from.name} />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
+            {r.status === "pending" && !r.openedAt && (
+              <span className="mt-1 h-[6px] w-[6px] shrink-0 rounded-full bg-[hsl(var(--ink))]" />
+            )}
             <p
               className={cn(
                 "truncate text-[14px]",

@@ -9,29 +9,38 @@ import { setAccount, useAccount } from "../../store/session";
 /**
  * Login.
  *
- * The signal-only auth surface for now: enter your email, we sign
- * you back in. When real auth lands, this file becomes the magic
- * link / SSO client — same shape, same copy, same easing.
+ * Email + password authentication. The user enters their
+ * credentials and clicks "Log in." A real backend validates
+ * the password and returns a session token; the frontend
+ * stubs this with a short delay.
  *
- * If a profile already exists for this device, the email simply
- * confirms identity. If not, we route them through onboarding.
+ * "Forgot password?" routes to a separate page. Social
+ * login (Google / Apple) will be added after the backend
+ * ships.
  */
 export function Login() {
   const account = useAccount();
   const { navigate } = useRouter();
   const [email, setEmail] = useState(account?.email ?? "");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const canSubmit = validEmail && password.length > 0 && !submitting;
 
-  const continueIn = async () => {
-    if (!valid) return;
+  const logIn = async () => {
+    if (!canSubmit) return;
+    setError("");
     setSubmitting(true);
     await new Promise((r) => setTimeout(r, 500));
+
+    // TODO: wire to backend — POST /auth/login { email, password }
+    // For now, accept any non-empty password.
     setAccount({
       email,
-      displayName: account?.displayName ?? email.split("@")[0],
       hasProfile: account?.hasProfile ?? false,
+      hasPassword: true,
     });
     if (account?.hasProfile) {
       navigate("/dashboard");
@@ -62,8 +71,8 @@ export function Login() {
               Log in to <span className="italic">ReachMe</span>.
             </h1>
             <p className="mt-7 max-w-[44ch] text-[hsl(var(--ink-muted))]">
-              Return to your page, your inbox, and your account. We'll send a
-              one-time link to your email.
+              Enter your email and password to access your page, inbox, and
+              account.
             </p>
           </Reveal>
 
@@ -73,23 +82,55 @@ export function Login() {
                 label="Email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError("");
+                }}
                 placeholder="you@example.com"
                 autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && valid && !submitting) continueIn();
-                }}
               />
+              <div className="mt-5">
+                <TextField
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError("");
+                  }}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && canSubmit) logIn();
+                  }}
+                />
+              </div>
+
+              {error && (
+                <p className="mt-3 text-[12.5px] leading-[1.55] text-[hsl(var(--danger))]">
+                  {error}
+                </p>
+              )}
+
+              <div className="mt-3">
+                <Link
+                  href="/forgot-password"
+                  className="text-[12.5px] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+
               <div className="mt-6 space-y-3">
                 <Button
                   size="lg"
                   trailingArrow
-                  disabled={!valid}
+                  disabled={!canSubmit}
                   loading={submitting}
-                  onClick={continueIn}
+                  onClick={logIn}
                   className="w-full"
                 >
-                  Continue
+                  Log in
                 </Button>
                 <p className="text-center text-[12.5px] text-[hsl(var(--ink-subtle))]">
                   No account yet?{" "}

@@ -103,10 +103,9 @@ export function DashboardShell({
                     layoutId="dashboard-tab-pill"
                     className="absolute inset-0 rounded-full bg-[hsl(var(--ink))]"
                     transition={{
-                      type: "spring",
-                      stiffness: 600,
-                      damping: 44,
-                      mass: 0.5,
+                      type: "tween",
+                      duration: 0.25,
+                      ease: [0.22, 1, 0.36, 1],
                     }}
                   />
                 )}

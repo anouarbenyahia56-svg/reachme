@@ -1,6 +1,7 @@
 import type {
   Profile,
   ReceivedRequest,
+  RequestAttachment,
   RequestRecord,
   SenderContact,
   SentRequest,
@@ -42,6 +43,21 @@ function uid(): string {
     return crypto.randomUUID();
   }
   return `r_${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36)}`;
+}
+
+/** Deterministic conversation ID for a sender-owner pair. Same
+ *  email + same handle = same conversation, always. */
+function getConversationId(senderEmail: string, ownerHandle: string): string {
+  const email = senderEmail.trim().toLowerCase();
+  const handle = ownerHandle.trim().toLowerCase();
+  // Simple hash — not cryptographic, but stable and collision-free
+  // enough for a local store. A backend would use a proper key.
+  let hash = 0;
+  const key = `${email}:${handle}`;
+  for (let i = 0; i < key.length; i++) {
+    hash = ((hash << 5) - hash + key.charCodeAt(i)) | 0;
+  }
+  return `conv_${Math.abs(hash).toString(36)}`;
 }
 
 function getReceived(): ReceivedRequest[] {
@@ -149,6 +165,7 @@ export function submitRequest(
 
   const record: RequestRecord = {
     id: uid(),
+    conversationId: getConversationId(input.from.email, owner.handle),
     toHandle: owner.handle,
     toDisplayName: owner.displayName,
     toAvatarUrl: owner.avatarUrl,
@@ -181,8 +198,15 @@ export function submitRequest(
   return { ok: true, record };
 }
 
-export function replyToRequest(id: string, body: string): boolean {
-  if (!body.trim()) return false;
+export function replyToRequest(
+  id: string,
+  body?: string,
+  attachments?: RequestAttachment[],
+): boolean {
+  const hasBody = body && body.trim().length > 0;
+  const hasAttachments = attachments && attachments.length > 0;
+  if (!hasBody && !hasAttachments) return false;
+
   const now = new Date().toISOString();
   let changed = false;
   const update = <T extends RequestRecord>(r: T): T => {
@@ -191,7 +215,11 @@ export function replyToRequest(id: string, body: string): boolean {
     return {
       ...r,
       status: "replied",
-      reply: { body: body.trim(), repliedAt: now },
+      reply: {
+        ...(hasBody ? { body: body!.trim() } : {}),
+        ...(hasAttachments ? { attachments } : {}),
+        repliedAt: now,
+      },
       escrow: {
         ...r.escrow,
         releasedAt: now,
@@ -202,6 +230,16 @@ export function replyToRequest(id: string, body: string): boolean {
   setReceived(getReceived().map(update));
   setSent(getSent().map(update));
   return changed;
+}
+
+export function markOpened(id: string): void {
+  const now = new Date().toISOString();
+  const update = <T extends RequestRecord>(r: T): T => {
+    if (r.id !== id || r.openedAt) return r;
+    return { ...r, openedAt: now } as T;
+  };
+  setReceived(getReceived().map(update));
+  setSent(getSent().map(update));
 }
 
 export function declineRequest(id: string, reason?: string): boolean {
@@ -238,6 +276,15 @@ export function useSent(): SentRequest[] {
   });
 }
 
+/** Get all requests in a conversation, sorted chronologically.
+ *  Works for both the owner and sender side. */
+export function getConversation(conversationId: string): RequestRecord[] {
+  const all = [...getReceived(), ...getSent()];
+  return all
+    .filter((r) => r.conversationId === conversationId)
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
 // ─── Demo seeding ─────────────────────────────────────────────────
 //
 // First-time profile owners get a single, gentle "welcome" request
@@ -258,6 +305,7 @@ export function seedDemoForOwner(profile: Profile): void {
 
   const welcome: ReceivedRequest = {
     id: seedId,
+    conversationId: getConversationId("sarah@meridianventures.com", profile.handle),
     toHandle: profile.handle,
     toDisplayName: profile.displayName,
     toAvatarUrl: profile.avatarUrl,

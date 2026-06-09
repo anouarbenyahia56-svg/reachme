@@ -56,7 +56,8 @@ export function VerifyEmailBanner() {
       className="mb-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-5 py-3.5"
     >
       <p className="text-[14px] leading-[1.55] text-[hsl(var(--ink-muted))]">
-        Verify <span className="text-[hsl(var(--ink))]">{account.email}</span> to secure your account.
+        Verify <span className="text-[hsl(var(--ink))]">{account.email}</span> to
+        receive and withdraw money.
       </p>
       <div className="flex items-center gap-5 text-[14px]">
         <button

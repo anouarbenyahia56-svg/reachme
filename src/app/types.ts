@@ -44,6 +44,7 @@ export type SocialPlatform =
   | "youtube"
   | "twitch"
   | "kick"
+  | "snapchat"
   | "linkedin"
   | "github"
   | "spotify"
@@ -67,8 +68,8 @@ export interface Profile {
   avatarUrl?: string;
   /** Minimum amount, in cents, that a sender must attach. */
   minAmountCents: number;
-  /** Reply window in days. Selectable by the owner: 3, 5,
-   *  or 7. Defaults to 5. */
+  /** Reply window in days. Selectable by the owner: 1, 2,
+   *  or 3. Defaults to 2. */
   replyWindowDays: number;
   categories: Category[];
   /** Optional social links rendered on the public card. */
@@ -83,9 +84,11 @@ export interface Profile {
  *  becomes the result of a token exchange — same shape. */
 export interface Account {
   email: string;
-  displayName: string;
   /** True once onboarding is complete and a profile exists. */
   hasProfile: boolean;
+  /** True once the user has set a password. Controls whether
+   *  Settings shows "Set password" or "Change password." */
+  hasPassword: boolean;
 }
 
 /** Sender contact carried with every request. Stored opaquely on
@@ -100,9 +103,17 @@ export interface SenderContact {
 
 /** A single request. Lives in either the owner's "received"
  *  inbox or the sender's "sent" outbox depending on whose store
- *  it is in — the shape is identical. */
+ *  it is in — the shape is identical.
+ *
+ *  Each sender-owner pair shares one conversation thread. The
+ *  `conversationId` groups all requests between the same two
+ *  people. A follow-up is simply a new request with the same
+ *  conversationId. */
 export interface RequestRecord {
   id: string;
+  /** Deterministic ID grouping all requests between the same
+   *  sender email + owner handle. */
+  conversationId: string;
   /** Handle of the owner the request was sent to. */
   toHandle: string;
   /** Display name & avatar snapshot of the owner at send time. */
@@ -116,10 +127,15 @@ export interface RequestRecord {
   amountCents: number;
   status: RequestStatus;
   createdAt: ISODate;
+  /** Set when the owner opens the request detail. Used to show an
+   *  unread indicator on pending rows in the inbox. */
+  openedAt?: ISODate;
   expiresAt: ISODate;
-  /** Set when status becomes "replied". */
+  /** Set when status becomes "replied". The owner can reply with
+   *  text, attachments (voice, video, files), or both. */
   reply?: {
-    body: string;
+    body?: string;
+    attachments?: RequestAttachment[];
     repliedAt: ISODate;
   };
   /** Set when status becomes "declined". */
@@ -137,6 +153,16 @@ export interface RequestRecord {
     /** Platform fee in cents — applied on release only. */
     feeCents?: number;
   };
+}
+
+/** An attachment included in a reply. For v1, stored as data
+ *  URLs locally. For v2, swap to remote URLs from S3. */
+export interface RequestAttachment {
+  type: "voice" | "video" | "file" | "image";
+  url: string;
+  name?: string;
+  /** Duration in seconds — for voice/video playback UI. */
+  duration?: number;
 }
 
 /** Snapshot stored locally so a sender can see their own outbox. */

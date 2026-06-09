@@ -65,6 +65,63 @@ authoritative, and complete.
 
 ---
 
+## The Exchange Model
+
+### Request → Reply → Done
+
+Each request is a single paid exchange:
+
+1. **Sender submits a request** with a financial signal ≥ the owner's floor.
+2. **Owner replies** — with text, voice, video, files, or any combination.
+3. **The request is done.** Escrow released. Conversation closed.
+
+There is no back-and-forth within a single request. One payment,
+one reply. The reply can be rich (text + attachments, voice note,
+video), but it is one response.
+
+### Follow-ups: New Request, Same Conversation
+
+If the sender wants to continue the conversation, they send a
+**new request** with a new payment. This appears as a new message
+in the same conversation thread.
+
+Rules:
+- A sender can send a follow-up at any time — whether the owner
+  has replied to the previous request or not.
+- Each follow-up is a **new request** in the owner's inbox. The
+  owner sees it as a fresh request, with full context of the
+  conversation history.
+- Each follow-up requires a new payment ≥ the floor.
+- The conversation thread groups all requests between the same
+  sender and owner.
+
+### Reply Format
+
+The owner can reply with:
+- **Text only** — a written message
+- **Attachments only** — voice, video, files, images
+- **Text + attachments** — a message with supporting media
+
+There is no requirement to include text. The owner can reply with
+just a voice note or just a file, if that's the appropriate
+response.
+
+### Conversation Thread
+
+- Each sender-owner pair has one conversation thread.
+- The thread contains all requests and replies, in chronological
+  order.
+- Both the sender and the owner can see the full history.
+- The owner sees the thread when they click into a request in
+  their inbox.
+
+### Platform Fee
+
+The platform fee (5%) is deducted on each completed reply.
+Declined and expired requests are fully refunded — no fee.
+
+---
+
 ## The Promise
 
 Stay reachable without letting noise reach you.

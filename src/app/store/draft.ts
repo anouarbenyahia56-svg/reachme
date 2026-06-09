@@ -26,7 +26,7 @@ const KEY = "draft.onboarding";
 
 const DEFAULTS: OnboardingDraft = {
   minAmountCents: 15000,
-  replyWindowDays: 5,
+  replyWindowDays: 2,
   categories: [...DEFAULT_CATEGORIES],
   visibility: "public",
 };

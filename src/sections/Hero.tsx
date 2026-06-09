@@ -41,8 +41,8 @@ export function Hero() {
               text="Serious people"
               inView={false}
               delay={0.1}
-              stagger={0.06}
-              duration={0.95}
+              stagger={0.05}
+              duration={0.7}
               as="span"
             />
           </span>
@@ -50,9 +50,9 @@ export function Hero() {
             <WordReveal
               text="can reach you."
               inView={false}
-              delay={0.3}
-              stagger={0.06}
-              duration={0.95}
+              delay={0.2}
+              stagger={0.05}
+              duration={0.7}
               as="span"
             />
           </span>
@@ -63,7 +63,7 @@ export function Hero() {
                 : { opacity: 0, y: 16, filter: "blur(8px)" }
             }
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ duration: 0.95, delay: 0.85, ease: EASE }}
+            transition={{ duration: 0.7, delay: 0.5, ease: EASE }}
             className="block italic text-[hsl(var(--ink-subtle))]"
             style={{ fontSize: "0.84em", fontWeight: 400 }}
             aria-hidden="true"
@@ -74,8 +74,8 @@ export function Hero() {
         </h1>
 
         <BlurReveal
-          delay={1.05}
-          duration={0.9}
+          delay={0.6}
+          duration={0.7}
           inView={false}
           as="p"
           className="mt-12 max-w-[44ch] text-[hsl(var(--ink-muted))]"
@@ -95,8 +95,8 @@ export function Hero() {
         </BlurReveal>
 
         <BlurReveal
-          delay={1.2}
-          duration={0.9}
+          delay={0.7}
+          duration={0.7}
           inView={false}
           className="mt-12 flex flex-col items-center gap-7"
         >
@@ -120,14 +120,14 @@ function SeeHowItWorks() {
   return (
     <a
       href="#mechanic"
-      className="group relative inline-flex items-center text-[11px] font-medium uppercase text-[hsl(var(--ink-muted))] transition-colors duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-[hsl(var(--ink))]"
+      className="group relative inline-flex items-center text-[11px] font-medium uppercase text-[hsl(var(--ink-muted))] transition-colors duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-[hsl(var(--ink))]"
       style={{ letterSpacing: "0.22em" }}
     >
-      <span className="inline-flex items-center transition-transform duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-x-[12px]">
+      <span className="inline-flex items-center transition-transform duration-[350ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-x-[12px]">
         <span>See how it works</span>
         <span
           aria-hidden="true"
-          className="ml-2 inline-flex w-0 items-center overflow-hidden text-[hsl(var(--ink))] opacity-0 transition-[width,opacity] duration-[700ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:w-[22px] group-hover:opacity-100"
+          className="ml-2 inline-flex w-0 items-center overflow-hidden text-[hsl(var(--ink))] opacity-0 transition-[width,opacity] duration-[350ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:w-[22px] group-hover:opacity-100"
         >
           <svg
             viewBox="0 0 18 8"

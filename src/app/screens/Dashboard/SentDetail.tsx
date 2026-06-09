@@ -1,20 +1,24 @@
-import { ArrowLeft } from "lucide-react";
+import type { ReactNode } from "react";
+import { ArrowLeft, Camera, File, Mic, Play } from "lucide-react";
 import { Card } from "../../ui/Card";
 import { Pill } from "../../ui/Pill";
 import { Avatar } from "../../ui/Avatar";
 import { Reveal } from "../../ui/Reveal";
 import { Link, useRouter } from "../../router";
-import { useSent } from "../../store/requests";
+import { useSent, getConversation, platformFeeCents } from "../../store/requests";
+import { useProfile } from "../../store/session";
 import { dateLong, formatMoney, timeAgo, timeUntil } from "../../store/format";
+import type { RequestRecord } from "../../types";
 
 /**
  * Sent detail — read-only view from the sender's perspective.
- * The owner stays at the top, the message they sent and the
- * reply (if any) sit below, and the escrow card spells out
- * exactly where the money is.
+ * Shows the full conversation thread with the owner, the escrow
+ * card, and a fee breakdown (owner only — they can see what
+ * platform fee was deducted).
  */
 export function SentDetail({ id }: { id: string }) {
   const all = useSent();
+  const profile = useProfile();
   const r = all.find((x) => x.id === id);
   const { navigate } = useRouter();
 
@@ -42,6 +46,12 @@ export function SentDetail({ id }: { id: string }) {
       </Card>
     );
   }
+
+  // Get full conversation thread
+  const thread = getConversation(r.conversationId);
+  const isOwner = Boolean(
+    profile && profile.handle.toLowerCase() === r.toHandle.toLowerCase(),
+  );
 
   return (
     <Reveal duration={0.4} blur={4}>
@@ -99,47 +109,12 @@ export function SentDetail({ id }: { id: string }) {
           </div>
 
           <div className="px-7 pb-7 pt-6 md:px-9 md:pb-9">
-            <p
-              className="whitespace-pre-line text-[hsl(var(--ink))]"
-              style={{ fontSize: "1rem", lineHeight: 1.7 }}
-            >
-              {r.message}
-            </p>
-
-            {r.reply && (
-              <div className="mt-9 rounded-2xl border border-[hsl(var(--ink))] bg-[hsl(var(--surface))] px-5 py-5">
-                <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-                  Reply from {r.toDisplayName.split(" ")[0]} ·{" "}
-                  {timeAgo(r.reply.repliedAt)}
-                </p>
-                <p
-                  className="mt-2.5 whitespace-pre-line text-[hsl(var(--ink))]"
-                  style={{ fontSize: "0.97rem", lineHeight: 1.7 }}
-                >
-                  {r.reply.body}
-                </p>
-              </div>
-            )}
-
-            {r.decline && (
-              <div className="mt-9 rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--page))] px-5 py-5">
-                <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-                  Declined · {timeAgo(r.decline.declinedAt)}
-                </p>
-                {r.decline.reason ? (
-                  <p
-                    className="mt-2.5 text-[hsl(var(--ink))]"
-                    style={{ fontSize: "0.97rem", lineHeight: 1.7 }}
-                  >
-                    {r.decline.reason}
-                  </p>
-                ) : (
-                  <p className="mt-2.5 text-[hsl(var(--ink-muted))]">
-                    No reason was given. Your full amount is back with you.
-                  </p>
-                )}
-              </div>
-            )}
+            {/* Conversation thread */}
+            <div className="space-y-6">
+              {thread.map((req) => (
+                <ConversationEntry key={req.id} r={req} />
+              ))}
+            </div>
           </div>
         </Card>
 
@@ -173,6 +148,30 @@ export function SentDetail({ id }: { id: string }) {
                     ? `Refunded ${dateLong(r.decline!.declinedAt)}.`
                     : `Refunded after the reply window closed.`}
             </p>
+
+            {/* Fee breakdown — owner only */}
+            {isOwner && r.status === "replied" && (
+              <div className="mt-5 space-y-2 border-t border-[hsl(var(--rule))] pt-5">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[12.5px] text-[hsl(var(--ink-muted))]">You sent</span>
+                  <span className="text-[13px] font-medium tabular-nums text-[hsl(var(--ink))]">
+                    {formatMoney(r.amountCents)}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[12.5px] text-[hsl(var(--ink-muted))]">Platform fee</span>
+                  <span className="text-[12.5px] tabular-nums text-[hsl(var(--ink-subtle))]">
+                    − {formatMoney(platformFeeCents(r.amountCents))}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-[12.5px] text-[hsl(var(--ink-muted))]">Owner received</span>
+                  <span className="text-[12.5px] tabular-nums text-[hsl(var(--ink-subtle))]">
+                    {formatMoney(r.amountCents - platformFeeCents(r.amountCents))}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
           <div className="px-7 pb-7 pt-6 md:px-9 md:pb-9">
             <Row label="Submitted" value={dateLong(r.createdAt)} />
@@ -193,12 +192,87 @@ export function SentDetail({ id }: { id: string }) {
   );
 }
 
+function ConversationEntry({ r }: { r: RequestRecord }) {
+  const fee = r.escrow.feeCents ?? platformFeeCents(r.amountCents);
+  const release = r.amountCents - fee;
+
+  return (
+    <div className="space-y-4">
+      {/* Sender's message */}
+      <div className="rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--page))] px-5 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[12.5px] text-[hsl(var(--ink-subtle))]">
+            {formatMoney(r.amountCents)} · {timeAgo(r.createdAt)}
+          </p>
+          <StatusPill status={r.status} />
+        </div>
+        <p
+          className="mt-2.5 whitespace-pre-line text-[hsl(var(--ink))]"
+          style={{ fontSize: "0.97rem", lineHeight: 1.7 }}
+        >
+          {r.message}
+        </p>
+      </div>
+
+      {/* Owner's reply */}
+      {r.reply && (
+        <div className="ml-6 rounded-2xl border border-[hsl(var(--ink))] bg-[hsl(var(--surface))] px-5 py-4">
+          <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
+            Reply · {timeAgo(r.reply.repliedAt)}
+          </p>
+          {r.reply.body && (
+            <p
+              className="mt-2.5 whitespace-pre-line text-[hsl(var(--ink))]"
+              style={{ fontSize: "0.97rem", lineHeight: 1.7 }}
+            >
+              {r.reply.body}
+            </p>
+          )}
+          {/* Attachments */}
+          {r.reply.attachments && r.reply.attachments.length > 0 && (
+            <div className={`flex flex-wrap gap-2 ${r.reply.body ? "mt-3" : "mt-2"}`}>
+              {r.reply.attachments.map((a, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-2 rounded-full bg-[hsl(var(--page))] px-3 py-1.5 ring-1 ring-[hsl(var(--rule))]"
+                >
+                  {a.type === "image" && <Camera size={12} strokeWidth={1.6} />}
+                  {a.type === "voice" && <Mic size={12} strokeWidth={1.6} />}
+                  {a.type === "video" && <Play size={12} strokeWidth={1.6} />}
+                  {a.type === "file" && <File size={12} strokeWidth={1.6} />}
+                  <span className="max-w-[120px] truncate text-[11.5px] text-[hsl(var(--ink))]">
+                    {a.name || a.type}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Declined */}
+      {r.decline && (
+        <div className="ml-6 flex justify-center pt-2">
+          <div className="text-center">
+            <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
+              Declined · {timeAgo(r.decline.declinedAt)}
+            </p>
+            <p className="mt-1 text-[12.5px] text-[hsl(var(--ink-muted))]">
+              Refunded {formatMoney(r.amountCents)}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StatusPill({
   status,
 }: {
   status: "pending" | "replied" | "declined" | "expired";
 }) {
-  if (status === "pending") return <Pill size="sm" tone="ink">Held</Pill>;
+  if (status === "pending") return <Pill size="sm" tone="ink">Pending</Pill>;
   if (status === "replied") return <Pill size="sm">Replied</Pill>;
   if (status === "declined") return <Pill size="sm" tone="muted">Declined</Pill>;
   return <Pill size="sm" tone="muted">Expired</Pill>;
