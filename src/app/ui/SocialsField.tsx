@@ -199,7 +199,7 @@ export function SocialsField({
                     onBlur={() => onBlurHandle(id)}
                     placeholder={placeholder}
                     aria-label={`${label} handle`}
-                    className="min-w-0 bg-transparent text-[14px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
+                    className="min-w-0 h-9 bg-transparent text-[14px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
                   />
                   <button
                     type="button"
