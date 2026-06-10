@@ -66,6 +66,8 @@ export interface Profile {
   title: string;
   /** Data URL or future remote URL — same shape, swap the source. */
   avatarUrl?: string;
+  /** Optional background image for the public card. */
+  backgroundUrl?: string;
   /** Minimum amount, in cents, that a sender must attach. */
   minAmountCents: number;
   /** Reply window in days. Selectable by the owner: 1, 2,

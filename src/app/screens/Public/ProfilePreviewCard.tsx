@@ -114,6 +114,13 @@ export function ProfilePreviewCard({
           "min-h-[calc(100vh-68px)] min-h-[calc(100dvh-68px)] flex flex-col justify-center md:min-h-0",
         "md:mx-auto md:my-10 md:max-w-[480px] md:rounded-[20px] md:shadow-[0_1px_1px_rgba(15,15,15,0.04),0_2px_6px_rgba(15,15,15,0.04),0_28px_56px_-20px_rgba(15,15,15,0.12)]",
       )}
+      style={{
+        backgroundImage: profile.backgroundUrl
+          ? `url(${profile.backgroundUrl})`
+          : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
     >
       <div className="px-7 pb-14 pt-14 md:px-11 md:pb-16 md:pt-16">
         <Section delay={0} className="flex justify-center">
