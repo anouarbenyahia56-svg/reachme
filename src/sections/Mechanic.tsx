@@ -16,8 +16,8 @@ const STEPS = [
     body: "Category. Context. A clear message. And an amount that signals the sender means it. Nothing arrives half-formed.",
   },
   {
-    title: "Reply, decline, or let it expire.",
-    body: "You stay in control. Replies release the payment. Declined or expired requests are refunded automatically.",
+    title: "Reply or let it expire.",
+    body: "You stay in control. Replies release the payment. Expired requests are refunded automatically.",
   },
 ] as const;
 

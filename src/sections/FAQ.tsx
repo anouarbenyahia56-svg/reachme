@@ -11,7 +11,7 @@ import {
 const ITEMS = [
   {
     q: "What’s the amount actually for?",
-    a: "It’s a seriousness signal — not a payment for your time. The sender attaches it to demonstrate the request is worth your attention. You can choose to reply and accept it, or decline and refund it. Either way, the sender chose to put something on the line.",
+    a: "It’s a seriousness signal — not a payment for your time. The sender attaches it to demonstrate the request is worth your attention. You can choose to reply and accept it, or ignore it and it expires. Either way, the sender chose to put something on the line.",
   },
   {
     q: "What happens if I don’t reply?",

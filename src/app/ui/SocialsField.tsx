@@ -67,9 +67,11 @@ function buildConnectedList(socials: Socials | undefined): SocialPlatform[] {
 export function SocialsField({
   value,
   onChange,
+  description,
 }: {
   value: Socials;
   onChange: (v: Socials) => void;
+  description?: string;
 }) {
   const [connected, setConnected] = useState<SocialPlatform[]>(() =>
     buildConnectedList(value),
@@ -149,9 +151,7 @@ export function SocialsField({
   };
 
   const onBlurHandle = (id: SocialPlatform) => {
-    if (!(handles[id] ?? "").trim() && !value[id]) {
-      removePlatform(id);
-    }
+    // Do not auto-remove on blur. User explicitly removes with the X button.
   };
 
   return (
@@ -162,9 +162,11 @@ export function SocialsField({
           {connected.length} of {MAX_SOCIALS}
         </span>
       </div>
-      <p className="mb-6 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-muted))]">
-        Link the profiles your audience already follows.
-      </p>
+      {description && (
+        <p className="mb-6 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-muted))]">
+          {description}
+        </p>
+      )}
 
       <ul className="space-y-3">
         <AnimatePresence initial={false}>
@@ -199,7 +201,7 @@ export function SocialsField({
                     onBlur={() => onBlurHandle(id)}
                     placeholder={placeholder}
                     aria-label={`${label} handle`}
-                    className="min-w-0 h-9 bg-transparent text-[14px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
+                    className="min-w-0 h-10 bg-transparent text-[14px] leading-[36px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
                   />
                   <button
                     type="button"

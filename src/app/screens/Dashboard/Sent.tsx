@@ -5,7 +5,6 @@ import { Pill } from "../../ui/Pill";
 import { useSent } from "../../store/requests";
 import { Avatar } from "../../ui/Avatar";
 import { Link } from "../../router";
-import { Reveal } from "../../ui/Reveal";
 import { formatMoney, timeAgo } from "../../store/format";
 import type { RequestStatus } from "../../types";
 import { cn } from "@/lib/utils";
@@ -13,7 +12,6 @@ import { cn } from "@/lib/utils";
 const FILTERS: ReadonlyArray<{ id: RequestStatus | "all"; label: string }> = [
   { id: "pending", label: "Pending" },
   { id: "replied", label: "Replied" },
-  { id: "declined", label: "Declined" },
   { id: "expired", label: "Expired" },
   { id: "all", label: "All" },
 ];
@@ -34,7 +32,6 @@ export function Sent() {
       all: all.length,
       pending: 0,
       replied: 0,
-      declined: 0,
       expired: 0,
     };
     all.forEach((r) => (out[r.status] = (out[r.status] ?? 0) + 1));
@@ -151,7 +148,6 @@ export function Sent() {
 function moneyState(r: import("../../types").RequestRecord): string {
   if (r.status === "pending") return "Held — awaiting reply";
   if (r.status === "replied") return `Released to ${r.toDisplayName}`;
-  if (r.status === "declined") return "Refunded to you";
   return "Refunded to you";
 }
 
@@ -165,10 +161,6 @@ function Empty({ filter }: { filter: string }) {
       title: "No replies received yet.",
       body: "Replies you receive will appear here, with the owner's response.",
     },
-    declined: {
-      title: "Nothing declined.",
-      body: "If an owner declines, the full amount comes back to you here.",
-    },
     expired: {
       title: "Nothing expired.",
       body: "If an owner doesn't reply within their reply window, the request expires and refunds.",
@@ -180,36 +172,33 @@ function Empty({ filter }: { filter: string }) {
   };
   const m = messages[filter] ?? messages.all;
   return (
-    <Reveal duration={0.3} blur={0}>
-      <div className="px-7 py-20 text-center md:px-9">
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[hsl(var(--page))] text-[hsl(var(--ink-muted))] ring-1 ring-[hsl(var(--rule))]">
-          <Send size={18} strokeWidth={1.6} aria-hidden="true" />
-        </span>
-        <h3
-          className="mt-5 font-serif text-[hsl(var(--ink))]"
-          style={{
-            fontSize: "1.6rem",
-            fontWeight: 500,
-            letterSpacing: "-0.025em",
-          }}
-        >
-          {m.title}
-        </h3>
-        <p className="mx-auto mt-2 max-w-[44ch] text-[13.5px] text-[hsl(var(--ink-muted))]">
-          {m.body}
-        </p>
-      </div>
-    </Reveal>
+    <div className="px-7 py-20 text-center md:px-9">
+      <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[hsl(var(--page))] text-[hsl(var(--ink-muted))] ring-1 ring-[hsl(var(--rule))]">
+        <Send size={18} strokeWidth={1.6} aria-hidden="true" />
+      </span>
+      <h3
+        className="mt-5 font-serif text-[hsl(var(--ink))]"
+        style={{
+          fontSize: "1.6rem",
+          fontWeight: 500,
+          letterSpacing: "-0.025em",
+        }}
+      >
+        {m.title}
+      </h3>
+      <p className="mx-auto mt-2 max-w-[44ch] text-[13.5px] text-[hsl(var(--ink-muted))]">
+        {m.body}
+      </p>
+    </div>
   );
 }
 
 function StatusPill({
   status,
 }: {
-  status: "pending" | "replied" | "declined" | "expired";
+  status: "pending" | "replied" | "expired";
 }) {
   if (status === "pending") return <Pill size="sm" tone="ink">Pending</Pill>;
   if (status === "replied") return <Pill size="sm">Replied</Pill>;
-  if (status === "declined") return <Pill size="sm" tone="muted">Declined</Pill>;
   return <Pill size="sm" tone="muted">Expired</Pill>;
 }

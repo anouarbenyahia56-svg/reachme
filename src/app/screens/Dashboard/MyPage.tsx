@@ -107,6 +107,7 @@ export function MyPage() {
           <SocialsField
             value={draft.socials ?? {}}
             onChange={(v) => set("socials", v)}
+            description="Link the profiles your audience already follows."
           />
         </div>
       </Card>
@@ -429,18 +430,16 @@ function CategoriesField({
       </div>
       <div className="space-y-6">
         <ul className="flex flex-wrap gap-2">
-          <AnimatePresence initial={false} mode="popLayout">
+          <AnimatePresence initial={false}>
             {items.map((c) => (
               <motion.li
                 key={c.id}
-                layout
                 initial={{ opacity: 0, y: 6, filter: "blur(6px)" }}
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 exit={{ opacity: 0, y: -4, filter: "blur(6px)" }}
                 transition={{
                   duration: 0.2,
                   ease: EASE,
-                  layout: { duration: 0.3, ease: EASE },
                 }}
               >
                 <span className="inline-flex items-center gap-2 rounded-full bg-[hsl(var(--ink))] py-1.5 pl-4 pr-1.5 text-[12.5px] font-medium text-[hsl(var(--page))]">

@@ -7,9 +7,8 @@ import { Card } from "../../ui/Card";
 import { Pill } from "../../ui/Pill";
 import { Avatar } from "../../ui/Avatar";
 import { Button } from "../../ui/Button";
-import { Modal } from "../../ui/Modal";
 import { Link, useRouter } from "../../router";
-import { useReceived, replyToRequest, declineRequest, platformFeeCents, markOpened } from "../../store/requests";
+import { useReceived, replyToRequest, platformFeeCents, markOpened } from "../../store/requests";
 import {
   dateLong,
   formatMoney,
@@ -24,7 +23,7 @@ import type { RequestAttachment } from "../../types";
 /**
  * Request detail — the moment of decision. Sender block at top,
  * full message below, escrow card in the sidebar showing exactly
- * where the money sits. Reply, decline, or do nothing.
+ * where the money sits. Reply or do nothing.
  *
  * Reply transforms the page into a conversation view — the
  * sender's message becomes a chat bubble, the reply input
@@ -39,7 +38,6 @@ export function RequestDetail({ id }: { id: string }) {
   const [replying, setReplying] = useState(false);
   const [reply, setReply] = useState("");
   const [attachments, setAttachments] = useState<RequestAttachment[]>([]);
-  const [declineOpen, setDeclineOpen] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -110,13 +108,6 @@ export function RequestDetail({ id }: { id: string }) {
       setReplying(false);
       setReply("");
       setAttachments([]);
-    }
-  };
-
-  const onDecline = () => {
-    if (declineRequest(r.id)) {
-      toast.show("Declined.", `Refunded ${formatMoney(r.amountCents)}`);
-      setDeclineOpen(false);
     }
   };
 
@@ -440,31 +431,12 @@ export function RequestDetail({ id }: { id: string }) {
                             </div>
                           </div>
                         )}
-
-                        {/* Declined — small centered marker, not a bubble */}
-                        {r.decline && (
-                          <div className="flex justify-center pt-4">
-                            <div className="text-center">
-                              <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-                                Declined
-                              </p>
-                              <p className="mt-1 text-[11.5px] text-[hsl(var(--ink-subtle))]">
-                                {timeAgo(r.decline.declinedAt)}
-                              </p>
-                              {r.decline.reason && (
-                                <p className="mx-auto mt-3 max-w-[42ch] whitespace-pre-line text-[13.5px] leading-[1.6] text-[hsl(var(--ink-muted))]">
-                                  {r.decline.reason}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
 
                   {/* Actions — flush, no divider */}
-                  {r.status === "pending" && (
+                   {r.status === "pending" && (
                     <div className="px-7 pt-5 pb-7 md:px-9 md:pt-6 md:pb-9">
                       <div className="flex flex-wrap items-center gap-3">
                         <Button
@@ -473,13 +445,6 @@ export function RequestDetail({ id }: { id: string }) {
                           trailingArrow
                         >
                           Reply &amp; release {formatMoney(r.amountCents)}
-                        </Button>
-                        <Button
-                          size="md"
-                          variant="outline"
-                          onClick={() => setDeclineOpen(true)}
-                        >
-                          Decline &amp; refund
                         </Button>
                       </div>
                     </div>
@@ -509,23 +474,6 @@ export function RequestDetail({ id }: { id: string }) {
           )}
         </AnimatePresence>
       </div>
-
-      <Modal
-        open={declineOpen}
-        onClose={() => setDeclineOpen(false)}
-        title="Decline this request?"
-        description={`The full ${formatMoney(r.amountCents)} will be refunded to ${r.from.name.split(" ")[0]}.`}
-        size="sm"
-      >
-        <div className="mt-2 flex flex-wrap items-center justify-end gap-3">
-          <Button variant="ghost" onClick={() => setDeclineOpen(false)}>
-            Keep pending
-          </Button>
-          <Button variant="danger" onClick={onDecline}>
-            Decline &amp; refund
-          </Button>
-        </div>
-      </Modal>
     </div>
   );
 }
@@ -554,11 +502,10 @@ function ReplyIconBtn({
 function StatusPill({
   status,
 }: {
-  status: "pending" | "replied" | "declined" | "expired";
+  status: "pending" | "replied" | "expired";
 }) {
   if (status === "pending") return <Pill size="sm" tone="ink">Pending</Pill>;
   if (status === "replied") return <Pill size="sm">Replied</Pill>;
-  if (status === "declined") return <Pill size="sm" tone="muted">Declined</Pill>;
   return <Pill size="sm" tone="muted">Expired</Pill>;
 }
 
@@ -595,9 +542,7 @@ function EscrowCard({
             ? `Auto-refunds ${timeUntil(r.expiresAt)}`
             : r.status === "replied"
               ? `Released ${dateLong(r.reply!.repliedAt)}`
-              : r.status === "declined"
-                ? `Refunded ${dateLong(r.decline!.declinedAt)}`
-                : "Refunded automatically"}
+              : "Refunded automatically"}
         </p>
 
         <div className="pt-5 space-y-2">
@@ -614,7 +559,7 @@ function EscrowCard({
             </span>
           </div>
           <div className="flex items-baseline justify-between">
-            <span className="text-[12.5px] text-[hsl(var(--ink-muted))]">If you decline</span>
+            <span className="text-[12.5px] text-[hsl(var(--ink-muted))]">If you don't reply</span>
             <span className="text-[12.5px] tabular-nums text-[hsl(var(--ink-subtle))]">
               Refund {formatMoney(r.amountCents)}
             </span>
@@ -644,12 +589,6 @@ function TimelineCard({
       icon: <Check size={12} strokeWidth={1.6} />,
       label: "Released to you",
       meta: dateLong(r.escrow.releasedAt),
-    });
-  if (r.escrow.refundedAt && r.status === "declined")
-    events.push({
-      icon: <X size={12} strokeWidth={1.6} />,
-      label: "Refunded to sender",
-      meta: dateLong(r.escrow.refundedAt),
     });
   if (r.escrow.refundedAt && r.status === "expired")
     events.push({

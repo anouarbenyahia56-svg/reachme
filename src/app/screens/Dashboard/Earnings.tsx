@@ -1,12 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Inbox } from "lucide-react";
 import { Card } from "../../ui/Card";
 import { Pill } from "../../ui/Pill";
 import { Button } from "../../ui/Button";
 import { Modal } from "../../ui/Modal";
 import { Label } from "../../ui/Field";
-import { Reveal } from "../../ui/Reveal";
-import { useRouter } from "../../router";
+import { useNavigate } from "../../router";
 import { useReceived, platformFeeCents } from "../../store/requests";
 import {
   useWithdrawals,
@@ -71,7 +70,7 @@ export function Earnings() {
   const withdrawals = useWithdrawals();
   const payoutMethod = usePayoutMethod();
   const toast = useToast();
-  const { navigate } = useRouter();
+  const navigate = useNavigate();
 
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
@@ -85,48 +84,61 @@ export function Earnings() {
 
   // ─── Derived numbers (intermediate calculations) ────────────────
 
-  const inbox = received.filter(
-    (r) => r.toHandle.toLowerCase() === profile.handle.toLowerCase(),
+  const inbox = useMemo(
+    () => received.filter((r) => r.toHandle.toLowerCase() === profile.handle.toLowerCase()),
+    [received, profile.handle],
   );
-  const pending = inbox.filter((r) => r.status === "pending");
-  const released = inbox.filter(
-    (r) => r.status === "replied" && r.escrow.releasedAt,
+  const pending = useMemo(() => inbox.filter((r) => r.status === "pending"), [inbox]);
+  const released = useMemo(
+    () => inbox.filter((r) => r.status === "replied" && r.escrow.releasedAt),
+    [inbox],
   );
   const netOf = (r: ReceivedRequest) =>
     r.amountCents - (r.escrow.feeCents ?? platformFeeCents(r.amountCents));
 
-  const startOfMonth = new Date(
-    new Date().getFullYear(),
-    new Date().getMonth(),
-    1,
-  );
-  const thisMonth = released.filter(
-    (r) => new Date(r.reply!.repliedAt).getTime() >= startOfMonth.getTime(),
-  );
+  const thisMonth = useMemo(() => {
+    const startOfMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1,
+    );
+    return released.filter(
+      (r) => new Date(r.reply!.repliedAt).getTime() >= startOfMonth.getTime(),
+    );
+  }, [released]);
 
   // ─── Backing variables (replace each with real API data) ────────
 
   // TODO: wire to backend — value from GET /earnings/lifetime
-  const lifetimeNetCents = released.reduce((sum, r) => sum + netOf(r), 0);
+  const lifetimeNetCents = useMemo(
+    () => released.reduce((sum, r) => sum + netOf(r), 0),
+    [released],
+  );
 
   // TODO: wire to backend — value from GET /earnings/lifetime/count
   const lifetimeReplyCount = released.length;
 
   // TODO: wire to backend — value from GET /earnings/available
-  const availableBalance = Math.max(
-    0,
-    lifetimeNetCents - withdrawnCents(withdrawals),
+  const availableBalance = useMemo(
+    () => Math.max(0, lifetimeNetCents - withdrawnCents(withdrawals)),
+    [lifetimeNetCents, withdrawals],
   );
 
   // TODO: wire to backend — value from GET /earnings/this-month
-  const thisMonthEarnings = thisMonth.reduce((sum, r) => sum + netOf(r), 0);
+  const thisMonthEarnings = useMemo(
+    () => thisMonth.reduce((sum, r) => sum + netOf(r), 0),
+    [thisMonth],
+  );
 
   const currentMonthName = new Date().toLocaleDateString("en-US", {
     month: "long",
   });
 
   // TODO: wire to backend — value from GET /earnings/pending-escrow
-  const pendingEscrow = pending.reduce((sum, r) => sum + r.amountCents, 0);
+  const pendingEscrow = useMemo(
+    () => pending.reduce((sum, r) => sum + r.amountCents, 0),
+    [pending],
+  );
 
   // TODO: wire to backend — value from GET /earnings/pending-escrow/count
   const pendingRequestCount = pending.length;
@@ -140,28 +152,36 @@ export function Earnings() {
   const hasAvailableFunds = availableBalance > 0;
 
   // TODO: wire to backend — array from GET /earnings/history
-  const earningsHistory: EarningEntry[] = [...released]
-    .sort(
-      (a, b) =>
-        new Date(b.reply!.repliedAt).getTime() -
-        new Date(a.reply!.repliedAt).getTime(),
-    )
-    .map((r) => ({
-      id: r.id,
-      date: r.reply!.repliedAt,
-      category:
-        profile.categories.find((c) => c.id === r.category)?.label ?? "—",
-      amountCents: netOf(r),
-    }));
+  const earningsHistory: EarningEntry[] = useMemo(
+    () =>
+      [...released]
+        .sort(
+          (a, b) =>
+            new Date(b.reply!.repliedAt).getTime() -
+            new Date(a.reply!.repliedAt).getTime(),
+        )
+        .map((r) => ({
+          id: r.id,
+          date: r.reply!.repliedAt,
+          category:
+            profile.categories.find((c) => c.id === r.category)?.label ?? "—",
+          amountCents: netOf(r),
+        })),
+    [released, profile.categories],
+  );
 
   // TODO: wire to backend — array from GET /withdrawals/history
-  const withdrawalsHistory: WithdrawalEntry[] = withdrawals.map((w) => ({
-    id: w.id,
-    date: w.completedAt ?? w.requestedAt,
-    amountCents: w.amountCents,
-    lastFour: w.method.lastFour,
-    status: w.status,
-  }));
+  const withdrawalsHistory: WithdrawalEntry[] = useMemo(
+    () =>
+      withdrawals.map((w) => ({
+        id: w.id,
+        date: w.completedAt ?? w.requestedAt,
+        amountCents: w.amountCents,
+        lastFour: w.method.lastFour,
+        status: w.status,
+      })),
+    [withdrawals],
+  );
 
   // ─── Handlers (placeholder functions) ────────────────────────────
 
@@ -176,6 +196,10 @@ export function Earnings() {
   // TODO: wire to backend — POST /withdrawals, then poll the result
   // or subscribe to a webhook before refreshing the balance.
   const handleWithdraw = () => {
+    if (!profile.verified) {
+      toast.show("Verify your email to withdraw money.");
+      return;
+    }
     openWithdrawModal();
   };
 
@@ -218,7 +242,7 @@ export function Earnings() {
           className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-5 py-3.5"
         >
           <p className="text-[14px] leading-[1.55] text-[hsl(var(--ink-muted))]">
-            Verify your email to receive and withdraw money.
+            Verify your email to be able to withdraw money.
           </p>
           <button
             type="button"
@@ -230,8 +254,7 @@ export function Earnings() {
         </div>
       )}
 
-      <Reveal duration={0.45} blur={5} delay={0}>
-        <StatementCard
+      <StatementCard
           availableBalance={availableBalance}
           lifetimeNetCents={lifetimeNetCents}
           lifetimeReplyCount={lifetimeReplyCount}
@@ -246,25 +269,20 @@ export function Earnings() {
           onConnectBank={handleConnectBank}
           onWithdraw={handleWithdraw}
         />
-      </Reveal>
 
-      <Reveal duration={0.45} blur={5} delay={0.06}>
-        <EarnedCard
+      <EarnedCard
           earnings={earningsHistory}
           loading={loading}
           onRowClick={(id) => navigate(`/dashboard/received/${id}`)}
         />
-      </Reveal>
 
-      <Reveal duration={0.45} blur={5} delay={0.12}>
-        <BankCard
+      <BankCard
           hasPayoutMethod={hasPayoutMethod}
           payoutMethod={payoutMethod}
           withdrawals={withdrawalsHistory}
           loading={loading}
           onConnectBank={handleConnectBank}
         />
-      </Reveal>
 
       <WithdrawModal
         open={withdrawOpen}

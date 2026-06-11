@@ -18,7 +18,6 @@ import { useExternal } from "./useExternal";
  *
  *   submit   → held    (status=pending,  expiresAt=+replyWindow)
  *   reply    → release (status=replied,  fee deducted)
- *   decline  → refund  (status=declined)
  *   tick     → refund  (status=expired)  — when expiresAt passes
  *
  * The platform fee is a constant for now; trivial to make per-tier
@@ -31,7 +30,7 @@ const SENT_KEY = "sent";
 export const PLATFORM_FEE_BPS = 500; // 5% on completed reply
 
 /** Platform fee in cents for a given gross amount. Applied on
- *  release only; declined and expired requests are fully refunded. */
+ *  release only; expired requests are fully refunded. */
 export function platformFeeCents(amountCents: number): number {
   return Math.round((amountCents * PLATFORM_FEE_BPS) / 10_000);
 }
@@ -240,24 +239,6 @@ export function markOpened(id: string): void {
   };
   setReceived(getReceived().map(update));
   setSent(getSent().map(update));
-}
-
-export function declineRequest(id: string, reason?: string): boolean {
-  const now = new Date().toISOString();
-  let changed = false;
-  const update = <T extends RequestRecord>(r: T): T => {
-    if (r.id !== id || r.status !== "pending") return r;
-    changed = true;
-    return {
-      ...r,
-      status: "declined",
-      decline: { reason: reason?.trim() || undefined, declinedAt: now },
-      escrow: { ...r.escrow, refundedAt: now },
-    } as T;
-  };
-  setReceived(getReceived().map(update));
-  setSent(getSent().map(update));
-  return changed;
 }
 
 // ─── Reactive bindings ────────────────────────────────────────────

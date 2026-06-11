@@ -230,36 +230,30 @@ export function ProfilePreviewCard({
         </Section>
 
         <Section delay={0.34} className="mt-12">
-          {preview ? (
-            <div
-              role="status"
-              className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--rule))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-subtle))]"
-            >
-              Send a request
-            </div>
-          ) : isPaused ? (
-            <div
-              role="status"
-              className="flex h-[50px] w-full items-center justify-center rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-muted))]"
-            >
-              Not accepting requests right now.
-            </div>
-          ) : isOwner ? (
-            <button
-              type="button"
-              onClick={() => setSelfRequestOpen(true)}
-              className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/85 focus-visible:outline-none"
-            >
-              Send a request
-            </button>
-          ) : (
-            <Link
-              href={`/${profile.handle}/send`}
-              className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/85 focus-visible:outline-none"
-            >
-              Send a request
-            </Link>
-          )}
+          {!preview &&
+            (isPaused ? (
+              <div
+                role="status"
+                className="flex h-[50px] w-full items-center justify-center rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-muted))]"
+              >
+                Not accepting requests right now.
+              </div>
+            ) : isOwner ? (
+              <button
+                type="button"
+                onClick={() => setSelfRequestOpen(true)}
+                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/85 focus-visible:outline-none"
+              >
+                Send a request
+              </button>
+            ) : (
+              <Link
+                href={`/${profile.handle}/send`}
+                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/85 focus-visible:outline-none"
+              >
+                Send a request
+              </Link>
+            ))}
         </Section>
       </div>
 

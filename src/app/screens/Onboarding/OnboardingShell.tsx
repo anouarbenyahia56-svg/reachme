@@ -43,7 +43,7 @@ export function OnboardingShell({
   return (
     <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
       <header className="sticky inset-x-0 top-0 z-40 bg-[hsl(var(--page))]/85 backdrop-blur">
-        <div className="mx-auto flex h-[68px] max-w-[920px] items-center justify-between px-6 md:px-10">
+        <div className="mx-auto flex h-[68px] items-center justify-between px-6 md:px-10">
           <Link href="/" aria-label="ReachMe" className="-mx-1 px-1">
             <Wordmark />
           </Link>

@@ -62,7 +62,13 @@ export function VisibilityField({
       setCustomActive(true);
       setCustomStr(defaultVal);
       onChangeReplyWindow(4);
-      requestAnimationFrame(() => customInputRef.current?.focus());
+      requestAnimationFrame(() => {
+        const el = customInputRef.current;
+        if (el) {
+          el.focus();
+          el.select();
+        }
+      });
     }
   };
 
@@ -159,26 +165,32 @@ export function VisibilityField({
               ].join(" ")}
             >
               {customActive ? (
-                <div className="flex items-center justify-center gap-1">
+                <span
+                  className="font-serif"
+                  style={{
+                    fontSize: "1.3rem",
+                    fontWeight: 500,
+                    letterSpacing: "-0.025em",
+                  }}
+                >
                   <input
                     ref={customInputRef}
                     type="text"
                     inputMode="numeric"
-                    className="w-10 bg-transparent text-center font-serif text-[1.3rem] font-medium tracking-[-0.025em] outline-none"
+                    className="w-[1ch] bg-transparent text-center font-serif text-[1.3rem] font-medium tracking-[-0.025em] outline-none"
                     value={customStr}
                     onChange={(e) => {
                       const raw = e.target.value.replace(/\D/g, "");
-                      if (raw === "") {
-                        setCustomStr("");
-                        return;
-                      }
+                      if (raw === "") return;
+                      const last = raw.slice(-1);
                       const n = Math.min(
                         MAX_REPLY_WINDOW,
-                        Math.max(1, parseInt(raw, 10)),
+                        Math.max(4, parseInt(last, 10)),
                       );
                       setCustomStr(String(n));
                       onChangeReplyWindow(n);
                     }}
+                    onFocus={(e) => e.target.select()}
                     onKeyDown={(e) => {
                       if (e.key === "Escape") {
                         onPreset(2);
@@ -188,8 +200,8 @@ export function VisibilityField({
                     onClick={(e) => e.stopPropagation()}
                     aria-label="Custom reply window days"
                   />
-                  <span className="text-[12px] opacity-60">days</span>
-                </div>
+                  {"\u00A0"}day{customStr !== "1" ? "s" : ""}
+                </span>
               ) : (
                 <span
                   className="font-serif"

@@ -37,9 +37,9 @@ export function Terms() {
               meaningful amount of money to their request. You set your floor
               — the minimum signal someone must attach — and decide which
               requests are worth your time. We hold the funds in escrow until
-              you reply, decline, or the request expires. If you reply, the
-              funds are released to you minus a 5% platform fee. If you decline
-              or let the request expire, the sender is refunded in full.
+              you reply, or the request expires. If you reply, the
+              funds are released to you minus a 5% platform fee. If you let
+              the request expire, the sender is refunded in full.
             </p>
           </section>
 
@@ -65,11 +65,10 @@ export function Terms() {
             <p>
               When someone sends a request, their payment is held in escrow by
               our payment processor. The funds remain in escrow until one of
-              three things happens: you reply within your reply window (the
-              funds are released to you minus a 5% platform fee), you decline
-              the request (the sender is refunded in full), or the request
+              two things happens: you reply within your reply window (the
+              funds are released to you minus a 5% platform fee), or the request
               expires without a response (the sender is refunded in full). We
-              earn nothing on declined or expired requests.
+              earn nothing on expired requests.
             </p>
             <p className="mt-4">
               Payouts are processed to the bank account or payment method you

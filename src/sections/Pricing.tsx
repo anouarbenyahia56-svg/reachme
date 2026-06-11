@@ -11,7 +11,7 @@ import {
 const TERMS = [
   "Free to create your profile.",
   "No subscription. No monthly cost.",
-  "Nothing taken on declined or expired requests.",
+  "Nothing taken on expired requests.",
   "5% only when you choose to reply.",
 ] as const;
 

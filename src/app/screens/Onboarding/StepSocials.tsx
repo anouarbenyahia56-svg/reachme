@@ -47,6 +47,12 @@ export function StepSocials() {
         <div className="mt-14 max-w-[780px]">
           <SocialsField value={socials} onChange={setSocials} />
 
+          {Object.keys(socials).length === 0 && (
+            <p className="mt-4 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
+              Add at least one social link.
+            </p>
+          )}
+
           <p className="mt-7 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
             You can add or change these any time from your page settings.
           </p>

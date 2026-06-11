@@ -168,8 +168,8 @@ function AvatarUploader({
         onChange={async (e) => {
           const f = e.target.files?.[0];
           if (!f) return;
-          if (f.size > 1024 * 1024) {
-            setUploadError("File is too large. Please upload an image under 1 MB.");
+          if (f.size > 5 * 1024 * 1024) {
+            setUploadError("File is too large. Please upload an image under 5 MB.");
             e.target.value = "";
             return;
           }

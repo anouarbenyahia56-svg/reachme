@@ -17,10 +17,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * The gateway to the dashboard.
  *
  * Not a step — a destination. No progress bar, no back button.
- * The user arrives here after completing the sequence and sees
- * a live preview of their card, centered on the page. One
- * action: "Go live." It commits the account and routes into
- * the dashboard where the welcome overlay picks up the story.
+ * Shows a live preview of the page, then launches into the dashboard.
  */
 export function StepFinish() {
   const { navigate } = useRouter();
@@ -28,8 +25,6 @@ export function StepFinish() {
   const [submitting, setSubmitting] = useState(false);
   const [launched, setLaunched] = useState(false);
 
-  // If essential pieces are missing, kick back to the first
-  // missing step rather than render a half-built preview.
   useEffect(() => {
     if (!draft.handle) navigate("/claim", { replace: true });
     else if (!draft.displayName || !draft.title)
@@ -61,21 +56,17 @@ export function StepFinish() {
     createdAt: new Date().toISOString(),
   };
 
-  // Commit the page, then hand off to the live dashboard.
-  // The 250ms beat gives the button a deliberate, premium
-  // weight before the route changes.
   const launch = async () => {
     setSubmitting(true);
     await new Promise((r) => setTimeout(r, 250));
 
-    const profile: Profile = { ...previewProfile, verified: false };
     setAccount({
       email: draft.email!,
       hasProfile: true,
       hasPassword: false,
     });
-    setProfile(profile);
-    seedDemoForOwner(profile);
+    setProfile(previewProfile);
+    seedDemoForOwner(previewProfile);
     clearDraft();
 
     setLaunched(true);
@@ -101,34 +92,19 @@ export function StepFinish() {
               maxWidth: "16ch",
             }}
           >
-            This is your page.
+            This is it.
           </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ duration: 0.5, delay: 0.1, ease: EASE }}
-            className="mt-6 max-w-[42ch] text-[hsl(var(--ink-muted))]"
-            style={{ fontSize: "1.1rem", lineHeight: 1.55 }}
-          >
-            Here's what people will see when they land on it.
-          </motion.p>
         </div>
       </Reveal>
 
-      <Reveal delay={0.2} duration={0.6} axis="y" blur={5}>
-        <div className="mt-12 mx-auto max-w-[480px]">
-          <ProfilePreviewCard
-            profile={previewProfile}
-            variant="preview"
-            animate={false}
-            preview
-          />
+      <Reveal delay={0.15} duration={0.7} axis="y" blur={4}>
+        <div className="mx-auto mt-12 w-full max-w-[480px]">
+          <ProfilePreviewCard profile={previewProfile} variant="preview" preview animate={false} />
         </div>
       </Reveal>
 
-      <Reveal delay={0.35} duration={0.5} axis="y" blur={4}>
-        <div className="mt-12 mx-auto max-w-[480px]">
+      <Reveal delay={0.3} duration={0.5} axis="y" blur={4}>
+        <div className="mt-10 mx-auto max-w-[480px] flex flex-col items-center">
           <motion.button
             type="button"
             disabled={submitting || launched}
@@ -136,7 +112,7 @@ export function StepFinish() {
             whileTap={submitting || launched ? undefined : { y: 0 }}
             transition={{ duration: 0.25, ease: EASE }}
             onClick={launch}
-            className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-[background-color] duration-300 hover:bg-[hsl(var(--ink))]/85 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-[52px] w-auto items-center justify-center rounded-full bg-[hsl(var(--ink))] px-12 text-[15px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-[background-color,box-shadow] duration-300 hover:bg-[hsl(var(--ink))]/85 hover:shadow-[0_0_0_1px_hsl(var(--ink)),0_8px_24px_-8px_rgba(0,0,0,0.25)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:shadow-none"
           >
             <AnimatePresence mode="wait">
               {launched ? (
@@ -168,8 +144,11 @@ export function StepFinish() {
               )}
             </AnimatePresence>
           </motion.button>
-          <p className="mt-4 text-center text-[12.5px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
-            You can pause or change your settings anytime from your dashboard.
+          <p className="mt-3 text-center text-[11px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
+            By going live, you agree to our{" "}
+            <a href="/terms" className="underline underline-offset-2 hover:text-[hsl(var(--ink))]">Terms of Service</a>{" "}
+            and{" "}
+            <a href="/privacy" className="underline underline-offset-2 hover:text-[hsl(var(--ink))]">Privacy Policy</a>.
           </p>
         </div>
       </Reveal>

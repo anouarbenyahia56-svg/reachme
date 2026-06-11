@@ -51,7 +51,7 @@ managing the one you already have.
 ### 3. Escrow of Respect
 
 The money isn't a fee — it's a commitment held in escrow. You
-reply, they're honored. You decline or ignore within the window,
+ reply, they're honored. You ignore within the window,
 they're refunded. The platform's incentive is quality, not
 volume.
 
@@ -118,7 +118,7 @@ response.
 ### Platform Fee
 
 The platform fee (5%) is deducted on each completed reply.
-Declined and expired requests are fully refunded — no fee.
+Expired requests are fully refunded — no fee.
 
 ---
 

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail,
   Shield,
@@ -19,7 +18,6 @@ import { Modal } from "../../ui/Modal";
 import { TextField, Label } from "../../ui/Field";
 import { Avatar } from "../../ui/Avatar";
 import { Pill } from "../../ui/Pill";
-import { Reveal } from "../../ui/Reveal";
 import { setAccount, signOut, useAccount, useProfile } from "../../store/session";
 import { useToast } from "../../ui/Toast";
 import { cn } from "@/lib/utils";
@@ -40,21 +38,13 @@ import { cn } from "@/lib/utils";
 export function Settings() {
   return (
     <div className="mx-auto max-w-3xl space-y-14">
-      <Reveal duration={0.45} blur={5} delay={0}>
-        <AccountCard />
-      </Reveal>
+      <AccountCard />
 
-      <Reveal duration={0.45} blur={5} delay={0.06}>
-        <NotificationsCard />
-      </Reveal>
+      <NotificationsCard />
 
-      <Reveal duration={0.45} blur={5} delay={0.12}>
-        <SecurityCard />
-      </Reveal>
+      <SecurityCard />
 
-      <Reveal duration={0.45} blur={5} delay={0.18}>
-        <DangerZoneCard />
-      </Reveal>
+      <DangerZoneCard />
     </div>
   );
 }
@@ -499,8 +489,7 @@ function NotificationsCard() {
 
   useEffect(() => {
     // TODO: wire to backend — fetch notification preferences
-    const timer = setTimeout(() => setLoading(false), 400);
-    return () => clearTimeout(timer);
+    setLoading(false);
   }, []);
 
   const toggle = (id: string) => {
@@ -630,11 +619,8 @@ function SecurityCard() {
 
   useEffect(() => {
     // TODO: wire to backend — GET /settings/security
-    const timer = setTimeout(() => {
-      setTwoFactorLoading(false);
-      setSessionsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    setTwoFactorLoading(false);
+    setSessionsLoading(false);
   }, []);
 
   const toggleTwoFactor = () => {

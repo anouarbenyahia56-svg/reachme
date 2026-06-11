@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -18,12 +19,15 @@ import {
  * navigate.
  */
 
+type NavigateFn = (to: string, opts?: { replace?: boolean }) => void;
+
 interface RouterValue {
   path: string;
-  navigate: (to: string, opts?: { replace?: boolean }) => void;
+  navigate: NavigateFn;
 }
 
 const RouterContext = createContext<RouterValue | null>(null);
+const NavigateContext = createContext<NavigateFn | null>(null);
 
 function currentPath(): string {
   if (typeof window === "undefined") return "/";
@@ -42,7 +46,8 @@ export function RouterProvider({ children }: { children: ReactNode }) {
   const navigate = useCallback(
     (to: string, opts: { replace?: boolean } = {}) => {
       if (typeof window === "undefined") return;
-      const target = to.startsWith("/") ? to : `/${to}`;
+      const raw = to.startsWith("/") ? to : `/${to}`;
+      const target = raw.split("?")[0];
       if (target === window.location.pathname) return;
       if (opts.replace) {
         window.history.replaceState(null, "", target);
@@ -50,9 +55,6 @@ export function RouterProvider({ children }: { children: ReactNode }) {
         window.history.pushState(null, "", target);
       }
       setPath(target);
-      // Reset scroll on navigation. Same-route hash links handle
-      // their own scroll behaviour upstream.
-      window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
     },
     [],
   );
@@ -60,13 +62,22 @@ export function RouterProvider({ children }: { children: ReactNode }) {
   const value = useMemo<RouterValue>(() => ({ path, navigate }), [path, navigate]);
 
   return (
-    <RouterContext.Provider value={value}>{children}</RouterContext.Provider>
+    <RouterContext.Provider value={value}>
+      <NavigateContext.Provider value={navigate}>{children}</NavigateContext.Provider>
+    </RouterContext.Provider>
   );
 }
 
 export function useRouter(): RouterValue {
   const ctx = useContext(RouterContext);
   if (!ctx) throw new Error("useRouter must be used inside <RouterProvider>");
+  return ctx;
+}
+
+/** Returns the stable navigate function without subscribing to path changes. */
+export function useNavigate(): NavigateFn {
+  const ctx = useContext(NavigateContext);
+  if (!ctx) throw new Error("useNavigate must be used inside <RouterProvider>");
   return ctx;
 }
 

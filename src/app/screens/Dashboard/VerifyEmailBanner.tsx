@@ -57,7 +57,7 @@ export function VerifyEmailBanner() {
     >
       <p className="text-[14px] leading-[1.55] text-[hsl(var(--ink-muted))]">
         Verify <span className="text-[hsl(var(--ink))]">{account.email}</span> to
-        receive and withdraw money.
+        be able to withdraw money.
       </p>
       <div className="flex items-center gap-5 text-[14px]">
         <button

@@ -144,9 +144,7 @@ export function SentDetail({ id }: { id: string }) {
                 ? `Refunds ${timeUntil(r.expiresAt)} if no reply.`
                 : r.status === "replied"
                   ? `Released to ${r.toDisplayName} on ${dateLong(r.reply!.repliedAt)}.`
-                  : r.status === "declined"
-                    ? `Refunded ${dateLong(r.decline!.declinedAt)}.`
-                    : `Refunded after the reply window closed.`}
+                  : `Refunded after the reply window closed.`}
             </p>
 
             {/* Fee breakdown — owner only */}
@@ -249,20 +247,6 @@ function ConversationEntry({ r }: { r: RequestRecord }) {
           )}
         </div>
       )}
-
-      {/* Declined */}
-      {r.decline && (
-        <div className="ml-6 flex justify-center pt-2">
-          <div className="text-center">
-            <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-              Declined · {timeAgo(r.decline.declinedAt)}
-            </p>
-            <p className="mt-1 text-[12.5px] text-[hsl(var(--ink-muted))]">
-              Refunded {formatMoney(r.amountCents)}
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -270,11 +254,10 @@ function ConversationEntry({ r }: { r: RequestRecord }) {
 function StatusPill({
   status,
 }: {
-  status: "pending" | "replied" | "declined" | "expired";
+  status: "pending" | "replied" | "expired";
 }) {
   if (status === "pending") return <Pill size="sm" tone="ink">Pending</Pill>;
   if (status === "replied") return <Pill size="sm">Replied</Pill>;
-  if (status === "declined") return <Pill size="sm" tone="muted">Declined</Pill>;
   return <Pill size="sm" tone="muted">Expired</Pill>;
 }
 

@@ -14,7 +14,6 @@ import { cn } from "@/lib/utils";
 const FILTERS: ReadonlyArray<{ id: RequestStatus | "all"; label: string }> = [
   { id: "pending", label: "Pending" },
   { id: "replied", label: "Replied" },
-  { id: "declined", label: "Declined" },
   { id: "expired", label: "Expired" },
   { id: "all", label: "All" },
 ];
@@ -42,7 +41,6 @@ export function Received() {
       all: inbox.length,
       pending: 0,
       replied: 0,
-      declined: 0,
       expired: 0,
     };
     inbox.forEach((r) => (out[r.status] = (out[r.status] ?? 0) + 1));
@@ -189,10 +187,6 @@ function Empty({ filter }: { filter: string }) {
     replied: {
       title: "No replies yet.",
       body: "Replies you've sent will appear here, with the released amount.",
-    },
-    declined: {
-      title: "Nothing declined.",
-      body: "Requests you decline land here. Senders are refunded automatically.",
     },
     expired: {
       title: "Nothing expired.",

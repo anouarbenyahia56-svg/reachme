@@ -1,11 +1,11 @@
 import { motion, AnimatePresence, type HTMLMotionProps } from "framer-motion";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Copy, Check } from "lucide-react";
 import { EASE } from "@/components/motion";
 import { useProfile } from "../../store/session";
 import { useReceived } from "../../store/requests";
 import { Card } from "../../ui/Card";
-import { Link, useRouter } from "../../router";
+import { Link, useNavigate } from "../../router";
 import { Button } from "../../ui/Button";
 import { useToast } from "../../ui/Toast";
 import { formatMoney } from "../../store/format";
@@ -32,7 +32,7 @@ const MS_PER_HOUR = 60 * 60 * 1000;
 export function Overview() {
   const profile = useProfile();
   const received = useReceived();
-  const { navigate } = useRouter();
+  const navigate = useNavigate();
   const toast = useToast();
   const [copied, setCopied] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
@@ -49,38 +49,47 @@ export function Overview() {
 
   if (!profile) return null;
 
-  const inbox = received.filter(
-    (r) => r.toHandle.toLowerCase() === profile.handle.toLowerCase(),
+  const inbox = useMemo(
+    () => received.filter((r) => r.toHandle.toLowerCase() === profile.handle.toLowerCase()),
+    [received, profile.handle],
   );
-  const pending = inbox.filter((r) => r.status === "pending");
+  const pending = useMemo(() => inbox.filter((r) => r.status === "pending"), [inbox]);
 
   // Held — total amount held across pending requests.
-  const inEscrowCents = pending.reduce((sum, r) => sum + r.amountCents, 0);
+  const inEscrowCents = useMemo(() => pending.reduce((sum, r) => sum + r.amountCents, 0), [pending]);
 
   // Expiring within 24 hours — the real deadline pressure.
-  const now = Date.now();
-  const expiringSoon = pending.filter((r) => {
-    const expiresAt = new Date(r.expiresAt).getTime();
-    return expiresAt - now < 24 * MS_PER_HOUR;
-  });
+  const expiringSoon = useMemo(() => {
+    const now = Date.now();
+    return pending.filter((r) => {
+      const expiresAt = new Date(r.expiresAt).getTime();
+      return expiresAt - now < 24 * MS_PER_HOUR;
+    });
+  }, [pending]);
 
   // Released this month — net of the 5% platform fee.
-  const startOfMonth = new Date();
-  startOfMonth.setDate(1);
-  startOfMonth.setHours(0, 0, 0, 0);
-  const releasedThisMonth = inbox.filter((r) => {
-    if (r.status !== "replied" || !r.reply) return false;
-    return new Date(r.reply.repliedAt).getTime() >= startOfMonth.getTime();
-  });
-  const releasedCents = releasedThisMonth.reduce(
-    (sum, r) => sum + r.amountCents - (r.escrow.feeCents ?? 0),
-    0,
+  const releasedThisMonth = useMemo(() => {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    return inbox.filter((r) => {
+      if (r.status !== "replied" || !r.reply) return false;
+      return new Date(r.reply.repliedAt).getTime() >= startOfMonth.getTime();
+    });
+  }, [inbox]);
+  const releasedCents = useMemo(
+    () => releasedThisMonth.reduce((sum, r) => sum + r.amountCents - (r.escrow.feeCents ?? 0), 0),
+    [releasedThisMonth],
   );
 
   // Total earned — cumulative net (after fee) of every reply since joining.
-  const totalEarnedCents = inbox
-    .filter((r) => r.status === "replied" && r.reply)
-    .reduce((sum, r) => sum + r.amountCents - (r.escrow.feeCents ?? 0), 0);
+  const totalEarnedCents = useMemo(
+    () =>
+      inbox
+        .filter((r) => r.status === "replied" && r.reply)
+        .reduce((sum, r) => sum + r.amountCents - (r.escrow.feeCents ?? 0), 0),
+    [inbox],
+  );
 
   const link = `reachme.com/${profile.handle}`;
 

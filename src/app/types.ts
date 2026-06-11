@@ -8,7 +8,6 @@
  *
  *   pending  → held on submission
  *   replied  → released to owner (less platform fee)
- *   declined → refunded to sender
  *   expired  → refunded to sender
  *
  * The two core actors are named consistently throughout the app:
@@ -25,7 +24,6 @@ export type Visibility = "public" | "paused";
 export type RequestStatus =
   | "pending"
   | "replied"
-  | "declined"
   | "expired";
 
 /** A category the owner accepts requests under. */
@@ -139,11 +137,6 @@ export interface RequestRecord {
     body?: string;
     attachments?: RequestAttachment[];
     repliedAt: ISODate;
-  };
-  /** Set when status becomes "declined". */
-  decline?: {
-    reason?: string;
-    declinedAt: ISODate;
   };
   /** Audit of the escrow lifecycle. Mirrors what a payment
    *  processor will do; the UI reads this directly. */

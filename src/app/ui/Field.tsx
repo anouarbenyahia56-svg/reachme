@@ -92,11 +92,11 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
           <input
             ref={ref}
             id={fieldId}
-            className={cn(
-              "w-full bg-transparent px-4 py-3.5 text-[15px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none",
-              hasAdorn && "px-3",
-              prefix && "pl-1",
-              suffix && "pr-1",
+          className={cn(
+            "w-full bg-transparent px-4 py-3.5 text-[15px] leading-7 text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none",
+            hasAdorn && "px-3",
+            prefix && "pl-1",
+            suffix && "pr-1",
             )}
             {...rest}
           />

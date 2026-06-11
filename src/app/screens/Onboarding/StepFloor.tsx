@@ -175,8 +175,8 @@ function EscrowExplainer({ cents }: { cents: number }) {
       />
       <Row
         eyebrow="Refunded"
-        title="On decline or expiry"
-        body="Decline or let it expire. The person reaching out is refunded automatically."
+        title="On expiry"
+        body="If you don't reply within your reply window, the person reaching out is refunded automatically."
       />
     </div>
   );

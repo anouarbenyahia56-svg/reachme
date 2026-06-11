@@ -676,7 +676,7 @@ function StepAmount({
       <PanelTitle
         eyebrow="Attach amount"
         title="Show that you mean it."
-        description={`The amount is held until ${profile.displayName.split(" ")[0]} replies. If they decline or don't respond within ${profile.replyWindowDays === 1 ? "1 day" : `${profile.replyWindowDays} days`}, it returns to you in full.`}
+        description={`The amount is held until ${profile.displayName.split(" ")[0]} replies. If they don't respond within ${profile.replyWindowDays === 1 ? "1 day" : `${profile.replyWindowDays} days`}, it returns to you in full.`}
       />
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
@@ -831,7 +831,7 @@ function StepReview({
 
       <p className="mt-7 text-[12px] leading-[1.6] text-[hsl(var(--ink-subtle))]">
         By sending, you agree to ReachMe's escrow terms: held on submit,
-        released on reply, refunded on decline or expiry.
+        released on reply, refunded on expiry.
       </p>
     </div>
   );
@@ -890,7 +890,7 @@ function SuccessPanel({
           style={{ fontSize: "1rem", lineHeight: 1.65 }}
         >
           The amount is held. If they reply, it's released to them. If they
-          decline or don't respond by {dateLong(expiresAt)}, it's refunded
+          don't respond by {dateLong(expiresAt)}, it's refunded
           to you in full.
         </p>
         <div className="mt-9 flex flex-wrap justify-center gap-3">
