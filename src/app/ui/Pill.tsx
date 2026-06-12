@@ -31,7 +31,7 @@ export function Pill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full font-medium",
+        "inline-flex cursor-default items-center gap-1.5 rounded-full font-medium",
         size === "sm"
           ? "px-4 py-[7px] text-[12.5px] tracking-[-0.01em]"
           : "px-[18px] py-2 text-[13px] tracking-[-0.01em]",

@@ -5,6 +5,7 @@ import { Button } from "../../ui/Button";
 import { Reveal } from "../../ui/Reveal";
 import { OnboardingShell, OnboardingTitle } from "./OnboardingShell";
 import { isHandleAvailable } from "../../store/format";
+import { cn } from "@/lib/utils";
 import { isHandleTaken } from "../../store/directory";
 import { patchDraft, useDraft } from "../../store/draft";
 
@@ -123,20 +124,20 @@ export function StepHandle() {
     <OnboardingShell step={1} total={7}>
       <OnboardingTitle
         title="Claim your handle."
-        description="Your handle becomes the public page where people can reach you. Choose something short, memorable, and yours."
+        description="Your handle is your public address — the page where people reach you. Short, memorable, yours."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
         <div className="mt-12 max-w-[640px]">
           <div
-            className={[
+            className={cn(
                 "relative flex w-full max-w-[440px] items-stretch overflow-hidden rounded-2xl border bg-[hsl(var(--surface))] transition-[border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
               isAvailable
                 ? "border-[hsl(var(--ink))]"
                 : showError
                   ? "border-[hsl(var(--danger))]"
                   : "border-[hsl(var(--rule-strong))] focus-within:border-[hsl(var(--ink))]",
-            ].join(" ")}
+            )}
           >
             <span className="select-none border-r border-[hsl(var(--rule))] bg-[hsl(var(--page))] px-5 py-4 text-[15px] text-[hsl(var(--ink-muted))]">
               reachme.com/
@@ -258,10 +259,10 @@ function StatusMessage({
   if (isAvailable) {
     return (
       <p
-        className={[
+        className={cn(
           "text-[12.5px] leading-[1.55] transition-colors duration-300",
           "text-[hsl(var(--ink))]",
-        ].join(" ")}
+        )}
       >
         {`reachme.com/${value} is yours.`}
       </p>
@@ -283,10 +284,10 @@ function StatusMessage({
         : "This handle is already taken.";
     return (
       <p
-        className={[
+        className={cn(
           "text-[12.5px] leading-[1.55] transition-colors duration-300",
           "text-[hsl(var(--danger))]",
-        ].join(" ")}
+        )}
       >
         {text}
       </p>
@@ -296,7 +297,7 @@ function StatusMessage({
   if (!value) {
     return (
       <p className="text-[12.5px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
-        Type a handle to check availability.
+        Start typing to see if your handle is available.
       </p>
     );
   }

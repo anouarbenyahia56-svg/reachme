@@ -193,7 +193,7 @@ export function Nav() {
                 onClick={() => setOpen(false)}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 0.3, delay: 0.16, ease: EASE }}
+                transition={{ duration: 0.3, delay: 0.18, ease: EASE }}
                 className="text-[13.5px] tracking-[0.005em] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
               >
                 Log in
@@ -202,7 +202,7 @@ export function Nav() {
                 href="/claim"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: 0.2, ease: EASE }}
+                transition={{ duration: 0.35, delay: 0.22, ease: EASE }}
                 className="rounded-full bg-[hsl(var(--ink))] px-8 py-3 text-[14px] font-medium text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/92"
               >
                 Claim handle

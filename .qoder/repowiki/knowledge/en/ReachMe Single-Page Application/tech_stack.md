@@ -1,0 +1,1 @@
+React 19 with TypeScript, Vite 7 for build tooling, Tailwind CSS 4 for styling, and Framer Motion for animations. Uses a custom, dependency-free router instead of React Router.

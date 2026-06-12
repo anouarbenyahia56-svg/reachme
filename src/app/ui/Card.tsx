@@ -1,24 +1,28 @@
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { Headline } from "./Headline";
+import { headlineCard } from "@/lib/typography";
 
 /**
  * Card — the surface every dashboard module sits on. Quiet,
- * with a hairline border, generous interior padding. Never
- * shadowed; the depth is in the type.
+ * with a hairline border, generous interior padding, and a
+ * subtle surface shadow that lifts it from the page.
  */
 export function Card({
   children,
   className,
   variant = "default",
   ...rest
-}: HTMLAttributes<HTMLDivElement> & { variant?: "default" | "dark" }) {
+}: HTMLAttributes<HTMLDivElement> & { variant?: "default" | "dark" | "urgent" }) {
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-3xl border",
+        "overflow-hidden rounded-3xl border transition-shadow duration-300",
         variant === "dark"
           ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
-          : "border-[hsl(var(--rule))] bg-[hsl(var(--surface))]",
+          : variant === "urgent"
+            ? "border-[hsl(var(--ink))] bg-[hsl(var(--surface))] shadow-glow"
+            : "border-[hsl(var(--rule))] bg-[hsl(var(--surface))] shadow-surface",
         className,
       )}
       {...rest}
@@ -44,7 +48,7 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        "flex items-start justify-between gap-6 px-7 pt-7 md:px-9 md:pt-9",
+        "flex items-start justify-between gap-6 px-7 pt-6 md:px-9 md:pt-7",
         className,
       )}
     >
@@ -58,19 +62,9 @@ export function CardHeader({
           </p>
         )}
         {title && (
-          <h2
-            className="font-serif text-[hsl(var(--ink))]"
-            style={{
-              fontSize: "clamp(1.5rem, 2.4vw, 2.1rem)",
-              fontWeight: 500,
-              lineHeight: 1.1,
-              letterSpacing: "-0.025em",
-              fontOpticalSizing: "auto",
-              textWrap: "balance",
-            }}
-          >
+          <Headline preset={headlineCard} as="h2">
             {title}
-          </h2>
+          </Headline>
         )}
         {description && (
           <p
@@ -94,7 +88,7 @@ export function CardBody({
   className?: string;
 }) {
   return (
-    <div className={cn("px-7 py-7 md:px-9 md:py-8", className)}>{children}</div>
+    <div className={cn("px-7 py-6 md:px-9 md:py-7", className)}>{children}</div>
   );
 }
 

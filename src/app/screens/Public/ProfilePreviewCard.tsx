@@ -1,10 +1,9 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { EASE } from "@/components/motion";
 import { Link } from "../../router";
 import { Avatar } from "../../ui/Avatar";
-import { Button } from "../../ui/Button";
-import { Modal } from "../../ui/Modal";
+
 import { Reveal } from "../../ui/Reveal";
 import { SocialIcons } from "../../ui/SocialIcons";
 import { formatMoney } from "../../store/format";
@@ -78,7 +77,6 @@ export function ProfilePreviewCard({
   const isOwner =
     Boolean(ownerProfile) &&
     ownerProfile?.handle.toLowerCase() === profile.handle.toLowerCase();
-  const [selfRequestOpen, setSelfRequestOpen] = useState(false);
   const isPaused = profile.visibility === "paused";
   const fullName = profile.displayName || profile.handle;
 
@@ -109,10 +107,10 @@ export function ProfilePreviewCard({
   return (
     <div
       className={cn(
-        "relative w-full bg-white text-center",
+        "relative w-full bg-[hsl(var(--page))] text-center",
         fill &&
           "min-h-[calc(100vh-68px)] min-h-[calc(100dvh-68px)] flex flex-col justify-center md:min-h-0",
-        "md:mx-auto md:my-10 md:max-w-[480px] md:rounded-[20px] md:shadow-[0_1px_1px_rgba(15,15,15,0.04),0_2px_6px_rgba(15,15,15,0.04),0_28px_56px_-20px_rgba(15,15,15,0.12)]",
+        "md:mx-auto md:my-10 md:max-w-[480px] md:overflow-hidden md:rounded-[20px] md:border md:border-[hsl(var(--rule))] md:shadow-[0_1px_1px_rgba(15,15,15,0.04),0_2px_6px_rgba(15,15,15,0.04),0_28px_56px_-20px_rgba(15,15,15,0.12)]",
       )}
       style={{
         backgroundImage: profile.backgroundUrl
@@ -229,9 +227,9 @@ export function ProfilePreviewCard({
           </div>
         </Section>
 
-        <Section delay={0.34} className="mt-12">
-          {!preview &&
-            (isPaused ? (
+        {!preview && (
+          <Section delay={0.34} className="mt-12">
+            {isPaused ? (
               <div
                 role="status"
                 className="flex h-[50px] w-full items-center justify-center rounded-full border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] px-7 text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--ink-muted))]"
@@ -239,41 +237,20 @@ export function ProfilePreviewCard({
                 Not accepting requests right now.
               </div>
             ) : isOwner ? (
-              <button
-                type="button"
-                onClick={() => setSelfRequestOpen(true)}
-                className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/85 focus-visible:outline-none"
-              >
-                Send a request
-              </button>
+              <div className="flex h-[50px] w-full cursor-not-allowed items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))]">
+                Reach Out
+              </div>
             ) : (
               <Link
                 href={`/${profile.handle}/send`}
                 className="flex h-[50px] w-full items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[14.5px] font-medium tracking-[-0.005em] text-[hsl(var(--page))] transition-colors duration-300 hover:bg-[hsl(var(--ink))]/85 focus-visible:outline-none"
               >
-                Send a request
+                Reach Out
               </Link>
-            ))}
-        </Section>
+            )}
+          </Section>
+        )}
       </div>
-
-      <Modal
-        open={selfRequestOpen}
-        onClose={() => setSelfRequestOpen(false)}
-        title="This is your page"
-        description="You can't request yourself — but you can share your link and watch requests land in your inbox."
-        size="sm"
-      >
-        <div className="mt-4 flex justify-end">
-          <Button
-            variant="ghost"
-            onClick={() => setSelfRequestOpen(false)}
-            className="px-6 py-2.5 text-[15px]"
-          >
-            Got it
-          </Button>
-        </div>
-      </Modal>
     </div>
   );
 }

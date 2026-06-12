@@ -7,6 +7,8 @@ import { X } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
+import { Headline } from "./Headline";
+import { headlineModal } from "@/lib/typography";
 
 /**
  * Modal — the platform's confirmation surface. Centered, with a
@@ -151,19 +153,9 @@ export function Modal({
             {(title || description) && (
               <div className="px-7 pb-3 pt-9 md:px-9 md:pt-10">
                 {title && (
-                  <h2
-                    id={titleId}
-                    className="font-serif text-[hsl(var(--ink))]"
-                    style={{
-                      fontSize: "clamp(1.45rem, 2.4vw, 1.9rem)",
-                      fontWeight: 500,
-                      lineHeight: 1.1,
-                      letterSpacing: "-0.025em",
-                      textWrap: "balance",
-                    }}
-                  >
+                  <Headline preset={headlineModal} as="h2" id={titleId}>
                     {title}
-                  </h2>
+                  </Headline>
                 )}
                 {description && (
                   <p

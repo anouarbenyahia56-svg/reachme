@@ -24,6 +24,8 @@ import type {
   Profile,
 } from "../../types";
 import { useToast } from "../../ui/Toast";
+import { cn } from "@/lib/utils";
+import { CardSkeleton, ScreenError } from "../../ui/ScreenStates";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -41,11 +43,40 @@ export function MyPage() {
   const [draft, setDraft] = useState<Profile | null>(profile);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // TODO: wire to backend — set `loading` to `true` while the
+  // profile fetch is in flight; set `error` to the caught error.
+  const loading = false;
+  const error: string | null = null;
+
   useEffect(() => {
     if (profile && !draft) setDraft(profile);
   }, [profile, draft]);
 
   if (!profile || !draft) return null;
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-14">
+        <Card>
+          <div className="px-8 py-9 md:px-11 md:py-11">
+            <CardSkeleton rows={4} />
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <ScreenError
+          title="Couldn't load your page settings."
+          message={error}
+          onRetry={() => window.location.reload()}
+        />
+      </Card>
+    );
+  }
 
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => {
     setDraft((d) => (d ? { ...d, [k]: v } : d));
@@ -66,7 +97,7 @@ export function MyPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-14">
       <Card>
-        <div className="px-10 py-12 md:px-14 md:py-16">
+        <div className="px-8 py-9 md:px-11 md:py-11">
           <div className="space-y-10">
             <AvatarField
               value={draft.avatarUrl}
@@ -93,7 +124,7 @@ export function MyPage() {
       </Card>
 
       <Card>
-        <div className="px-10 py-12 md:px-14 md:py-16">
+        <div className="px-8 py-9 md:px-11 md:py-11">
           <SocialsField
             value={draft.socials ?? {}}
             onChange={(v) => set("socials", v)}
@@ -103,7 +134,7 @@ export function MyPage() {
       </Card>
 
       <Card>
-        <div className="px-10 py-12 md:px-14 md:py-16">
+        <div className="px-8 py-9 md:px-11 md:py-11">
           <FloorField
             cents={draft.minAmountCents}
             onChange={(c) => set("minAmountCents", c)}
@@ -112,7 +143,7 @@ export function MyPage() {
       </Card>
 
       <Card>
-        <div className="px-10 py-12 md:px-14 md:py-16">
+        <div className="px-8 py-9 md:px-11 md:py-11">
           <CategoriesField
             items={draft.categories}
             onChange={(items) => set("categories", items)}
@@ -121,7 +152,7 @@ export function MyPage() {
       </Card>
 
       <Card>
-        <div className="px-10 py-12 md:px-14 md:py-16">
+        <div className="px-8 py-9 md:px-11 md:py-11">
           <VisibilityField
             visibility={draft.visibility}
             onChangeVisibility={(v) => set("visibility", v)}
@@ -247,23 +278,23 @@ function FloorField({
               type="button"
               onClick={() => onChange(p.cents)}
               aria-pressed={active}
-              className={[
+              className={cn(
                 "flex flex-col items-start rounded-2xl border px-5 py-5 text-left transition-[border-color,background-color,color] duration-300",
                 active
                   ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
                   : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
-              ].join(" ")}
+              )}
             >
               <span className="font-serif text-[1.25rem] font-medium tracking-[-0.025em]">
                 {p.label}
               </span>
               <span
-                className={[
+                className={cn(
                   "mt-1 text-[11.5px]",
                   active
                     ? "text-[hsl(var(--page))]/75"
                     : "text-[hsl(var(--ink-subtle))]",
-                ].join(" ")}
+                )}
               >
                 {p.helper}
               </span>
@@ -272,12 +303,12 @@ function FloorField({
         })}
       </div>
       <div
-        className={[
+        className={cn(
           "mt-4 flex items-center rounded-2xl border bg-[hsl(var(--surface))] transition-[border-color] duration-300",
           belowFloor
             ? "border-[hsl(var(--danger))] focus-within:border-[hsl(var(--danger))]"
             : "border-[hsl(var(--rule-strong))] focus-within:border-[hsl(var(--ink))]",
-        ].join(" ")}
+        )}
       >
         <span className="pl-4 text-[15px] text-[hsl(var(--ink-muted))]">$</span>
         <input
@@ -295,12 +326,12 @@ function FloorField({
       </div>
       <p
         id="myfloor-custom-help"
-        className={[
+        className={cn(
           "mt-2.5 text-[12.5px] leading-[1.55]",
           belowFloor
             ? "text-[hsl(var(--danger))]"
             : "text-[hsl(var(--ink-subtle))]",
-        ].join(" ")}
+        )}
       >
         {belowFloor
           ? "Floor must be at least $10."

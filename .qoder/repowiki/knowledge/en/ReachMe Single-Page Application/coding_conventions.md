@@ -1,0 +1,3 @@
+- State stores in `src/app/store/` expose both synchronous getter/setter functions and reactive hooks (e.g., `useAccount`, `useProfile`) for flexible consumption.
+- UI components in `src/app/ui/` use `framer-motion` for interactive elements and `tailwind-merge` with `clsx` for class name composition.
+- API client functions in `src/app/api/client.ts` are async stubs that simulate network delay and throw `ApiError` for unimplemented backend features.

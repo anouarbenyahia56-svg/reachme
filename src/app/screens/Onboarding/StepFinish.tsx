@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { EASE } from "@/components/motion";
+import { CelebrationBurst } from "@/components/CelebrationBurst";
 import { Reveal } from "../../ui/Reveal";
 import { Link, useRouter } from "../../router";
 import { OnboardingShell } from "./OnboardingShell";
@@ -76,26 +77,28 @@ export function StepFinish() {
 
   return (
     <OnboardingShell bare>
-      <Reveal delay={0.05} duration={0.6} axis="y" blur={5}>
-        <div className="flex flex-col items-center text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ duration: 0.5, delay: 0.04, ease: EASE }}
-            className="font-serif text-[hsl(var(--ink))]"
-            style={{
-              fontSize: "clamp(2.6rem, 6vw, 4.4rem)",
-              lineHeight: 1.02,
-              letterSpacing: "-0.04em",
-              fontWeight: 500,
-              textWrap: "balance",
-              maxWidth: "16ch",
-            }}
-          >
-            This is it.
-          </motion.h1>
-        </div>
-      </Reveal>
+      <CelebrationBurst autoPlay={launched}>
+        <Reveal delay={0.05} duration={0.6} axis="y" blur={5}>
+          <div className="flex flex-col items-center text-center">
+            <motion.h1
+              initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{ duration: 0.5, delay: 0.04, ease: EASE }}
+              className="font-serif text-[hsl(var(--ink))]"
+              style={{
+                fontSize: "clamp(2.6rem, 6vw, 4.4rem)",
+                lineHeight: 1.02,
+                letterSpacing: "-0.04em",
+                fontWeight: 500,
+                textWrap: "balance",
+                maxWidth: "16ch",
+              }}
+            >
+              This is it.
+            </motion.h1>
+          </div>
+        </Reveal>
+      </CelebrationBurst>
 
       <Reveal delay={0.15} duration={0.7} axis="y" blur={4}>
         <div className="mx-auto mt-12 w-full max-w-[480px]">

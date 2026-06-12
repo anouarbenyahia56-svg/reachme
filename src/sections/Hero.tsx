@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { useRef } from "react";
 import { CTA } from "@/components/CTA";
+import { ParallaxWrapper } from "@/components/ParallaxWrapper";
 import { BlurReveal, EASE, WordReveal } from "@/components/motion";
 
 /**
@@ -40,48 +41,50 @@ export function Hero() {
       className="relative px-6 pb-20 pt-40 md:px-10 md:pb-28 md:pt-44"
     >
       <div className="mx-auto flex max-w-[1180px] flex-col items-center text-center">
-        <h1
-          className="font-serif text-[hsl(var(--ink))]"
-          style={headlineStyle}
-        >
-          <span className="block">
-            <WordReveal
-              text="Serious people"
-              inView={false}
-              delay={0.1}
-              stagger={0.05}
-              duration={0.7}
-              as="span"
-              once
-            />
-          </span>
-          <span className="block">
-            <WordReveal
-              text="can reach you."
-              inView={false}
-              delay={0.2}
-              stagger={0.05}
-              duration={0.7}
-              as="span"
-              once
-            />
-          </span>
-          <motion.span
-            initial={
-              reduced || !isFirstMount
-                ? { opacity: 1, y: 0, filter: "blur(0px)" }
-                : { opacity: 0, y: 16, filter: "blur(8px)" }
-            }
-            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            transition={{ duration: 0.7, delay: 0.5, ease: EASE }}
-            className="block italic text-[hsl(var(--ink-subtle))]"
-            style={{ fontSize: "0.84em", fontWeight: 400 }}
-            aria-hidden="true"
+        <ParallaxWrapper speed={0.12}>
+          <h1
+            className="font-serif text-[hsl(var(--ink))]"
+            style={headlineStyle}
           >
-            Noise cannot.
-          </motion.span>
-          <span className="sr-only">Noise cannot.</span>
-        </h1>
+            <span className="block">
+              <WordReveal
+                text="Serious people"
+                inView={false}
+                delay={0.1}
+                stagger={0.05}
+                duration={0.7}
+                as="span"
+                once
+              />
+            </span>
+            <span className="block">
+              <WordReveal
+                text="can reach you."
+                inView={false}
+                delay={0.2}
+                stagger={0.05}
+                duration={0.7}
+                as="span"
+                once
+              />
+            </span>
+            <motion.span
+              initial={
+                reduced || !isFirstMount
+                  ? { opacity: 1, y: 0, filter: "blur(0px)" }
+                  : { opacity: 0, y: 12, filter: "blur(6px)" }
+              }
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{ duration: 0.7, delay: 0.5, ease: EASE }}
+              className="block italic text-[hsl(var(--ink-subtle))]"
+              style={{ fontSize: "0.84em", fontWeight: 400 }}
+              aria-hidden="true"
+            >
+              Noise cannot.
+            </motion.span>
+            <span className="sr-only">Noise cannot.</span>
+          </h1>
+        </ParallaxWrapper>
 
         <BlurReveal
           delay={0.6}
@@ -100,19 +103,21 @@ export function Hero() {
             }}
           >
             Set the floor. Let the requests worth your time through.
-            Let everything else disappear.
+            Let the rest disappear.
           </span>
         </BlurReveal>
 
-        <BlurReveal
-          delay={0.7}
-          duration={0.7}
-          inView={false}
-          className="mt-12 flex flex-col items-center gap-7"
-        >
-          <CTA href="/claim" label="Claim your handle" />
-          <SeeHowItWorks />
-        </BlurReveal>
+        <ParallaxWrapper speed={0.05}>
+          <BlurReveal
+            delay={0.7}
+            duration={0.7}
+            inView={false}
+            className="mt-12 flex flex-col items-center gap-7"
+          >
+            <CTA href="/claim" label="Claim your handle" />
+            <SeeHowItWorks />
+          </BlurReveal>
+        </ParallaxWrapper>
       </div>
     </section>
   );

@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { EASE } from "@/components/motion";
 import { Label } from "./Field";
 import type { Visibility } from "../types";
+import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS: ReadonlyArray<{
   value: Visibility;
@@ -86,12 +87,12 @@ export function VisibilityField({
               transition={{ duration: 0.25, ease: EASE }}
               onClick={() => onChangeVisibility(opt.value)}
               aria-pressed={active}
-              className={[
+              className={cn(
                 "flex flex-col items-start rounded-2xl border px-5 py-5 text-left transition-[border-color,background-color,color] duration-300",
                 active
                   ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
                   : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
-              ].join(" ")}
+              )}
             >
               <span
                 className="font-medium"
@@ -103,12 +104,12 @@ export function VisibilityField({
                 {opt.label}
               </span>
               <span
-                className={[
+                className={cn(
                   "mt-2 text-[12.5px] leading-[1.55]",
                   active
                     ? "text-[hsl(var(--page))]/75"
                     : "text-[hsl(var(--ink-muted))]",
-                ].join(" ")}
+                )}
               >
                 {opt.helper}
               </span>
@@ -131,12 +132,12 @@ export function VisibilityField({
                   transition={{ duration: 0.25, ease: EASE }}
                   onClick={() => onPreset(d)}
                   aria-pressed={active}
-                  className={[
+                  className={cn(
                     "rounded-2xl border px-4 py-4 text-center transition-[border-color,background-color,color] duration-300",
                     active
                       ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
                       : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
-                  ].join(" ")}
+                  )}
                 >
                   <span
                     className="font-serif"
@@ -157,12 +158,12 @@ export function VisibilityField({
               transition={{ duration: 0.25, ease: EASE }}
               onClick={onCustomToggle}
               aria-pressed={customActive}
-              className={[
+              className={cn(
                 "rounded-2xl border px-4 py-4 text-center transition-[border-color,background-color,color] duration-300",
                 customActive
                   ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
                   : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
-              ].join(" ")}
+              )}
             >
               {customActive ? (
                 <span

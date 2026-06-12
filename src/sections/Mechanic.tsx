@@ -1,5 +1,9 @@
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
+import { cn } from "@/lib/utils";
 import {
   BlurReveal,
+  EASE,
   RevealLines,
   SECTION_GRID,
   SECTION_PADDING,
@@ -9,7 +13,7 @@ import {
 const STEPS = [
   {
     title: "Set your floor.",
-    body: "You decide the minimum amount someone must attach to reach you. Your floor is your boundary.",
+    body: "You decide the minimum someone must attach to reach you. Your floor is your filter.",
   },
   {
     title: "Every request arrives complete.",
@@ -17,7 +21,7 @@ const STEPS = [
   },
   {
     title: "Reply or let it expire.",
-    body: "You stay in control. Replies release the payment. Expired requests are refunded automatically.",
+    body: "You stay in control. Reply to release the payment. Don't reply and it expires — refunded automatically.",
   },
 ] as const;
 
@@ -29,6 +33,56 @@ const STEPS = [
  * Columns separated by vertical hairlines on desktop only — no top
  * ink rule on the cards themselves.
  */
+function ScrollStep({
+  step,
+  index,
+}: {
+  step: (typeof STEPS)[number];
+  index: number;
+}) {
+  const reduced = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "center center"],
+  });
+
+  const x = useTransform(scrollYProgress, [0, 1], [30, 0]);
+  const opacity = useTransform(scrollYProgress, [0, 1], [0.3, 1]);
+
+  return (
+    <motion.article
+      ref={ref}
+      className={cn(
+        "relative md:pt-9 md:pb-10 md:pr-10",
+        "md:[&:not(:first-child)]:border-l md:[&:not(:first-child)]:border-[hsl(var(--rule))]",
+        index === 0 ? "md:pl-0" : "md:pl-10",
+      )}
+      style={reduced ? undefined : { x, opacity }}
+    >
+      <h3
+        className="font-serif text-[hsl(var(--ink))]"
+        style={{
+          fontSize: "1.55rem",
+          fontWeight: 500,
+          letterSpacing: "-0.02em",
+          lineHeight: 1.18,
+          textWrap: "balance",
+          fontOpticalSizing: "auto",
+        }}
+      >
+        {step.title}
+      </h3>
+      <p
+        className="mt-5 max-w-[36ch] text-[hsl(var(--ink-muted))]"
+        style={{ fontSize: "0.97rem", lineHeight: 1.65 }}
+      >
+        {step.body}
+      </p>
+    </motion.article>
+  );
+}
+
 export function Mechanic() {
   return (
     <section id="mechanic" className={`relative ${SECTION_PADDING}`}>
@@ -63,42 +117,11 @@ export function Mechanic() {
           </BlurReveal>
         </div>
 
-        <RevealLines
-          delay={0.15}
-          stagger={0.13}
-          className="col-span-12 mt-24 grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-0"
-        >
+        <div className="col-span-12 mt-24 grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-0">
           {STEPS.map((step, i) => (
-            <article
-              key={step.title}
-              className={[
-                "relative md:pt-9 md:pb-10 md:pr-10",
-                "md:[&:not(:first-child)]:border-l md:[&:not(:first-child)]:border-[hsl(var(--rule))]",
-                i === 0 ? "md:pl-0" : "md:pl-10",
-              ].join(" ")}
-            >
-              <h3
-                className="font-serif text-[hsl(var(--ink))]"
-                style={{
-                  fontSize: "1.55rem",
-                  fontWeight: 500,
-                  letterSpacing: "-0.02em",
-                  lineHeight: 1.18,
-                  textWrap: "balance",
-                  fontOpticalSizing: "auto",
-                }}
-              >
-                {step.title}
-              </h3>
-              <p
-                className="mt-5 max-w-[36ch] text-[hsl(var(--ink-muted))]"
-                style={{ fontSize: "0.97rem", lineHeight: 1.65 }}
-              >
-                {step.body}
-              </p>
-            </article>
+            <ScrollStep key={step.title} step={step} index={i} />
           ))}
-        </RevealLines>
+        </div>
       </div>
     </section>
   );

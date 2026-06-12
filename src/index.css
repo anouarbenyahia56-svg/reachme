@@ -2,11 +2,7 @@
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Design tokens
-   White and black. One palette, two registers:
-     • the page (light) — runs from the nav through to the FAQ
-     • the dark-world (dark) — wraps the closing and the footer only
-   The dark-world remaps the same token names. Components don't know
-   which register they live in; they ask the cascade.
+   Light mode only. The palette runs from the nav through to the footer.
    ──────────────────────────────────────────────────────────────────────────── */
 @theme inline {
   --color-page: hsl(var(--page));
@@ -21,6 +17,12 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
     sans-serif;
   --font-serif: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+
+  --shadow-sm: 0 1px 2px 0 hsl(var(--shadow-color) / 0.04);
+  --shadow-md: 0 4px 12px -2px hsl(var(--shadow-color) / 0.06), 0 2px 4px -1px hsl(var(--shadow-color) / 0.04);
+  --shadow-lg: 0 12px 28px -6px hsl(var(--shadow-color) / 0.08), 0 4px 8px -2px hsl(var(--shadow-color) / 0.04);
+  --shadow-xl: 0 24px 48px -8px hsl(var(--shadow-color) / 0.1), 0 8px 16px -4px hsl(var(--shadow-color) / 0.06);
+  --shadow-glow: 0 0 28px -4px hsl(var(--shadow-color) / 0.18);
 }
 
 :root {
@@ -33,23 +35,20 @@
   --rule-strong: 36 6% 78%;
   --surface: 0 0% 100%;
   --danger: 0 72% 45%;
+  --shadow-color: 0 0% 7%;
 }
 
-/* Dark-world — same token names, inverted values. The wrapper
-   announces its own background so neighbours don't need to. */
-.dark-world {
-  --page: 0 0% 6%;
-  --ink: 40 18% 96%;
-  --ink-muted: 40 8% 68%;
-  --ink-subtle: 36 6% 48%;
-  --rule: 0 0% 14%;
-  --rule-strong: 0 0% 22%;
-  --surface: 0 0% 9%;
-  --danger: 0 70% 62%;
+/* ─── Elevation utilities ───────────────────────────────────────── */
+.shadow-surface {
+  box-shadow: var(--shadow-md);
+}
 
-  background: hsl(var(--page));
-  color: hsl(var(--ink));
-  color-scheme: dark;
+.shadow-elevated {
+  box-shadow: var(--shadow-lg);
+}
+
+.shadow-glow {
+  box-shadow: var(--shadow-glow);
 }
 
 @layer base {
@@ -105,8 +104,8 @@
   }
 
   /* Display type — Fraunces. Renders identically to the wordmark:
-     same weight, optical sizing, kerning, feature settings. The logo
-     and the headlines are one typographic voice. */
+     same optical sizing, kerning, feature settings. Weight 500
+     matches every heading component in the product. */
   h1,
   h2,
   h3,
@@ -114,7 +113,7 @@
   h5,
   h6 {
     font-family: var(--font-serif);
-    font-weight: 300;
+    font-weight: 500;
     letter-spacing: -0.025em;
     font-optical-sizing: auto;
     font-feature-settings: "ss01", "kern";
@@ -155,6 +154,30 @@
     outline: 1.5px solid hsl(var(--ink));
     outline-offset: 3px;
     border-radius: 12px;
+  }
+
+  /* Skip-to-content — visible only on focus. Keyboard users tab
+     past the header straight to the main content. */
+  .skip-to-content {
+    position: fixed;
+    top: -100%;
+    left: 50%;
+    z-index: 9999;
+    transform: translateX(-50%);
+    padding: 0.75rem 1.5rem;
+    border-radius: 9999px;
+    background: hsl(var(--ink));
+    color: hsl(var(--page));
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: top 0.15s ease;
+  }
+
+  .skip-to-content:focus {
+    top: 12px;
+    outline: 2px solid hsl(var(--page));
+    outline-offset: 2px;
   }
 
   @media (prefers-reduced-motion: reduce) {

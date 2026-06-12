@@ -52,7 +52,7 @@ export function Login() {
   return (
     <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
       <AppHeader variant="marketing" />
-      <main className="mx-auto flex min-h-[calc(100vh-68px)] max-w-[1100px] items-center justify-center px-6 py-16 md:px-10">
+      <main id="main-content" className="mx-auto flex min-h-[calc(100vh-68px)] max-w-[1100px] items-center justify-center px-6 py-16 md:px-10">
         <div className="grid w-full max-w-[820px] items-center gap-16 lg:grid-cols-2">
           <Reveal>
             <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
@@ -71,8 +71,7 @@ export function Login() {
               Log in to <span className="italic">ReachMe</span>.
             </h1>
             <p className="mt-7 max-w-[44ch] text-[hsl(var(--ink-muted))]">
-              Enter your email and password to access your page, inbox, and
-              account.
+              Sign in to manage your page, inbox, and earnings.
             </p>
           </Reveal>
 

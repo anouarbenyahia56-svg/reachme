@@ -1,0 +1,5 @@
+- Entry point `src/main.tsx` renders `App.tsx`, which composes a custom dependency-free router (`src/app/router.tsx`), error boundary, and toast provider.
+- Routing is handled by a central `Routes.tsx` dispatching to feature-specific screens in `src/app/screens/` (Auth, Dashboard, Onboarding, Public, Send).
+- State management uses a lightweight external store pattern in `src/app/store/` backed by localStorage with reactive hooks (`useExternal`).
+- API interactions are abstracted in `src/app/api/client.ts` as async stubs ready for backend integration.
+- UI components in `src/app/ui/` and `src/components/` provide a consistent design system using Tailwind CSS and Framer Motion.

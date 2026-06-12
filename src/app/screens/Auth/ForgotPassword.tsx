@@ -16,12 +16,14 @@ export function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   const sendReset = async () => {
     if (!valid) return;
     setSubmitting(true);
+    setError(null);
     // TODO: wire to backend — POST /auth/forgot-password { email }
     await new Promise((r) => setTimeout(r, 500));
     setSubmitted(true);
@@ -31,7 +33,7 @@ export function ForgotPassword() {
   return (
     <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
       <AppHeader variant="marketing" />
-      <main className="mx-auto flex min-h-[calc(100vh-68px)] max-w-[1100px] items-center justify-center px-6 py-16 md:px-10">
+      <main id="main-content" className="mx-auto flex min-h-[calc(100vh-68px)] max-w-[1100px] items-center justify-center px-6 py-16 md:px-10">
         <div className="grid w-full max-w-[820px] items-center gap-16 lg:grid-cols-2">
           <Reveal>
             <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
@@ -50,8 +52,7 @@ export function ForgotPassword() {
               Forgot your <span className="italic">password</span>?
             </h1>
             <p className="mt-7 max-w-[44ch] text-[hsl(var(--ink-muted))]">
-              Enter the email address associated with your account and we'll
-              send you a link to reset your password.
+              Enter your email and we'll send a reset link.
             </p>
           </Reveal>
 
@@ -82,13 +83,20 @@ export function ForgotPassword() {
                     label="Email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { setEmail(e.target.value); setError(null); }}
                     placeholder="you@example.com"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && valid && !submitting) sendReset();
                     }}
                   />
+
+                  {error && (
+                    <p className="mt-3 text-[12.5px] leading-[1.55] text-[hsl(var(--danger))]" aria-live="assertive">
+                      {error}
+                    </p>
+                  )}
+
                   <div className="mt-6 space-y-3">
                     <Button
                       size="lg"

@@ -9,6 +9,8 @@ import { useSent, getConversation, platformFeeCents } from "../../store/requests
 import { useProfile } from "../../store/session";
 import { dateLong, formatMoney, timeAgo, timeUntil } from "../../store/format";
 import type { RequestRecord } from "../../types";
+import { cn } from "@/lib/utils";
+import { CardSkeleton, ScreenError } from "../../ui/ScreenStates";
 
 /**
  * Sent detail — read-only view from the sender's perspective.
@@ -22,10 +24,37 @@ export function SentDetail({ id }: { id: string }) {
   const r = all.find((x) => x.id === id);
   const { navigate } = useRouter();
 
+  // TODO: wire to backend — set `loading` to `true` while the
+  // request detail fetch is in flight; set `error` to the caught error.
+  const loading = false;
+  const error: string | null = null;
+
+  if (loading) {
+    return (
+      <Card>
+        <div className="px-7 py-7 md:px-9 md:py-8">
+          <CardSkeleton rows={4} />
+        </div>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <ScreenError
+          title="Couldn't load this request."
+          message={error}
+          onRetry={() => window.location.reload()}
+        />
+      </Card>
+    );
+  }
+
   if (!r) {
     return (
       <Card>
-        <div className="px-7 py-16 text-center md:px-9">
+        <div className="px-7 py-12 text-center md:px-9">
           <h3
             className="font-serif text-[hsl(var(--ink))]"
             style={{
@@ -34,7 +63,7 @@ export function SentDetail({ id }: { id: string }) {
               letterSpacing: "-0.025em",
             }}
           >
-            That sent request can't be found.
+            That request can't be found.
           </h3>
           <Link
             href="/dashboard/sent"
@@ -122,7 +151,7 @@ export function SentDetail({ id }: { id: string }) {
           <div className="px-7 pt-7 md:px-9 md:pt-9">
             <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
               {r.status === "pending"
-                ? "Held"
+                ? "In escrow"
                 : r.status === "replied"
                   ? "Released"
                   : "Refunded"}
@@ -151,7 +180,7 @@ export function SentDetail({ id }: { id: string }) {
             {isOwner && r.status === "replied" && (
               <div className="mt-5 space-y-2 border-t border-[hsl(var(--rule))] pt-5">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[12.5px] text-[hsl(var(--ink-muted))]">You sent</span>
+                  <span className="text-[12.5px] text-[hsl(var(--ink-muted))]">Amount sent</span>
                   <span className="text-[13px] font-medium tabular-nums text-[hsl(var(--ink))]">
                     {formatMoney(r.amountCents)}
                   </span>
@@ -163,7 +192,7 @@ export function SentDetail({ id }: { id: string }) {
                   </span>
                 </div>
                 <div className="flex items-baseline justify-between">
-                  <span className="text-[12.5px] text-[hsl(var(--ink-muted))]">Owner received</span>
+                  <span className="text-[12.5px] text-[hsl(var(--ink-muted))]">Owner receives</span>
                   <span className="text-[12.5px] tabular-nums text-[hsl(var(--ink-subtle))]">
                     {formatMoney(r.amountCents - platformFeeCents(r.amountCents))}
                   </span>
@@ -174,7 +203,7 @@ export function SentDetail({ id }: { id: string }) {
           <div className="px-7 pb-7 pt-6 md:px-9 md:pb-9">
             <Row label="Submitted" value={dateLong(r.createdAt)} />
             <Row
-              label={r.status === "pending" ? "Refunds on" : "Reply window"}
+              label={r.status === "pending" ? "Refunds" : "Reply window"}
               value={dateLong(r.expiresAt)}
             />
             {r.escrow.releasedAt && (
@@ -228,7 +257,7 @@ function ConversationEntry({ r }: { r: RequestRecord }) {
           )}
           {/* Attachments */}
           {r.reply.attachments && r.reply.attachments.length > 0 && (
-            <div className={`flex flex-wrap gap-2 ${r.reply.body ? "mt-3" : "mt-2"}`}>
+            <div className={cn("flex flex-wrap gap-2", r.reply.body ? "mt-3" : "mt-2")}>
               {r.reply.attachments.map((a, i) => (
                 <div
                   key={i}

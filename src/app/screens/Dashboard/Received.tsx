@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Inbox, Search } from "lucide-react";
 import { Card } from "../../ui/Card";
 import { Pill } from "../../ui/Pill";
-import { Reveal } from "../../ui/Reveal";
+import { EmptyState } from "../../ui/EmptyState";
 import { useReceived } from "../../store/requests";
 import { useProfile } from "../../store/session";
 import { Avatar } from "../../ui/Avatar";
@@ -10,6 +10,7 @@ import { Link } from "../../router";
 import { formatMoney, timeAgo } from "../../store/format";
 import type { ReceivedRequest, RequestStatus } from "../../types";
 import { cn } from "@/lib/utils";
+import { CardSkeleton, ScreenError } from "../../ui/ScreenStates";
 
 const FILTERS: ReadonlyArray<{ id: RequestStatus | "all"; label: string }> = [
   { id: "pending", label: "Pending" },
@@ -28,6 +29,11 @@ export function Received() {
   const all = useReceived();
   const [filter, setFilter] = useState<RequestStatus | "all">("pending");
   const [query, setQuery] = useState("");
+
+  // TODO: wire to backend — set `loading` to `true` while the
+  // inbox fetch is in flight; set `error` to the caught error.
+  const loading = false;
+  const error: string | null = null;
 
   const inbox = useMemo(() => {
     if (!profile) return [] as ReceivedRequest[];
@@ -61,6 +67,28 @@ export function Received() {
     }
     return list;
   }, [inbox, filter, query]);
+
+  if (loading) {
+    return (
+      <Card>
+        <div className="px-7 py-5 md:px-9">
+          <CardSkeleton rows={5} />
+        </div>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <ScreenError
+          title="Couldn't load your inbox."
+          message={error}
+          onRetry={() => window.location.reload()}
+        />
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -103,7 +131,7 @@ export function Received() {
           </span>
           <input
             type="text"
-            placeholder="Search names, subjects, messages"
+            placeholder="Search by name, subject, or message"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-[260px] bg-transparent px-3 py-2 text-[13px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
@@ -182,15 +210,15 @@ function Empty({ filter }: { filter: string }) {
   const messages: Record<string, { title: string; body: string }> = {
     pending: {
       title: "Nothing waiting on you.",
-      body: "When a serious request lands, it'll show up here first. We'll email you the moment it does.",
+      body: "When a serious request arrives, it appears here first. You'll also get an email the moment it does.",
     },
     replied: {
       title: "No replies yet.",
-      body: "Replies you've sent will appear here, with the released amount.",
+      body: "Every reply you send appears here alongside the amount it released.",
     },
     expired: {
       title: "Nothing expired.",
-      body: "Requests left unattended past your reply window expire — and refund — on their own.",
+      body: "Requests that pass your reply window without a response expire and refund automatically.",
     },
     all: {
       title: "Nothing in your inbox yet.",
@@ -199,25 +227,10 @@ function Empty({ filter }: { filter: string }) {
   };
   const m = messages[filter] ?? messages.all;
   return (
-    <Reveal duration={0.3} blur={0}>
-      <div className="px-7 py-20 text-center md:px-9">
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[hsl(var(--page))] text-[hsl(var(--ink-muted))] ring-1 ring-[hsl(var(--rule))]">
-          <Inbox size={18} strokeWidth={1.6} aria-hidden="true" />
-        </span>
-        <h3
-          className="mt-5 font-serif text-[hsl(var(--ink))]"
-          style={{
-            fontSize: "1.6rem",
-            fontWeight: 500,
-            letterSpacing: "-0.025em",
-          }}
-        >
-          {m.title}
-        </h3>
-        <p className="mx-auto mt-2 max-w-[44ch] text-[13.5px] text-[hsl(var(--ink-muted))]">
-          {m.body}
-        </p>
-      </div>
-    </Reveal>
+    <EmptyState
+      icon={Inbox}
+      title={m.title}
+      body={m.body}
+    />
   );
 }

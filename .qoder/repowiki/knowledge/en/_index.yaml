@@ -1,0 +1,101 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: en-US
+branch: main
+exported_at: "2026-06-12T02:48:17Z"
+modules:
+    "":
+        dir_name: ReachMe Single-Page Application
+        title: ReachMe Single-Page Application
+        scope:
+            - README.md
+            - CONCEPT.md
+            - .gitignore
+            - .gitattributes
+            - .npmrc
+            - package.json
+            - package-lock.json
+            - tsconfig.json
+            - vite.config.ts
+            - index.html
+            - public\favicon.svg
+            - public\robots.txt
+            - src\App.tsx
+            - src\app\ErrorBoundary.tsx
+            - src\app\LandingApp.tsx
+            - src\app\LinkInterceptor.tsx
+            - src\app\Routes.tsx
+            - src\app\api\client.ts
+            - src\app\api\index.ts
+            - src\app\router.tsx
+            - src\app\screens\Auth\ForgotPassword.tsx
+            - src\app\screens\Auth\Login.tsx
+            - src\app\screens\Dashboard\DashboardShell.tsx
+            - src\app\screens\Dashboard\Earnings.tsx
+            - src\app\screens\Dashboard\MyPage.tsx
+            - src\app\screens\Dashboard\Overview.tsx
+            - src\app\screens\Dashboard\Received.tsx
+            - src\app\screens\Dashboard\RequestDetail.tsx
+            - src\app\screens\Dashboard\Sent.tsx
+            - src\app\screens\Dashboard\SentDetail.tsx
+            - src\app\screens\Dashboard\Settings.tsx
+            - src\app\screens\Dashboard\VerifyEmailBanner.tsx
+            - src\app\screens\Legal\Privacy.tsx
+            - src\app\screens\Legal\Terms.tsx
+            - src\app\screens\Onboarding\OnboardingShell.tsx
+            - src\app\screens\Onboarding\StepCategories.tsx
+            - src\app\screens\Onboarding\StepEmail.tsx
+            - src\app\screens\Onboarding\StepFinish.tsx
+            - src\app\screens\Onboarding\StepFloor.tsx
+            - src\app\screens\Onboarding\StepHandle.tsx
+            - src\app\screens\Onboarding\StepIdentity.tsx
+            - src\app\screens\Onboarding\StepSocials.tsx
+            - src\app\screens\Onboarding\StepVisibility.tsx
+            - src\app\screens\Public\ProfilePreviewCard.tsx
+            - src\app\screens\Public\PublicProfile.tsx
+            - src\app\screens\Send\SendRequest.tsx
+            - src\app\store\categories.ts
+            - src\app\store\directory.ts
+            - src\app\store\draft.ts
+            - src\app\store\format.ts
+            - src\app\store\payoutMethod.ts
+            - src\app\store\requests.ts
+            - src\app\store\session.ts
+            - src\app\store\socials.ts
+            - src\app\store\storage.ts
+            - src\app\store\useExternal.ts
+            - src\app\store\verification.ts
+            - src\app\store\withdrawals.ts
+            - src\app\types.ts
+            - src\app\ui\AppHeader.tsx
+            - src\app\ui\Avatar.tsx
+            - src\app\ui\Button.tsx
+            - src\app\ui\Card.tsx
+            - src\app\ui\Field.tsx
+            - src\app\ui\Modal.tsx
+            - src\app\ui\Pill.tsx
+            - src\app\ui\Reveal.tsx
+            - src\app\ui\ScreenStates.tsx
+            - src\app\ui\SocialIcons.tsx
+            - src\app\ui\SocialsField.tsx
+            - src\app\ui\Toast.tsx
+            - src\app\ui\VisibilityField.tsx
+            - src\components\CTA.tsx
+            - src\components\Wordmark.tsx
+            - src\components\motion.tsx
+            - src\index.css
+            - src\lib\utils.ts
+            - src\main.tsx
+            - src\sections\Audience.tsx
+            - src\sections\Closing.tsx
+            - src\sections\FAQ.tsx
+            - src\sections\Footer.tsx
+            - src\sections\Hero.tsx
+            - src\sections\Mechanic.tsx
+            - src\sections\Nav.tsx
+            - src\sections\Pricing.tsx
+            - src\sections\Thesis.tsx
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []

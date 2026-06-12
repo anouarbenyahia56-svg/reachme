@@ -1,0 +1,1 @@
+A React-based platform for managing paid attention requests, featuring user onboarding, dashboard management, and public profile interactions.

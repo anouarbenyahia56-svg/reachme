@@ -21,12 +21,14 @@ import { Pill } from "../../ui/Pill";
 import { setAccount, signOut, useAccount, useProfile } from "../../store/session";
 import { useToast } from "../../ui/Toast";
 import { cn } from "@/lib/utils";
+import { Headline } from "../../ui/Headline";
+import { headlineCard } from "@/lib/typography";
 
 /**
  * Settings — the owner's account configuration, security,
  * and account management surface.
  *
- * Four sections, in order:
+ * Three sections, in order:
  *   1. Account       — email, password, connected social logins
  *   2. Notifications — email notification preferences
  *   3. Security      — two-factor auth, active sessions
@@ -35,6 +37,7 @@ import { cn } from "@/lib/utils";
  * Every handler is a named function with a TODO for backend
  * wiring. No decorative elements — everything earns its place.
  */
+
 export function Settings() {
   return (
     <div className="mx-auto max-w-3xl space-y-14">
@@ -107,18 +110,9 @@ function SectionHeader({
         <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
           {eyebrow}
         </p>
-        <p
-          className="mt-3 font-serif text-[hsl(var(--ink))]"
-          style={{
-            fontSize: "clamp(1.5rem, 2.4vw, 2.1rem)",
-            fontWeight: 500,
-            letterSpacing: "-0.025em",
-            lineHeight: 1.1,
-            textWrap: "balance",
-          }}
-        >
+        <Headline preset={headlineCard} as="p" className="mt-3">
           {title}
-        </p>
+        </Headline>
         <p className="mt-3 max-w-[50ch] text-[13.5px] leading-[1.6] text-[hsl(var(--ink-muted))]">
           {description}
         </p>
@@ -250,7 +244,7 @@ function AccountCard() {
   return (
     <>
       <Card>
-        <div className="px-8 py-10 md:px-11 md:py-12">
+        <div className="px-8 py-9 md:px-11 md:py-10">
           <div className="flex items-start justify-between gap-6">
             <SectionHeader
               icon={<Mail size={16} strokeWidth={1.6} aria-hidden="true" />}
@@ -321,7 +315,7 @@ function AccountCard() {
                     <p className="mt-1 text-[13px] text-[hsl(var(--ink-muted))]">
                       {account.hasPassword
                         ? "Used to sign in to your account."
-                        : "Set a password so you can also sign in with a password."}
+                        : "Set a password to sign in without a social provider."}
                     </p>
                   </div>
                   <Button variant="outline" size="sm" onClick={openPasswordModal}>
@@ -502,7 +496,7 @@ function NotificationsCard() {
 
   return (
     <Card>
-      <div className="px-8 py-10 md:px-11 md:py-12">
+      <div className="px-8 py-9 md:px-11 md:py-10">
         <SectionHeader
           icon={<Bell size={16} strokeWidth={1.6} aria-hidden="true" />}
           eyebrow="Notifications"
@@ -658,7 +652,7 @@ function SecurityCard() {
   return (
     <>
       <Card>
-        <div className="px-8 py-10 md:px-11 md:py-12">
+        <div className="px-8 py-9 md:px-11 md:py-10">
           <SectionHeader
             icon={<Shield size={16} strokeWidth={1.6} aria-hidden="true" />}
             eyebrow="Security"
@@ -688,7 +682,7 @@ function SecurityCard() {
                   </p>
                   <p className="mt-1 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-muted))]">
                     {twoFactorEnabled
-                      ? "Extra verification is required when you sign in from a new device."
+                      ? "A verification code is required when signing in from a new device."
                       : "Add an extra layer of security to your account."}
                   </p>
                 </div>
@@ -895,7 +889,7 @@ function DangerZoneCard() {
   return (
     <>
       <Card variant="dark">
-        <div className="px-8 py-10 md:px-11 md:py-12">
+        <div className="px-8 py-9 md:px-11 md:py-10">
           <div className="flex items-start gap-4">
             <span className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--page))]/10 text-[hsl(var(--page))]/70 ring-1 ring-[hsl(var(--page))]/15">
               <AlertTriangle size={16} strokeWidth={1.6} aria-hidden="true" />
@@ -904,20 +898,11 @@ function DangerZoneCard() {
               <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--page))]/50">
                 Danger zone
               </p>
-              <p
-                className="mt-3 font-serif text-[hsl(var(--page))]"
-                style={{
-                  fontSize: "clamp(1.5rem, 2.4vw, 2.1rem)",
-                  fontWeight: 500,
-                  letterSpacing: "-0.025em",
-                  lineHeight: 1.1,
-                  textWrap: "balance",
-                }}
-              >
+              <Headline preset={headlineCard} as="p" className="mt-3 text-[hsl(var(--page))]">
                 Irreversible actions.
-              </p>
+              </Headline>
               <p className="mt-3 max-w-[50ch] text-[13.5px] leading-[1.6] text-[hsl(var(--page))]/60">
-                These actions are permanent and cannot be undone. Please read carefully.
+                These actions cannot be undone. Read carefully before proceeding.
               </p>
             </div>
           </div>

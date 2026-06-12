@@ -1,26 +1,42 @@
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { useRef } from "react";
 import { CTA } from "@/components/CTA";
-import { BlurReveal, SECTION_PADDING, WordReveal } from "@/components/motion";
+import { BlurReveal, EASE, SECTION_PADDING, WordReveal } from "@/components/motion";
 
 /**
  * Closing — the last word.
  *
- * Lives inside the dark-world wrapper. Renders against the standard
- * tokens, which the wrapper has remapped — the section does not know
- * it is dark. Type matches the hero scale; the page bookends.
+ * Renders against the standard tokens. Type matches the hero scale;
+ * the page bookends.
  *
  * Subline beneath the CTA contextualises "handle" — the only place
  * on the page that defines the term, placed exactly where the action
  * is asked for.
  */
 export function Closing() {
+  const reduced = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+
+  const scale = useTransform(scrollYProgress, [0, 0.5], [0.96, 1]);
+  const blur = useTransform(scrollYProgress, [0, 0.5], ["blur(4px)", "blur(0px)"]);
+  const opacity = useTransform(scrollYProgress, [0, 0.3], [0.6, 1]);
+
   return (
     <section
+      ref={ref}
       className={`relative ${SECTION_PADDING.replace(
         "py-32",
         "py-44",
       ).replace("md:py-40", "md:py-56")}`}
     >
-      <div className="mx-auto max-w-[1100px] text-center">
+      <motion.div
+        className="mx-auto max-w-[1100px] text-center"
+        style={reduced ? undefined : { scale, filter: blur, opacity }}
+      >
         <WordReveal
           as="h2"
           text="Stay reachable."
@@ -69,7 +85,7 @@ export function Closing() {
             who reaches you.
           </p>
         </BlurReveal>
-      </div>
+      </motion.div>
     </section>
   );
 }

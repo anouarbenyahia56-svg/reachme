@@ -1,10 +1,12 @@
-import { useState, useMemo } from "react";
-import { Inbox } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Inbox, Wallet } from "lucide-react";
 import { Card } from "../../ui/Card";
 import { Pill } from "../../ui/Pill";
 import { Button } from "../../ui/Button";
 import { Modal } from "../../ui/Modal";
 import { Label } from "../../ui/Field";
+import { EmptyState } from "../../ui/EmptyState";
+import { AnimatedStat } from "../../ui/AnimatedStat";
 import { useNavigate } from "../../router";
 import { useReceived, platformFeeCents } from "../../store/requests";
 import {
@@ -151,6 +153,15 @@ export function Earnings() {
 
   const hasAvailableFunds = availableBalance > 0;
 
+  // Celebration on first earnings
+  const prevLifetimeRef = useRef(lifetimeNetCents);
+  useEffect(() => {
+    if (prevLifetimeRef.current === 0 && lifetimeNetCents > 0) {
+      toast.show("You earned your first payout.");
+    }
+    prevLifetimeRef.current = lifetimeNetCents;
+  }, [lifetimeNetCents, toast]);
+
   // TODO: wire to backend — array from GET /earnings/history
   const earningsHistory: EarningEntry[] = useMemo(
     () =>
@@ -242,7 +253,7 @@ export function Earnings() {
           className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-5 py-3.5"
         >
           <p className="text-[14px] leading-[1.55] text-[hsl(var(--ink-muted))]">
-            Verify your email to be able to withdraw money.
+            Verify your email to enable withdrawals.
           </p>
           <button
             type="button"
@@ -332,10 +343,10 @@ function StatementCard({
 }: StatementCardProps) {
   return (
     <Card>
-      <div className="px-8 py-10 md:px-11 md:py-14">
+      <div className="px-8 py-9 md:px-11 md:py-10">
         <div className="flex items-start justify-between gap-6">
           <p className="pt-1.5 text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-            Available to withdraw
+            Available
           </p>
           <div className="flex shrink-0 flex-col items-end gap-2">
             {!hasPayoutMethod ? (
@@ -345,7 +356,7 @@ function StatementCard({
                 trailingArrow
                 disabled={loading}
               >
-                Connect bank account
+                Connect payout method
               </Button>
             ) : hasAvailableFunds ? (
               <Button
@@ -371,7 +382,8 @@ function StatementCard({
               height="h-[clamp(3.2rem,6.6vw,4.8rem)]"
             />
           ) : (
-            <p
+            <AnimatedStat
+              value={formatMoney(availableBalance, { withCents: true })}
               className="font-serif text-[hsl(var(--ink))]"
               style={{
                 fontSize: "clamp(3.2rem, 6.6vw, 4.8rem)",
@@ -380,9 +392,7 @@ function StatementCard({
                 lineHeight: 1,
                 fontVariantNumeric: "tabular-nums",
               }}
-            >
-              {formatMoney(availableBalance, { withCents: true })}
-            </p>
+            />
           )}
           <p className="mt-5 max-w-[58ch] text-[13.5px] leading-[1.6] text-[hsl(var(--ink-muted))]">
             {statementHelper({
@@ -406,7 +416,7 @@ function StatementCard({
             }
           />
           <StatementStat
-            label="Held"
+            label="In escrow"
             loading={loading}
             value={formatMoney(pendingEscrow, { withCents: true })}
             caption={
@@ -449,7 +459,7 @@ function statementHelper({
     return "You haven't earned anything yet. Reply to requests to start earning.";
   }
   if (availableCents === 0) {
-    return "Everything you've earned has been moved to your bank.";
+    return "All earnings have been moved to your bank.";
   }
   if (!hasMethod) {
     return `${formatMoney(lifetimeNetCents, { withCents: true })} earned across ${lifetimeReplyCount} ${lifetimeReplyCount === 1 ? "reply" : "replies"}. Add a payout method to withdraw.`;
@@ -477,11 +487,12 @@ function StatementStat({
         <ShimmerBlock
           width="w-[140px]"
           height="h-[clamp(1.6rem,2.8vw,2rem)]"
-          className="mt-3"
+          className="mt-4"
         />
       ) : (
-        <p
-          className="mt-3 font-serif text-[hsl(var(--ink))]"
+        <AnimatedStat
+          value={value}
+          className="mt-4 font-serif text-[hsl(var(--ink))]"
           style={{
             fontSize: "clamp(1.6rem, 2.8vw, 2rem)",
             fontWeight: 500,
@@ -489,11 +500,9 @@ function StatementStat({
             lineHeight: 1.05,
             fontVariantNumeric: "tabular-nums",
           }}
-        >
-          {value}
-        </p>
+        />
       )}
-      <p className="mt-2.5 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-muted))]">
+      <p className="mt-3.5 text-[12.5px] leading-[1.6] text-[hsl(var(--ink-muted))]">
         {caption}
       </p>
     </div>
@@ -511,7 +520,7 @@ interface EarnedCardProps {
 function EarnedCard({ earnings, loading, onRowClick }: EarnedCardProps) {
   return (
     <Card>
-      <div className="px-8 py-10 md:px-11 md:py-12">
+      <div className="px-8 py-9 md:px-11 md:py-10">
         <div className="flex items-baseline justify-between">
           <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
             Earned
@@ -585,25 +594,11 @@ function EarningRow({
 
 function EarnedEmptyState() {
   return (
-    <div className="mt-6 flex flex-col items-center px-6 py-16 text-center">
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[hsl(var(--page))] text-[hsl(var(--ink-muted))] ring-1 ring-[hsl(var(--rule))]">
-        <Inbox size={18} strokeWidth={1.6} aria-hidden="true" />
-      </span>
-      <p
-        className="mt-6 font-serif text-[hsl(var(--ink))]"
-        style={{
-          fontSize: "1.55rem",
-          fontWeight: 500,
-          letterSpacing: "-0.025em",
-          lineHeight: 1.15,
-        }}
-      >
-        Nothing earned yet.
-      </p>
-      <p className="mt-2.5 max-w-[44ch] text-[13.5px] leading-[1.6] text-[hsl(var(--ink-muted))]">
-        Your payments will appear here as you reply to requests.
-      </p>
-    </div>
+    <EmptyState
+      icon={Wallet}
+      title="Nothing earned yet."
+      body="Payments appear here each time you reply to a request."
+    />
   );
 }
 
@@ -669,7 +664,7 @@ function BankCard({
                 Not connected
               </p>
               <p className="mt-2 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-muted))]">
-                Add a bank account to withdraw.
+                Connect a payout method to start withdrawing.
               </p>
             </div>
             <Button
@@ -678,14 +673,14 @@ function BankCard({
               trailingArrow
               disabled={loading}
             >
-              Connect bank account
+              Connect payout method
             </Button>
           </div>
         </Card>
       )}
 
       <Card>
-        <div className="px-8 py-10 md:px-11 md:py-12">
+        <div className="px-8 py-9 md:px-11 md:py-10">
           <div className="flex items-baseline justify-between">
             <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
               Withdrawals
@@ -706,8 +701,7 @@ function BankCard({
             </div>
           ) : withdrawals.length === 0 ? (
             <p className="mt-7 max-w-[42ch] text-[13.5px] leading-[1.6] text-[hsl(var(--ink-muted))]">
-              Your withdrawal history will appear here once you start moving
-              earnings to your bank.
+              Withdrawal history appears here after your first transfer.
             </p>
           ) : (
             <ul className="mt-7 divide-y divide-[hsl(var(--rule))]">

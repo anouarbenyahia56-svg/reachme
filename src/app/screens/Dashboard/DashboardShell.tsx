@@ -1,4 +1,5 @@
 import { type ReactNode, useRef, useLayoutEffect, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import { AppHeader } from "../../ui/AppHeader";
 import { Link, useNavigate } from "../../router";
 import { VerifyEmailBanner } from "./VerifyEmailBanner";
@@ -55,7 +56,6 @@ export function DashboardShell({
   trailing,
   children,
 }: {
-  title: ReactNode;
   headlines: Record<string, ReactNode>;
   description?: ReactNode;
   trailing?: ReactNode;
@@ -185,7 +185,7 @@ export function DashboardShell({
     <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
       <AppHeader />
 
-      <main className="mx-auto max-w-[1180px] px-5 pb-32 pt-10 md:px-8 md:pt-14">
+      <main id="main-content" className="mx-auto max-w-[1180px] px-5 pb-32 pt-10 md:px-8 md:pt-14">
         <VerifyEmailBanner />
 
         <div>
@@ -229,7 +229,7 @@ export function DashboardShell({
           <span
             ref={pillRef}
             aria-hidden="true"
-            className="pointer-events-none absolute top-0 left-0 h-full rounded-full bg-[hsl(var(--ink))]"
+            className="pointer-events-none absolute top-0 left-0 h-full rounded-full bg-[hsl(var(--ink))] shadow-sm"
             style={{ willChange: "transform, width" }}
           />
 
@@ -237,7 +237,10 @@ export function DashboardShell({
             <Link
               key={t.href}
               href={t.href}
-              className={`relative rounded-full px-4 py-2 text-[13px] font-medium ${INACTIVE_CLASSES.join(" ")}`}
+              className={cn(
+                "relative rounded-full px-4 py-2 text-[13px] font-medium",
+                ...INACTIVE_CLASSES,
+              )}
             >
               <span className="relative">{t.label}</span>
             </Link>

@@ -15,7 +15,7 @@ const ITEMS = [
   },
   {
     q: "What happens if I don’t reply?",
-    a: "Nothing on your side. The request expires after three days, the sender is refunded automatically, and we take no fee. The default is friction-free for you.",
+    a: "Nothing on your side. The request expires after the reply window, the sender is refunded automatically, and we take no fee. The default is friction-free for you.",
   },
   {
     q: "How is this different from a paid DM or a Calendly?",

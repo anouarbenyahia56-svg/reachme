@@ -73,7 +73,7 @@ export function StepEmail() {
     <OnboardingShell step={2} total={7} back="/claim">
       <OnboardingTitle
         title="Link your email."
-        description="This is how you sign in and how we notify you when a request arrives. No spam, no sharing."
+        description="How you sign in and how we notify you when a request arrives. We never share it, and we never spam."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>

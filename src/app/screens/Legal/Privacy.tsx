@@ -10,7 +10,7 @@ export function Privacy() {
         </Link>
       </header>
 
-      <main className="mx-auto max-w-[720px] px-6 pb-32 pt-12 md:px-10">
+      <main id="main-content" className="mx-auto max-w-[720px] px-6 pb-32 pt-12 md:px-10">
         <h1
           className="font-serif text-[hsl(var(--ink))]"
           style={{

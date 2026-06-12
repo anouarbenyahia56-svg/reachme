@@ -35,7 +35,7 @@ export function StepVisibility() {
     <OnboardingShell step={7} total={7} back="/claim/socials">
       <OnboardingTitle
         title="Control who can reach you."
-        description="Change this whenever you like. Being open doesn't mean accepting everyone — your rules still decide what reaches you."
+        description="Change this whenever you like. Being public doesn't mean accepting everyone — your floor and categories still filter what reaches you."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>

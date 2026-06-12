@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { AppHeader } from "../../ui/AppHeader";
 import { Reveal } from "../../ui/Reveal";
 import { Link } from "../../router";
@@ -6,6 +6,8 @@ import { findInDirectory } from "../../store/directory";
 import { useProfile } from "../../store/session";
 import { useToast } from "../../ui/Toast";
 import { ProfilePreviewCard } from "./ProfilePreviewCard";
+import { CardSkeleton, ScreenError } from "../../ui/ScreenStates";
+import { Card } from "../../ui/Card";
 
 /**
  * Public profile route — what every visitor sees on
@@ -29,6 +31,11 @@ export function PublicProfile({ handle }: { handle: string }) {
   const hasOwnPage = Boolean(ownerProfile);
   const toast = useToast();
 
+  // TODO: wire to backend — set `loading` to `true` while the
+  // public profile fetch is in flight; set `error` to the caught error.
+  const [loading] = useState(false);
+  const [error] = useState<string | null>(null);
+
   const handleShare = useCallback(async () => {
     if (!profile) return;
     const url = window.location.href;
@@ -51,6 +58,42 @@ export function PublicProfile({ handle }: { handle: string }) {
     }
   }, [profile, toast]);
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
+        <AppHeader variant="auto" />
+        <main id="main-content" className="md:px-6 md:pb-32 md:pt-10">
+          <div className="md:mx-auto md:max-w-[480px]">
+            <Card>
+              <div className="px-7 py-10 md:px-9">
+                <CardSkeleton rows={6} />
+              </div>
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
+        <AppHeader variant="auto" />
+        <main id="main-content" className="md:px-6 md:pb-32 md:pt-10">
+          <div className="md:mx-auto md:max-w-[480px]">
+            <Card>
+              <ScreenError
+                title="Couldn't load this page."
+                message={error}
+                onRetry={() => window.location.reload()}
+              />
+            </Card>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   if (!profile) {
     return <NotFound handle={handle} />;
   }
@@ -59,7 +102,7 @@ export function PublicProfile({ handle }: { handle: string }) {
     <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
       <AppHeader variant="auto" />
 
-      <main className="md:px-6 md:pb-32 md:pt-10">
+      <main id="main-content" className="md:px-6 md:pb-32 md:pt-10">
         <div className="relative md:mx-auto md:max-w-[480px]">
           <button
             type="button"
@@ -114,7 +157,7 @@ function NotFound({ handle }: { handle: string }) {
   return (
     <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
       <AppHeader variant="minimal" />
-      <main className="mx-auto flex min-h-[70vh] max-w-[760px] flex-col items-center justify-center px-6 text-center">
+      <main id="main-content" className="mx-auto flex min-h-[70vh] max-w-[760px] flex-col items-center justify-center px-6 text-center">
         <Reveal>
           <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
             Page not found

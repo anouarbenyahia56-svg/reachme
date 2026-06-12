@@ -189,7 +189,7 @@ function DashboardRoutes({
   const detail = dashboardDetailRoute(path);
   if (detail) {
     return (
-      <DashboardShell title={detail.title} headlines={{ detail: detail.title }}>
+      <DashboardShell headlines={{ detail: detail.title }}>
         {detail.content}
       </DashboardShell>
     );
@@ -200,7 +200,7 @@ function DashboardRoutes({
   const activeTab = getActiveTab(path);
 
   return (
-    <DashboardShell title={TAB_TITLES[activeTab]} headlines={TAB_TITLES}>
+    <DashboardShell headlines={TAB_TITLES}>
       <div data-panel="overview" style={{ display: activeTab === "overview" ? undefined : "none" }}>
         <MemoOverview />
       </div>

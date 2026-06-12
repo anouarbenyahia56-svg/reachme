@@ -9,6 +9,7 @@ import { OnboardingShell, OnboardingTitle } from "./OnboardingShell";
 import { patchDraft, useDraft } from "../../store/draft";
 import { formatMoney, parseMoneyToCents, FLOOR_PRESETS } from "../../store/format";
 import { platformFeeCents } from "../../store/requests";
+import { cn } from "@/lib/utils";
 
 /**
  * Step 4 — Set your floor.
@@ -62,12 +63,12 @@ export function StepFloor() {
                     setCents(p.cents);
                     setCustom(String(p.cents / 100));
                   }}
-                  className={[
+                  className={cn(
                     "flex flex-col items-start rounded-2xl border px-4 py-4 text-left transition-[border-color,background-color] duration-300",
                     active
                       ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
                       : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
-                  ].join(" ")}
+                  )}
                   aria-pressed={active}
                 >
                   <span
@@ -81,12 +82,12 @@ export function StepFloor() {
                     {p.label}
                   </span>
                   <span
-                    className={[
+                    className={cn(
                       "mt-1 text-[11.5px]",
                       active
                         ? "text-[hsl(var(--page))]/70"
                         : "text-[hsl(var(--ink-subtle))]",
-                    ].join(" ")}
+                    )}
                   >
                     {p.helper}
                   </span>
@@ -97,15 +98,15 @@ export function StepFloor() {
 
           <div className="mt-7">
             <Label>
-              Or set a custom floor
+              Or enter a custom amount
             </Label>
             <div
-              className={[
+              className={cn(
                 "flex items-center overflow-hidden rounded-2xl border bg-[hsl(var(--surface))] transition-[border-color] duration-300",
                 belowFloorError
                   ? "border-[hsl(var(--danger))]"
                   : "border-[hsl(var(--rule-strong))] focus-within:border-[hsl(var(--ink))]",
-              ].join(" ")}
+              )}
             >
               <span className="select-none pl-5 text-[15px] text-[hsl(var(--ink-muted))]">
                 $

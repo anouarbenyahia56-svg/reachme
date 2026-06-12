@@ -2,6 +2,7 @@ import { motion, AnimatePresence, type HTMLMotionProps } from "framer-motion";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Copy, Check } from "lucide-react";
 import { EASE } from "@/components/motion";
+import { CelebrationBurst } from "@/components/CelebrationBurst";
 import { useProfile } from "../../store/session";
 import { useReceived } from "../../store/requests";
 import { Card } from "../../ui/Card";
@@ -9,6 +10,9 @@ import { Link, useRouter } from "../../router";
 import { Button } from "../../ui/Button";
 import { useToast } from "../../ui/Toast";
 import { formatMoney } from "../../store/format";
+import { AnimatedStat } from "../../ui/AnimatedStat";
+import { CardSkeleton, ScreenError } from "../../ui/ScreenStates";
+import { cn } from "@/lib/utils";
 
 /**
  * Overview — the owner's command center.
@@ -48,11 +52,21 @@ export function Overview() {
     }
   }, [path, search, navigate]);
 
-  if (!profile) return null;
+  // ─── Loading / error state ─────────────────────────────────────
+  // TODO: wire to backend — set `loading` to `true` while the
+  // dashboard data fetch is in flight; set `error` to the caught
+  // error message if it fails.
+  const loading = false;
+  const error: string | null = null;
 
   const inbox = useMemo(
-    () => received.filter((r) => r.toHandle.toLowerCase() === profile.handle.toLowerCase()),
-    [received, profile.handle],
+    () =>
+      profile
+        ? received.filter(
+            (r) => r.toHandle.toLowerCase() === profile.handle.toLowerCase(),
+          )
+        : [],
+    [received, profile],
   );
   const pending = useMemo(() => inbox.filter((r) => r.status === "pending"), [inbox]);
 
@@ -92,6 +106,39 @@ export function Overview() {
     [inbox],
   );
 
+  if (!profile) return null;
+
+  if (loading) {
+    return (
+      <div className="grid gap-6 lg:grid-cols-12">
+        <Card className="lg:col-span-12">
+          <div className="px-7 py-9 md:px-9 md:py-10">
+            <CardSkeleton rows={2} />
+          </div>
+        </Card>
+        {[0, 1, 2].map((i) => (
+          <Card key={i} className="lg:col-span-4">
+            <div className="px-7 py-7 md:px-9 md:py-8">
+              <CardSkeleton rows={1} />
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <ScreenError
+          title="Couldn't load your dashboard."
+          message={error}
+          onRetry={() => window.location.reload()}
+        />
+      </Card>
+    );
+  }
+
   const link = `reachme.com/${profile.handle}`;
 
   const copy = async () => {
@@ -110,7 +157,7 @@ export function Overview() {
       {/* ── Hero: only when no pending requests ── */}
       {pending.length === 0 && (
         <Card className="lg:col-span-12">
-          <div className="px-7 py-10 md:px-12 md:py-14">
+          <div className="px-7 py-9 md:px-9 md:py-10">
             {profile.visibility === "paused" ? (
               <PausedHero onResume={() => navigate("/dashboard/page")} />
             ) : inbox.length > 0 ? (
@@ -126,7 +173,7 @@ export function Overview() {
       {pending.length > 0 && (
         <>
           <Card className="lg:col-span-6">
-            <div className="px-7 py-8 md:px-9 md:py-10">
+            <div className="px-7 py-7 md:px-9 md:py-8">
               <Stat
                 label="Pending"
                 value={pending.length}
@@ -147,9 +194,9 @@ export function Overview() {
           </Card>
           <Card
             className="lg:col-span-6"
-            variant={expiringSoon.length > 0 ? "dark" : "default"}
+            variant={expiringSoon.length > 0 ? "urgent" : "default"}
           >
-            <div className="px-7 py-8 md:px-9 md:py-10">
+            <div className="px-7 py-7 md:px-9 md:py-8">
               <Stat
                 label="Expiring soon"
                 value={expiringSoon.length}
@@ -178,20 +225,20 @@ export function Overview() {
 
       {/* ── Money: what's at stake ── */}
       <Card className="lg:col-span-4">
-        <div className="px-7 py-8 md:px-9 md:py-10">
+        <div className="px-7 py-7 md:px-9 md:py-8">
           <Stat
-            label="Held"
+            label="In escrow"
             value={formatMoney(inEscrowCents, { withCents: true })}
             caption={
               pending.length === 0
-                ? "Nothing held."
-                : `${pending.length} ${pending.length === 1 ? "request" : "requests"} holding.`
+                ? "Nothing in escrow."
+                : `${pending.length} ${pending.length === 1 ? "request" : "requests"} in escrow.`
             }
           />
         </div>
       </Card>
       <Card className="lg:col-span-4">
-        <div className="px-7 py-8 md:px-9 md:py-10">
+        <div className="px-7 py-7 md:px-9 md:py-8">
           <Stat
             label="Released this month"
             value={formatMoney(releasedCents, { withCents: true })}
@@ -204,11 +251,11 @@ export function Overview() {
         </div>
       </Card>
       <Card className="lg:col-span-4">
-        <div className="px-7 py-8 md:px-9 md:py-10">
+        <div className="px-7 py-7 md:px-9 md:py-8">
           <Stat
-            label="Total earned"
+            label="Lifetime"
             value={formatMoney(totalEarnedCents, { withCents: true })}
-            caption="Since you joined."
+            caption="Net of platform fee."
           />
         </div>
       </Card>
@@ -218,7 +265,7 @@ export function Overview() {
         <div className="flex flex-wrap items-center gap-x-5 gap-y-4 px-7 py-6 md:px-9">
           <div className="min-w-0 flex-1">
             <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-              Your page link
+              Your link
             </p>
             <p className="mt-1.5 truncate text-[15px] text-[hsl(var(--ink))]">
               {link}
@@ -267,7 +314,7 @@ function CalmHero() {
   return (
     <div>
       <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-        All clear
+        Inbox clear
       </p>
       <p
         className="mt-5 font-serif text-[hsl(var(--ink))]"
@@ -282,8 +329,8 @@ function CalmHero() {
         Nothing needs you right now.
       </p>
       <p className="mt-3 max-w-[52ch] text-[15px] text-[hsl(var(--ink-muted))]">
-        Your inbox is clear. The next request will be here when it
-        arrives.
+        Your inbox is clear. When someone serious reaches out,
+        you'll know.
       </p>
     </div>
   );
@@ -293,7 +340,7 @@ function FreshHero() {
   return (
     <div>
       <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-        Your page
+        Ready
       </p>
       <p
         className="mt-5 font-serif text-[hsl(var(--ink))]"
@@ -309,7 +356,7 @@ function FreshHero() {
       </p>
       <p className="mt-3 max-w-[52ch] text-[15px] text-[hsl(var(--ink-muted))]">
         Share your link where the right people will find it. The
-        first request is the hardest — the rest follow.
+        first request is always the hardest — after that, momentum.
       </p>
     </div>
   );
@@ -334,8 +381,8 @@ function PausedHero({ onResume }: { onResume: () => void }) {
         Your page is paused.
       </p>
       <p className="mt-3 max-w-[52ch] text-[15px] text-[hsl(var(--ink-muted))]">
-        No new requests can come in. Pending requests — if any —
-        are still waiting on you.
+        No new requests can reach you. Anything already held is
+        still waiting on your reply.
       </p>
       <div className="mt-7">
         <Button onClick={onResume} size="md" trailingArrow>
@@ -361,14 +408,24 @@ function Stat({
   action?: ReactNode;
   dark?: boolean;
 }) {
-  const captionClass = `text-[12.5px] leading-[1.5] ${dark ? "text-[hsl(var(--page))]/60" : "text-[hsl(var(--ink-muted))]"}`;
+  const captionClass = cn(
+    "text-[12.5px] leading-[1.55]",
+    dark ? "text-[hsl(var(--page))]/60" : "text-[hsl(var(--ink-muted))]",
+  );
   return (
     <div>
-      <p className={`text-[10.5px] font-medium uppercase tracking-[0.22em] ${dark ? "text-[hsl(var(--page))]/50" : "text-[hsl(var(--ink-subtle))]"}`}>
+      <p className={cn(
+        "text-[10.5px] font-medium uppercase tracking-[0.22em]",
+        dark ? "text-[hsl(var(--page))]/50" : "text-[hsl(var(--ink-subtle))]",
+      )}>
         {label}
       </p>
-      <p
-        className={`mt-3 font-serif ${dark ? "text-[hsl(var(--page))]" : "text-[hsl(var(--ink))]"}`}
+      <AnimatedStat
+        value={value}
+        className={cn(
+          "mt-4 font-serif",
+          dark ? "text-[hsl(var(--page))]" : "text-[hsl(var(--ink))]",
+        )}
         style={{
           fontSize: "clamp(1.9rem, 3.4vw, 2.3rem)",
           fontWeight: 500,
@@ -376,16 +433,14 @@ function Stat({
           lineHeight: 1.05,
           fontVariantNumeric: "tabular-nums",
         }}
-      >
-        {value}
-      </p>
+      />
       {action != null ? (
-        <div className="mt-2 flex items-center justify-between gap-4">
+        <div className="mt-3.5 flex items-center justify-between gap-4">
           <p className={captionClass}>{caption}</p>
           {action}
         </div>
       ) : (
-        <p className={`mt-2 ${captionClass}`}>{caption}</p>
+        <p className={cn("mt-3.5", captionClass)}>{caption}</p>
       )}
     </div>
   );
@@ -428,6 +483,7 @@ function WelcomeOverlay({
         } as HTMLMotionProps<"div">)}
         className="relative w-full max-w-[560px] rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-8 py-10 text-center sm:px-12 sm:py-14"
       >
+        <CelebrationBurst autoPlay />
         <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
           You're live
         </p>

@@ -2,6 +2,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, Check } from "lucide-react";
 import { EASE } from "@/components/motion";
+import { cn } from "@/lib/utils";
+import { CelebrationBurst } from "@/components/CelebrationBurst";
 import { AppHeader } from "../../ui/AppHeader";
 import { Button } from "../../ui/Button";
 import { TextField, TextArea } from "../../ui/Field";
@@ -50,6 +52,7 @@ export function SendRequest({ handle }: { handle: string }) {
   // Slide direction for step transitions: +1 advancing (new step
   // enters from the right, current exits left), -1 going back.
   const [direction, setDirection] = useState(1);
+  const [shake, setShake] = useState(false);
   const [done, setDone] = useState<{
     id: string;
     expiresAt: string;
@@ -78,7 +81,7 @@ export function SendRequest({ handle }: { handle: string }) {
     return (
       <div className="min-h-screen bg-[hsl(var(--page))]">
         <AppHeader />
-        <main className="mx-auto max-w-[640px] px-6 py-32 text-center">
+        <main id="main-content" className="mx-auto max-w-[640px] px-6 py-32 text-center">
           <h1
             className="font-serif text-[hsl(var(--ink))]"
             style={{
@@ -104,7 +107,7 @@ export function SendRequest({ handle }: { handle: string }) {
     return (
       <div className="min-h-screen bg-[hsl(var(--page))]">
         <AppHeader />
-        <main className="mx-auto max-w-[640px] px-6 py-32 text-center">
+        <main id="main-content" className="mx-auto max-w-[640px] px-6 py-32 text-center">
           <Avatar size="lg" src={profile.avatarUrl} name={profile.displayName} />
           <h1
             className="mt-8 font-serif text-[hsl(var(--ink))]"
@@ -117,7 +120,7 @@ export function SendRequest({ handle }: { handle: string }) {
             {profile.displayName} isn't accepting requests right now.
           </h1>
           <p className="mt-5 text-[hsl(var(--ink-muted))]">
-            Their page is up — but the door is paused. Try again later.
+            Their page is visible but they're not accepting requests right now. Check back later.
           </p>
         </main>
       </div>
@@ -169,6 +172,8 @@ export function SendRequest({ handle }: { handle: string }) {
     const err = validators[step]?.();
     if (err) {
       toast.show(err);
+      setShake(true);
+      window.setTimeout(() => setShake(false), 400);
       return;
     }
     setDirection(1);
@@ -203,7 +208,7 @@ export function SendRequest({ handle }: { handle: string }) {
     <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))]">
       <AppHeader />
 
-      <main className="mx-auto max-w-[760px] px-5 pb-32 pt-12 md:px-6 md:pt-16">
+      <main id="main-content" className="mx-auto max-w-[760px] px-5 pb-32 pt-12 md:px-6 md:pt-16">
         <Reveal blur={5} duration={0.4}>
           <RecipientHeader profile={profile} />
         </Reveal>
@@ -240,10 +245,13 @@ export function SendRequest({ handle }: { handle: string }) {
                     }),
                   }}
                   initial="enter"
-                  animate="center"
+                  animate={shake ? { x: [0, -10, 10, -5, 5, 0] } : "center"}
                   exit="exit"
                   transition={{ duration: 0.4, ease: EASE }}
-                  className="rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-6 py-7 sm:px-8 sm:py-8"
+                  className={cn(
+                    "rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-6 py-7 sm:px-8 sm:py-8",
+                    shake && "border-[hsl(var(--danger))]",
+                  )}
                 >
                   {step === 0 && (
                     <StepAbout
@@ -326,7 +334,7 @@ export function SendRequest({ handle }: { handle: string }) {
                   trailingArrow
                   onClick={submit}
                 >
-                  Send request &amp; hold {formatMoney(amountCents)}
+                  Reach Out
                 </Button>
               )}
             </div>
@@ -395,14 +403,14 @@ function Stepper({
             aria-current={i === current ? "step" : undefined}
           >
             <span
-              className={[
+              className={cn(
                 "inline-flex aspect-square h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[11px] font-medium leading-none tabular-nums",
                 i < current
                   ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
                   : i === current
                     ? "border-[hsl(var(--ink))] bg-transparent text-[hsl(var(--ink))]"
                     : "border-[hsl(var(--rule-strong))] bg-transparent text-[hsl(var(--ink-subtle))]",
-              ].join(" ")}
+              )}
             >
               {i < current ? (
                 <Check size={12} strokeWidth={2.2} aria-hidden="true" />
@@ -411,10 +419,10 @@ function Stepper({
               )}
             </span>
             <span
-              className={[
+              className={cn(
                 "hidden whitespace-nowrap sm:inline",
                 i === current ? "text-[hsl(var(--ink))]" : "",
-              ].join(" ")}
+              )}
             >
               {s}
             </span>
@@ -561,12 +569,12 @@ function StepCategory({
                 type="button"
                 onClick={() => onChange(c.id)}
                 aria-pressed={active}
-                className={[
+                className={cn(
                   "flex w-full items-center justify-between gap-3 rounded-2xl border px-5 py-4 text-left text-[14px] transition-[border-color,background-color,color] duration-300",
                   active
                     ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
                     : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--page))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
-                ].join(" ")}
+                )}
               >
                 <span className="font-medium">{c.label}</span>
                 {active && (
@@ -688,12 +696,12 @@ function StepAmount({
               type="button"
               onClick={() => onAmountStr(String(t.cents / 100))}
               aria-pressed={active}
-              className={[
+              className={cn(
                 "rounded-2xl border px-3 py-4 text-center transition-[border-color,background-color,color] duration-300",
                 active
                   ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
                   : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--page))] text-[hsl(var(--ink))] hover:border-[hsl(var(--ink))]",
-              ].join(" ")}
+              )}
             >
               <span
                 className="font-serif"
@@ -869,10 +877,16 @@ function SuccessPanel({
 }) {
   return (
     <Reveal>
-      <div className="mt-12 rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-6 py-12 text-center sm:px-10 sm:py-16">
-        <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[hsl(var(--page))]">
+      <div className="relative mt-12 rounded-3xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-6 py-12 text-center sm:px-10 sm:py-16">
+        <CelebrationBurst autoPlay />
+        <motion.span
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
+          className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
+        >
           <Check size={20} strokeWidth={1.8} aria-hidden="true" />
-        </span>
+        </motion.span>
         <h1
           className="mt-7 font-serif text-[hsl(var(--ink))]"
           style={{

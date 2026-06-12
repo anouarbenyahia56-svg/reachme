@@ -27,6 +27,9 @@ export default function App() {
     <ErrorBoundary>
       <RouterProvider>
         <ToastProvider>
+          <a href="#main-content" className="skip-to-content">
+            Skip to content
+          </a>
           <LinkInterceptor />
           <Routes />
         </ToastProvider>

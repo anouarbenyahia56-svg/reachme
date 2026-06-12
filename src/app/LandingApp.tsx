@@ -1,3 +1,4 @@
+import { ScrollProgress } from "@/components/ScrollProgress";
 import { Nav } from "@/sections/Nav";
 import { Hero } from "@/sections/Hero";
 import { Thesis } from "@/sections/Thesis";
@@ -19,8 +20,9 @@ import { Footer } from "@/sections/Footer";
 export function LandingApp() {
   return (
     <div className="min-h-screen bg-[hsl(var(--page))] text-[hsl(var(--ink))] antialiased">
+      <ScrollProgress />
       <Nav />
-      <main>
+      <main id="main-content">
         <Hero />
         <Thesis />
         <Mechanic />
@@ -28,10 +30,8 @@ export function LandingApp() {
         <Pricing />
         <FAQ />
 
-        <div className="dark-world">
-          <Closing />
-          <Footer />
-        </div>
+        <Closing />
+        <Footer />
       </main>
     </div>
   );

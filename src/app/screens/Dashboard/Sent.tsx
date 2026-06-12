@@ -2,12 +2,14 @@ import { useMemo, useState } from "react";
 import { Search, Send } from "lucide-react";
 import { Card } from "../../ui/Card";
 import { Pill } from "../../ui/Pill";
+import { EmptyState } from "../../ui/EmptyState";
 import { useSent } from "../../store/requests";
 import { Avatar } from "../../ui/Avatar";
 import { Link } from "../../router";
 import { formatMoney, timeAgo } from "../../store/format";
 import type { RequestStatus } from "../../types";
 import { cn } from "@/lib/utils";
+import { CardSkeleton, ScreenError } from "../../ui/ScreenStates";
 
 const FILTERS: ReadonlyArray<{ id: RequestStatus | "all"; label: string }> = [
   { id: "pending", label: "Pending" },
@@ -26,6 +28,11 @@ export function Sent() {
   const all = useSent();
   const [filter, setFilter] = useState<RequestStatus | "all">("pending");
   const [query, setQuery] = useState("");
+
+  // TODO: wire to backend — set `loading` to `true` while the
+  // sent requests fetch is in flight; set `error` to the caught error.
+  const loading = false;
+  const error: string | null = null;
 
   const counts = useMemo(() => {
     const out: Record<string, number> = {
@@ -53,6 +60,28 @@ export function Sent() {
     }
     return list;
   }, [all, filter, query]);
+
+  if (loading) {
+    return (
+      <Card>
+        <div className="px-7 py-5 md:px-9">
+          <CardSkeleton rows={5} />
+        </div>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <ScreenError
+          title="Couldn't load sent requests."
+          message={error}
+          onRetry={() => window.location.reload()}
+        />
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -94,7 +123,7 @@ export function Sent() {
           </span>
           <input
             type="text"
-            placeholder="Search names, subjects, messages"
+            placeholder="Search by name, subject, or message"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="w-[260px] bg-transparent px-3 py-2 text-[13px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
@@ -155,15 +184,15 @@ function Empty({ filter }: { filter: string }) {
   const messages: Record<string, { title: string; body: string }> = {
     pending: {
       title: "No requests waiting on a reply.",
-      body: "When you send a request, it'll show up here while it's held.",
+      body: "Requests you send appear here while they wait for a reply.",
     },
     replied: {
       title: "No replies received yet.",
-      body: "Replies you receive will appear here, with the owner's response.",
+      body: "When an owner replies, their response appears here.",
     },
     expired: {
       title: "Nothing expired.",
-      body: "If an owner doesn't reply within their reply window, the request expires and refunds.",
+      body: "Requests that pass the reply window without a response expire and refund to you automatically.",
     },
     all: {
       title: "No sent requests yet.",
@@ -172,24 +201,11 @@ function Empty({ filter }: { filter: string }) {
   };
   const m = messages[filter] ?? messages.all;
   return (
-    <div className="px-7 py-20 text-center md:px-9">
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[hsl(var(--page))] text-[hsl(var(--ink-muted))] ring-1 ring-[hsl(var(--rule))]">
-        <Send size={18} strokeWidth={1.6} aria-hidden="true" />
-      </span>
-      <h3
-        className="mt-5 font-serif text-[hsl(var(--ink))]"
-        style={{
-          fontSize: "1.6rem",
-          fontWeight: 500,
-          letterSpacing: "-0.025em",
-        }}
-      >
-        {m.title}
-      </h3>
-      <p className="mx-auto mt-2 max-w-[44ch] text-[13.5px] text-[hsl(var(--ink-muted))]">
-        {m.body}
-      </p>
-    </div>
+    <EmptyState
+      icon={Send}
+      title={m.title}
+      body={m.body}
+    />
   );
 }
 

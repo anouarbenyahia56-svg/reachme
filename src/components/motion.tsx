@@ -292,3 +292,37 @@ export function CountTo({
     />
   );
 }
+
+// ─── Pulse ─────────────────────────────────────────────────────────────────
+
+export function Pulse({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  const reduced = useReducedMotion();
+
+  if (reduced) {
+    return <div className={className}>{children}</div>;
+  }
+
+  return (
+    <motion.div
+      className={className}
+      animate={{
+        opacity: [1, 0.85, 1],
+        scale: [1, 1.015, 1],
+      }}
+      transition={{
+        duration: 2.4,
+        ease: "easeInOut",
+        repeat: Infinity,
+        repeatType: "loop",
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}

@@ -13,7 +13,6 @@ const COLUMNS = [
   {
     label: "Company",
     items: [
-      ["Manifesto", "#"],
       ["Contact", "mailto:hello@reachme.com"],
     ],
   },
@@ -29,9 +28,7 @@ const COLUMNS = [
 /**
  * Footer.
  *
- * Lives inside the dark-world wrapper alongside the closing.
- * Renders against the same standard tokens — which the wrapper has
- * remapped — so the section does not know it is dark.
+ * Renders against the same standard tokens.
  */
 export function Footer() {
   return (
