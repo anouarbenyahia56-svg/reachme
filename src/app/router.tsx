@@ -5,7 +5,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 
@@ -23,6 +22,7 @@ type NavigateFn = (to: string, opts?: { replace?: boolean }) => void;
 
 interface RouterValue {
   path: string;
+  search: string;
   navigate: NavigateFn;
 }
 
@@ -34,11 +34,20 @@ function currentPath(): string {
   return window.location.pathname || "/";
 }
 
+function currentSearch(): string {
+  if (typeof window === "undefined") return "";
+  return window.location.search || "";
+}
+
 export function RouterProvider({ children }: { children: ReactNode }) {
   const [path, setPath] = useState<string>(currentPath);
+  const [search, setSearch] = useState<string>(currentSearch);
 
   useEffect(() => {
-    const onPop = () => setPath(currentPath());
+    const onPop = () => {
+      setPath(currentPath());
+      setSearch(currentSearch());
+    };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
@@ -47,19 +56,22 @@ export function RouterProvider({ children }: { children: ReactNode }) {
     (to: string, opts: { replace?: boolean } = {}) => {
       if (typeof window === "undefined") return;
       const raw = to.startsWith("/") ? to : `/${to}`;
-      const target = raw.split("?")[0];
-      if (target === window.location.pathname) return;
+      const fullUrl = raw;
+      const targetPath = raw.split("?")[0];
+      const targetSearch = raw.includes("?") ? raw.split("?")[1] : "";
+      if (targetPath === window.location.pathname && targetSearch === window.location.search) return;
       if (opts.replace) {
-        window.history.replaceState(null, "", target);
+        window.history.replaceState(null, "", fullUrl);
       } else {
-        window.history.pushState(null, "", target);
+        window.history.pushState(null, "", fullUrl);
       }
-      setPath(target);
+      setPath(targetPath);
+      setSearch("?" + targetSearch);
     },
     [],
   );
 
-  const value = useMemo<RouterValue>(() => ({ path, navigate }), [path, navigate]);
+  const value = useMemo<RouterValue>(() => ({ path, search, navigate }), [path, search, navigate]);
 
   return (
     <RouterContext.Provider value={value}>

@@ -71,6 +71,14 @@ export function Routes() {
     }
   }, [path, account, profile, navigate]);
 
+  // Guard: redirect unauthenticated users away from protected routes
+  useEffect(() => {
+    if (account) return;
+    if (path.startsWith("/dashboard")) {
+      navigate("/login", { replace: true });
+    }
+  }, [path, account, navigate]);
+
   // ─── Static, app-owned routes ─────────────────────────────────────
 
   if (path === "/" || path === "") {
@@ -93,6 +101,7 @@ export function Routes() {
   if (path === "/privacy") return <Privacy />;
 
   if (path.startsWith("/dashboard")) {
+    if (!account || !profile) return null;
     return <DashboardRoutes path={path} hasProfile={Boolean(profile)} hasAccount={Boolean(account)} />;
   }
 

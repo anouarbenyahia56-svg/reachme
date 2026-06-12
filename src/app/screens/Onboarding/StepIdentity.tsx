@@ -33,14 +33,14 @@ export function StepIdentity() {
     displayName.trim().length > 0 && title.trim().length > 0;
 
   return (
-    <OnboardingShell step={3} total={8} back="/claim/email">
+    <OnboardingShell step={3} total={7} back="/claim/email">
       <OnboardingTitle
         title="Set the tone."
         description="This is what people see before they decide to reach out. Make it count — quietly."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
-        <div className="mt-14 max-w-[760px]">
+        <div className="mt-12 max-w-[760px]">
           <AvatarUploader
             value={avatarUrl}
             displayName={displayName}
@@ -51,6 +51,7 @@ export function StepIdentity() {
           <div className="mt-10 grid gap-7 md:grid-cols-2">
             <TextField
               label="Display name"
+              autoFocus
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Jordan Smith"

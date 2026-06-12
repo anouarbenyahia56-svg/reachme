@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Image, Plus, Trash2, X } from "lucide-react";
+import { Camera, Plus, Trash2, X } from "lucide-react";
 import { EASE } from "@/components/motion";
 import { Card } from "../../ui/Card";
 import { Button } from "../../ui/Button";
@@ -26,7 +26,6 @@ import type {
 import { useToast } from "../../ui/Toast";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5MB
-const MAX_BACKGROUND_BYTES = 10 * 1024 * 1024; // 10MB
 
 /**
  * My page — the live editor.
@@ -90,15 +89,6 @@ export function MyPage() {
               />
             </div>
           </div>
-        </div>
-      </Card>
-
-      <Card>
-        <div className="px-10 py-12 md:px-14 md:py-16">
-          <BackgroundField
-            value={draft.backgroundUrl}
-            onChange={(v) => set("backgroundUrl", v)}
-          />
         </div>
       </Card>
 
@@ -228,83 +218,7 @@ function AvatarField({
   );
 }
 
-function BackgroundField({
-  value,
-  onChange,
-}: {
-  value?: string;
-  onChange: (v?: string) => void;
-}) {
-  const input = useRef<HTMLInputElement>(null);
-  const toast = useToast();
-  return (
-    <div>
-      <Label>Background</Label>
-      <p className="mt-2 mb-4 text-[12.5px] text-[hsl(var(--ink-subtle))]">
-        A background image for your card. Landscape orientation works best. Max 10MB.
-      </p>
-      {value && (
-        <div className="mb-4 overflow-hidden rounded-2xl border border-[hsl(var(--rule))]">
-          <img
-            src={value}
-            alt="Background preview"
-            className="h-[140px] w-full object-cover"
-          />
-        </div>
-      )}
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          leadingIcon={<Image size={14} strokeWidth={1.6} />}
-          onClick={() => input.current?.click()}
-          type="button"
-        >
-          {value ? "Replace background" : "Upload background"}
-        </Button>
-        {value && (
-          <Button
-            variant="ghost"
-            size="sm"
-            leadingIcon={<Trash2 size={14} strokeWidth={1.6} />}
-            onClick={() => {
-              onChange(undefined);
-              if (input.current) input.current.value = "";
-            }}
-            type="button"
-          >
-            Remove
-          </Button>
-        )}
-      </div>
-      <input
-        key={value ? "has-bg" : "no-bg"}
-        ref={input}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={async (e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          if (f.size > MAX_BACKGROUND_BYTES) {
-            toast.show("Image too large. Max 10MB.");
-            e.target.value = "";
-            return;
-          }
-          try {
-            const url = await readFileAsDataURL(f);
-            onChange(url);
-          } catch {
-            toast.show("Couldn't read the file. Please try again.");
-          }
-          e.target.value = "";
-        }}
-      />
-    </div>
-  );
-}
-
-// ─── Social links ───────────────────────────────────────────────────
+// ─── Socials ───────────────────────────────────────────────────
 // (Shared SocialsField component imported from ui/SocialsField)
 
 function FloorField({

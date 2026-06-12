@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { EASE } from "@/components/motion";
 import { Reveal } from "../../ui/Reveal";
-import { useRouter } from "../../router";
+import { Link, useRouter } from "../../router";
 import { OnboardingShell } from "./OnboardingShell";
 import { clearDraft, useDraft } from "../../store/draft";
 import { setAccount, setProfile } from "../../store/session";
@@ -146,9 +146,9 @@ export function StepFinish() {
           </motion.button>
           <p className="mt-3 text-center text-[11px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
             By going live, you agree to our{" "}
-            <a href="/terms" className="underline underline-offset-2 hover:text-[hsl(var(--ink))]">Terms of Service</a>{" "}
+            <Link href="/terms" className="underline underline-offset-2 hover:text-[hsl(var(--ink))]">Terms of Service</Link>{" "}
             and{" "}
-            <a href="/privacy" className="underline underline-offset-2 hover:text-[hsl(var(--ink))]">Privacy Policy</a>.
+            <Link href="/privacy" className="underline underline-offset-2 hover:text-[hsl(var(--ink))]">Privacy Policy</Link>.
           </p>
         </div>
       </Reveal>

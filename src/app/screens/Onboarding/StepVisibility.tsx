@@ -32,14 +32,14 @@ export function StepVisibility() {
   }, [replyDays]);
 
   return (
-    <OnboardingShell step={7} total={8} back="/claim/socials">
+    <OnboardingShell step={7} total={7} back="/claim/socials">
       <OnboardingTitle
         title="Control who can reach you."
         description="Change this whenever you like. Being open doesn't mean accepting everyone — your rules still decide what reaches you."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
-        <div className="mt-14 max-w-[780px]">
+        <div className="mt-12 max-w-[780px]">
           <VisibilityField
             visibility={visibility}
             onChangeVisibility={setVisibility}

@@ -27,7 +27,7 @@ export function Login() {
   const [error, setError] = useState("");
 
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const canSubmit = validEmail && password.length > 0 && !submitting;
+  const canSubmit = validEmail && password.length >= 8 && !submitting;
 
   const logIn = async () => {
     if (!canSubmit) return;
@@ -36,7 +36,7 @@ export function Login() {
     await new Promise((r) => setTimeout(r, 500));
 
     // TODO: wire to backend — POST /auth/login { email, password }
-    // For now, accept any non-empty password.
+    // For now, accept any valid email + password >= 8 chars.
     setAccount({
       email,
       hasProfile: account?.hasProfile ?? false,
@@ -99,6 +99,7 @@ export function Login() {
                     setError("");
                   }}
                   placeholder="Enter your password"
+                  helper="At least 8 characters."
                   autoComplete="current-password"
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && canSubmit) logIn();

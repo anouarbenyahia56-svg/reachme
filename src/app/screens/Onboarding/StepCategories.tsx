@@ -63,14 +63,14 @@ export function StepCategories() {
   );
 
   return (
-    <OnboardingShell step={5} total={8} back="/claim/floor">
+    <OnboardingShell step={5} total={7} back="/claim/floor">
       <OnboardingTitle
         title="Choose what reaches you."
         description="People reaching out pick a category before they send. Choose the ones you're genuinely open to. Everything else self-selects out."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
-        <div className="mt-14 max-w-[780px]">
+        <div className="mt-12 max-w-[780px]">
           <Label>What you're open to</Label>
           <div className="rounded-2xl border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] p-4">
             <ul className="flex flex-wrap gap-2">

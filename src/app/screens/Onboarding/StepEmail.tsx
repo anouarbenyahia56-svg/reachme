@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../../ui/Button";
-import { Label } from "../../ui/Field";
+import { TextField } from "../../ui/Field";
 import { Reveal } from "../../ui/Reveal";
 import { OnboardingShell, OnboardingTitle } from "./OnboardingShell";
 import { patchDraft, useDraft } from "../../store/draft";
@@ -10,7 +10,7 @@ import { Link, useRouter } from "../../router";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Step 2 — Secure your handle.
+ * Step 2 — Link your email.
  *
  * A single, clean beat. The user types their email, accepts the
  * terms, and continues to step 3. No in-place detour: email
@@ -22,24 +22,47 @@ export function StepEmail() {
   const { navigate } = useRouter();
   const [email, setEmail] = useState(draft.email ?? "");
   const [blurred, setBlurred] = useState(false);
-
-  useEffect(() => {
-    patchDraft({ email });
-  }, [email]);
+  const abortRef = useRef<AbortController | null>(null);
 
   const trimmed = email.trim();
+
+  useEffect(() => {
+    patchDraft({ email: trimmed });
+  }, [trimmed]);
+
+  // --- Layer 1: shape validation (sync, instant) ---
   const shapeValid = EMAIL_RE.test(trimmed);
-  const registered = shapeValid && isEmailRegistered(trimmed);
 
-  // Invalid format is not an error here — the disabled Continue
-  // button and the live trimmed input already tell the user what's
-  // missing. The only message worth surfacing in red is a real,
-  // unfixable conflict: this email is already on another account.
+  // --- Layer 2: availability check (async-ready) ---
+  const [registered, setRegistered] = useState(false);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    if (!shapeValid) {
+      setRegistered(false);
+      setChecking(false);
+      return;
+    }
+
+    abortRef.current?.abort();
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
+    setChecking(true);
+
+    // Backend integration point: replace with API call
+    // e.g. fetch("/api/email/check", { signal: ctrl.signal, ... })
+    const result = isEmailRegistered(trimmed);
+    if (!ctrl.signal.aborted) {
+      setRegistered(result);
+      setChecking(false);
+    }
+
+    return () => ctrl.abort();
+  }, [trimmed, shapeValid]);
+
   const errorText = registered ? "This email is already registered." : undefined;
-
   const showError = blurred && !!errorText;
-
-  const canContinue = shapeValid && !registered;
+  const canContinue = shapeValid && !registered && !checking;
 
   const proceed = () => {
     if (!canContinue) return;
@@ -47,45 +70,33 @@ export function StepEmail() {
   };
 
   return (
-    <OnboardingShell step={2} total={8} back="/claim">
+    <OnboardingShell step={2} total={7} back="/claim">
       <OnboardingTitle
         title="Link your email."
         description="This is how you sign in and how we notify you when a request arrives. No spam, no sharing."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
-        <div className="mt-14 max-w-[640px]">
-          <Label htmlFor="email">Email</Label>
-          <div
-            className={[
-              "relative flex w-full max-w-[440px] items-stretch overflow-hidden rounded-2xl border bg-[hsl(var(--surface))] transition-[border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
-              showError
-                ? "border-[hsl(var(--danger))] focus-within:border-[hsl(var(--danger))]"
-                : "border-[hsl(var(--rule-strong))] focus-within:border-[hsl(var(--ink))]",
-            ].join(" ")}
-          >
-            <input
-              id="email"
-              type="email"
-              autoFocus
-              autoComplete="email"
-              placeholder="you@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onBlur={() => setBlurred(true)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && canContinue) {
-                  proceed();
-                }
-              }}
-              className="w-full bg-transparent px-5 py-4 text-[15px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
-            />
-          </div>
-          {showError && (
-            <p className="mt-2.5 text-[12.5px] leading-[1.55] text-[hsl(var(--danger))]" aria-live="assertive">
-              {errorText}
-            </p>
-          )}
+        <div className="mt-12 max-w-[640px]">
+          <TextField
+            label="Email"
+            id="email"
+            type="email"
+            autoFocus
+            autoComplete="email"
+            placeholder="you@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => setBlurred(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && canContinue) {
+                proceed();
+              }
+            }}
+            errorText={showError ? errorText : undefined}
+            aria-invalid={showError ? "true" : undefined}
+            className="max-w-[440px]"
+          />
 
           <p className="mt-3 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
             By continuing, you agree to our{" "}

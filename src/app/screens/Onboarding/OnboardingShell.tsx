@@ -76,7 +76,7 @@ export function OnboardingShell({
         )}
       </header>
 
-      <main className={`mx-auto max-w-[920px] overflow-x-clip px-6 pb-32 md:px-10 md:pb-44 ${bare ? "pt-20 md:pt-24" : "pt-12 md:pt-16"}`}>
+      <main className="mx-auto max-w-[920px] overflow-x-clip px-6 pb-32 pt-12 md:px-10 md:pb-44 md:pt-16">
         {back && (
           <button
             type="button"

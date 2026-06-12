@@ -247,6 +247,21 @@ function AuthedHeaderRight({
           </p>
         </div>
         <div className="mx-2 my-1 h-px bg-[hsl(var(--rule))]" />
+        <Link
+          href="/dashboard"
+          role="menuitem"
+          className="block rounded-xl px-3 py-2 text-[13px] text-[hsl(var(--ink-muted))] transition-colors duration-200 hover:bg-[hsl(var(--rule))]/40 hover:text-[hsl(var(--ink))]"
+        >
+          Dashboard
+        </Link>
+        <Link
+          href="/dashboard/settings"
+          role="menuitem"
+          className="block rounded-xl px-3 py-2 text-[13px] text-[hsl(var(--ink-muted))] transition-colors duration-200 hover:bg-[hsl(var(--rule))]/40 hover:text-[hsl(var(--ink))]"
+        >
+          Settings
+        </Link>
+        <div className="mx-2 my-1 h-px bg-[hsl(var(--rule))]" />
         <button
           type="button"
           role="menuitem"

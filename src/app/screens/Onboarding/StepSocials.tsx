@@ -9,7 +9,7 @@ import { SocialsField } from "../../ui/SocialsField";
 import type { Socials } from "../../types";
 
 /**
- * Step 6 — Social links.
+ * Step 6 — Socials.
  *
  * Wraps the shared SocialsField with onboarding-specific logic:
  * drafts are synced to the onboarding store, and at least one
@@ -37,19 +37,19 @@ export function StepSocials() {
   });
 
   return (
-    <OnboardingShell step={6} total={8} back="/claim/categories">
+    <OnboardingShell step={6} total={7} back="/claim/categories">
       <OnboardingTitle
         title="Link your socials."
         description="Add the profiles your audience already follows. Up to five — they sit as a quiet row on your public page."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
-        <div className="mt-14 max-w-[780px]">
+        <div className="mt-12 max-w-[780px]">
           <SocialsField value={socials} onChange={setSocials} />
 
           {Object.keys(socials).length === 0 && (
             <p className="mt-4 text-[12.5px] leading-[1.55] text-[hsl(var(--ink-subtle))]">
-              Add at least one social link.
+              Add at least one social.
             </p>
           )}
 

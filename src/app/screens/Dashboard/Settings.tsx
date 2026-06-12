@@ -153,7 +153,7 @@ function AccountCard() {
 
   // TODO: wire to backend — GET /settings/account/connections
   const [connectedSocials, setConnectedSocials] = useState<ConnectedSocial[]>([
-    { provider: "google", email: "user@gmail.com", connected: true },
+    { provider: "google", email: "", connected: false },
     { provider: "apple", email: "", connected: false },
   ]);
 

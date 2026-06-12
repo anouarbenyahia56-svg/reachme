@@ -157,7 +157,7 @@ export function SocialsField({
   return (
     <div>
       <div className="flex items-baseline justify-between gap-4">
-        <Label>Social links</Label>
+        <Label>Your socials</Label>
         <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-[hsl(var(--ink-subtle))]">
           {connected.length} of {MAX_SOCIALS}
         </span>
@@ -169,18 +169,22 @@ export function SocialsField({
       )}
 
       <ul className="space-y-3">
-        <AnimatePresence initial={false}>
+        <AnimatePresence initial={false} mode="popLayout">
           {connected.map((id) => {
             const label = platformLabel(id);
             const placeholder = platformPlaceholder(id);
             return (
               <motion.li
                 key={id}
-                layout="position"
+                layout
                 initial={{ opacity: 0, y: -6, filter: "blur(4px)" }}
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 exit={{ opacity: 0, y: -4, filter: "blur(4px)" }}
-                transition={{ duration: 0.3, ease: EASE }}
+                transition={{
+                  duration: 0.3,
+                  ease: EASE,
+                  layout: { duration: 0.3, ease: EASE },
+                }}
               >
                 <div className="grid grid-cols-[auto_88px_1fr_auto] items-center gap-4 rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--surface))] px-4 py-3.5">
                   <SocialIcon
@@ -218,7 +222,7 @@ export function SocialsField({
         </AnimatePresence>
       </ul>
 
-      <AnimatePresence initial={false}>
+      <AnimatePresence initial={false} mode="popLayout">
         {pickerOpen && available.length > 0 && (
           <motion.div
             key="picker"

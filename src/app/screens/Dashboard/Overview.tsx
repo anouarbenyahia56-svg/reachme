@@ -5,7 +5,7 @@ import { EASE } from "@/components/motion";
 import { useProfile } from "../../store/session";
 import { useReceived } from "../../store/requests";
 import { Card } from "../../ui/Card";
-import { Link, useNavigate } from "../../router";
+import { Link, useRouter } from "../../router";
 import { Button } from "../../ui/Button";
 import { useToast } from "../../ui/Toast";
 import { formatMoney } from "../../store/format";
@@ -32,20 +32,21 @@ const MS_PER_HOUR = 60 * 60 * 1000;
 export function Overview() {
   const profile = useProfile();
   const received = useReceived();
-  const navigate = useNavigate();
+  const { path, search, navigate } = useRouter();
   const toast = useToast();
   const [copied, setCopied] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
 
   // Welcome overlay — celebrates the first-ever live moment.
+  // Runs when we land on /dashboard with ?welcome=1
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
+    if (path !== "/dashboard") return;
+    const params = new URLSearchParams(search);
     if (params.get("welcome") === "1") {
       setShowWelcome(true);
-      window.history.replaceState(null, "", window.location.pathname);
+      navigate("/dashboard", { replace: true });
     }
-  }, []);
+  }, [path, search, navigate]);
 
   if (!profile) return null;
 

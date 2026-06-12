@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Loader2, X } from "lucide-react";
 import { useRouter } from "../../router";
 import { Button } from "../../ui/Button";
-import { Label } from "../../ui/Field";
 import { Reveal } from "../../ui/Reveal";
 import { OnboardingShell, OnboardingTitle } from "./OnboardingShell";
 import { isHandleAvailable } from "../../store/format";
@@ -19,11 +18,19 @@ const HANDLE_SHAPE = /^[a-z0-9][a-z0-9_-]{0,29}$/;
 /**
  * Step 1 — Claim your handle.
  *
- * The handle is the public address. We validate as the person
- * types: shape first (a-z, 0-9, -, _; 1-30 chars), then
- * availability (against reserved + directory). The "is yours"
- * message and the Continue button share the same predicate —
- * shape-valid, not reserved, not taken — so a single letter
+ * The handle is the public address. Validation is split into two
+ * layers:
+ *
+ *   1. Shape — instant, local. Regex test on the normalized input.
+ *      The Continue button stays disabled while shape is invalid.
+ *   2. Availability — async-ready. Triggered by a useEffect when
+ *      shape is valid. Currently synchronous (local checks), but
+ *      structured so that swapping in a backend API call requires
+ *      changing only the useEffect body — the UI, state, and
+ *      derived values remain untouched.
+ *
+ * The "is yours" message and the Continue button share the same
+ * predicate — shape-valid AND available — so a single letter
  * that's open is just as claimable as a long one.
  *
  * Continue commits the handle and advances to Step 2 (Email).
@@ -33,36 +40,73 @@ export function StepHandle() {
   const draft = useDraft();
   const [value, setValue] = useState<string>(draft.handle ?? "");
   const [blurred, setBlurred] = useState(false);
-  const [checking, setChecking] = useState(false);
+
+  // Availability state: "unknown" | "checking" | "available" | "reserved" | "taken"
+  const [availability, setAvailability] = useState<"unknown" | "checking" | "available" | "reserved" | "taken">("unknown");
 
   const normalized = value.trim().toLowerCase();
 
-  const status = useMemo(() => {
-    if (!normalized) return "empty" as const;
-    if (!HANDLE_SHAPE.test(normalized)) return "invalid" as const;
-    if (!isHandleAvailable(normalized)) return "reserved" as const;
-    if (isHandleTaken(normalized)) return "taken" as const;
-    return "ok" as const;
+  // Persist on every change so a refresh doesn't lose work.
+  useEffect(() => {
+    if (normalized) patchDraft({ handle: normalized });
   }, [normalized]);
 
-  // Tiny debounce on the "checking" UI so it doesn't blink.
+  // Layer 1: Shape validation — instant, local, synchronous.
+  const shapeValid = normalized.length > 0 && HANDLE_SHAPE.test(normalized);
+
+  // Layer 2: Availability check — async-ready.
+  // When the backend ships, replace the body of this useEffect with
+  // a fetch call. The controller pattern (abort on cleanup) ensures
+  // stale responses are discarded when the user keeps typing.
+  const abortRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
-    if (status !== "ok") {
-      setChecking(false);
+    // Not shape-valid or empty — reset to unknown.
+    if (!shapeValid) {
+      setAvailability("unknown");
       return;
     }
-    setChecking(true);
-    const t = window.setTimeout(() => setChecking(false), 280);
-    return () => window.clearTimeout(t);
-  }, [status, normalized]);
 
-  // "is yours" — the handle is shape-valid, not reserved, and
-  // not taken. Single character or long, a handle that's open
-  // is open. The Continue button shares this same predicate
-  // (plus the debounce), so the message and the affordance
-  // never disagree.
-  const isAvailable = status === "ok";
-  const canContinue = isAvailable && !checking;
+    // Shape is valid — check availability.
+    // Abort any in-flight check from a previous keystroke.
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setAvailability("checking");
+
+    // ─── Backend integration point ──────────────────────────────
+    // Replace this block with:
+    //   const res = await fetch(`/api/handles/${normalized}/check`, {
+    //     signal: controller.signal,
+    //   });
+    //   const { available, reason } = await res.json();
+    //   if (!controller.signal.aborted) {
+    //     setAvailability(available ? "available" : reason ?? "taken");
+    //   }
+    //
+    // For now, run the local checks synchronously (they're instant)
+    // and simulate a brief network delay for UI polish.
+    const checkLocal = () => {
+      if (!isHandleAvailable(normalized)) return "reserved" as const;
+      if (isHandleTaken(normalized)) return "taken" as const;
+      return "available" as const;
+    };
+
+    const t = window.setTimeout(() => {
+      if (!controller.signal.aborted) {
+        setAvailability(checkLocal());
+      }
+    }, 280);
+
+    return () => {
+      window.clearTimeout(t);
+      controller.abort();
+    };
+  }, [shapeValid, normalized]);
+
+  const isAvailable = availability === "available";
+  const canContinue = isAvailable;
 
   // Errors are gated on blur. While the user is still typing
   // (focused, never blurred) we keep the field neutral. The
@@ -73,18 +117,17 @@ export function StepHandle() {
   // Once blurred is true, the latch stays true and those
   // errors update live as the user types to fix them.
   const showError =
-    blurred && (status === "reserved" || status === "taken");
+    blurred && (availability === "reserved" || availability === "taken");
 
   return (
-    <OnboardingShell step={1} total={8}>
+    <OnboardingShell step={1} total={7}>
       <OnboardingTitle
         title="Claim your handle."
         description="Your handle becomes the public page where people can reach you. Choose something short, memorable, and yours."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
-        <div className="mt-14 max-w-[640px]">
-          <Label htmlFor="handle">This is where people will find you</Label>
+        <div className="mt-12 max-w-[640px]">
           <div
             className={[
                 "relative flex w-full max-w-[440px] items-stretch overflow-hidden rounded-2xl border bg-[hsl(var(--surface))] transition-[border-color] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
@@ -114,17 +157,15 @@ export function StepHandle() {
               onBlur={() => setBlurred(true)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && canContinue) {
-                  patchDraft({ handle: normalized });
                   navigate("/claim/email");
                 }
               }}
               className="w-full bg-transparent px-5 py-4 text-[15px] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none"
             />
             <span className="flex items-center pr-5">
-              {normalized && (checking || isAvailable || showError) && (
+              {normalized && (availability === "checking" || isAvailable || showError) && (
                 <StatusIcon
-                  status={status}
-                  checking={checking}
+                  availability={availability}
                   isAvailable={isAvailable}
                 />
               )}
@@ -133,7 +174,7 @@ export function StepHandle() {
 
           <div className="mt-2.5 min-h-[18px]" aria-live="polite">
             <StatusMessage
-              status={status}
+              availability={availability}
               value={normalized}
               blurred={blurred}
               isAvailable={isAvailable}
@@ -145,9 +186,8 @@ export function StepHandle() {
               size="lg"
               trailingArrow
               disabled={!canContinue}
-              loading={checking}
+              loading={availability === "checking"}
               onClick={() => {
-                patchDraft({ handle: normalized });
                 navigate("/claim/email");
               }}
             >
@@ -161,15 +201,13 @@ export function StepHandle() {
 }
 
 function StatusIcon({
-  status,
-  checking,
+  availability,
   isAvailable,
 }: {
-  status: "empty" | "invalid" | "reserved" | "taken" | "ok";
-  checking: boolean;
+  availability: "unknown" | "checking" | "available" | "reserved" | "taken";
   isAvailable: boolean;
 }) {
-  if (checking) {
+  if (availability === "checking") {
     return (
       <Loader2
         size={16}
@@ -189,7 +227,7 @@ function StatusIcon({
       />
     );
   }
-  if (status === "invalid" || status === "reserved" || status === "taken") {
+  if (availability === "reserved" || availability === "taken") {
     return (
       <X
         size={18}
@@ -203,12 +241,12 @@ function StatusIcon({
 }
 
 function StatusMessage({
-  status,
+  availability,
   value,
   blurred,
   isAvailable,
 }: {
-  status: "empty" | "invalid" | "reserved" | "taken" | "ok";
+  availability: "unknown" | "checking" | "available" | "reserved" | "taken";
   value: string;
   blurred: boolean;
   isAvailable: boolean;
@@ -231,7 +269,7 @@ function StatusMessage({
   }
   // reserved or taken — but the user is still typing.
   // Don't surface the error until they've left the field.
-  if (status === "reserved" || status === "taken") {
+  if (availability === "reserved" || availability === "taken") {
     if (!blurred) {
       return (
         <p className="text-[12.5px] leading-[1.55] transition-colors duration-300">
@@ -240,7 +278,7 @@ function StatusMessage({
       );
     }
     const text =
-      status === "reserved"
+      availability === "reserved"
         ? "That handle is reserved. Pick another."
         : "This handle is already taken.";
     return (

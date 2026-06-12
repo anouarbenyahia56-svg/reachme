@@ -39,14 +39,14 @@ export function StepFloor() {
   const canContinue = cents >= 1000; // $10 floor minimum-of-minimums
 
   return (
-    <OnboardingShell step={4} total={8} back="/claim/identity">
+    <OnboardingShell step={4} total={7} back="/claim/identity">
       <OnboardingTitle
         title="Set your floor."
         description="The floor is the minimum amount someone must attach to reach you. It is not a price for your time — it is a filter for whether someone means it."
       />
 
       <Reveal delay={0.32} duration={0.85} axis="x" blur={5}>
-        <div className="mt-14 max-w-[780px]">
+        <div className="mt-12 max-w-[780px]">
           <Label>Floor</Label>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
