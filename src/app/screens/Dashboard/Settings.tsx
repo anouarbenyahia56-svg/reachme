@@ -835,7 +835,9 @@ function SecurityCard() {
           </Button>
           <Button
             variant="danger"
-            onClick={() => revokeTarget && revokeSession(revokeTarget)}
+            onClick={() => {
+              if (revokeTarget) revokeSession(revokeTarget);
+            }}
             loading={revoking}
           >
             Revoke session

@@ -15,6 +15,7 @@ const SEED_DIRECTORY: Profile[] = [
   {
     handle: "youssefbenyahia",
     displayName: "Youssef Benyahia",
+    email: "youssef@reachme.com",
     title: "Founder & Investor",
     minAmountCents: 9500,
     replyWindowDays: 2,
@@ -36,6 +37,7 @@ const SEED_DIRECTORY: Profile[] = [
   {
     handle: "marawright",
     displayName: "Mara Wright",
+    email: "mara@reachme.com",
     title: "Partner, Northline Capital",
     minAmountCents: 25000,
     replyWindowDays: 2,
@@ -57,6 +59,7 @@ const SEED_DIRECTORY: Profile[] = [
   {
     handle: "jonas",
     displayName: "Jonas Lindberg",
+    email: "jonas@reachme.com",
     title: "Independent designer",
     minAmountCents: 12500,
     replyWindowDays: 2,
@@ -103,8 +106,10 @@ function ensureSeed(): Profile[] {
     SEED_DIRECTORY.map((s) => [s.handle.toLowerCase(), s]),
   );
   let dirty = false;
-  const migrated = current.map((entry) => {
-    const seed = seedByHandle.get(entry.handle.toLowerCase());
+  const migrated = current
+    .filter((entry) => entry && entry.handle)
+    .map((entry) => {
+      const seed = seedByHandle.get(entry.handle.toLowerCase());
     if (!seed) return entry;
     // Seed first, entry second — owner-edited fields win, new
     // seed fields are backfilled.
@@ -161,4 +166,17 @@ const REGISTERED_EMAILS: ReadonlySet<string> = new Set(
 
 export function isEmailRegistered(email: string): boolean {
   return REGISTERED_EMAILS.has(email.trim().toLowerCase());
+}
+
+/**
+ * Returns the ReachMe handle for a given email, if that email
+ * belongs to a profile in the directory. Used by the reply
+ * interface to show the sender's public handle beneath their name.
+ */
+export function findHandleByEmail(email: string): string | null {
+  if (!email) return null;
+  const match = ensureSeed().find(
+    (p) => p.email && p.email.toLowerCase() === email.trim().toLowerCase(),
+  );
+  return match?.handle ?? null;
 }

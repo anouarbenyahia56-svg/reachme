@@ -80,8 +80,8 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
         )}
         <div
           className={cn(
-            "relative flex items-stretch rounded-2xl border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] transition-[border-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus-within:border-[hsl(var(--ink))] focus-within:shadow-glow focus-within:ring-1 ring-[hsl(var(--ink))]/10",
-            errorText && "border-[hsl(var(--danger))] focus-within:border-[hsl(var(--danger))] focus-within:shadow-none focus-within:ring-0",
+            "relative flex items-stretch rounded-2xl border border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] transition-[border-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] focus-within:border-[hsl(var(--ink))] focus-within:ring-1 ring-[hsl(var(--ink))]/10",
+            errorText && "border-[hsl(var(--danger))] focus-within:border-[hsl(var(--danger))] focus-within:ring-0",
           )}
         >
           {prefix && (
@@ -152,7 +152,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           ref={ref}
           value={value}
           maxLength={maxChars}
-          className={cn(inputBase, "min-h-[120px] resize-none leading-[1.55] focus:shadow-glow focus:ring-1 ring-[hsl(var(--ink))]/10", errorText && "border-[hsl(var(--danger))] focus:border-[hsl(var(--danger))] focus:shadow-none focus:ring-0")}
+          className={cn(inputBase, "min-h-[120px] resize-none leading-[1.55] focus:ring-1 ring-[hsl(var(--ink))]/10", errorText && "border-[hsl(var(--danger))] focus:border-[hsl(var(--danger))] focus:ring-0")}
           {...rest}
         />
         <div className="mt-2.5 flex items-baseline justify-between gap-3">

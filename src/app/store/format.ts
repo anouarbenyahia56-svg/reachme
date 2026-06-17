@@ -27,6 +27,15 @@ export function parseMoneyToCents(input: string): number {
   return Math.round(value * 100);
 }
 
+/** "10:42 AM", "2:15 PM" */
+export function timeShort(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 /** "3 minutes ago", "2 hours ago", "yesterday", "3 days ago", "Jun 4". */
 export function timeAgo(iso: string, now: Date = new Date()): string {
   const then = new Date(iso);
@@ -127,6 +136,16 @@ export const FLOOR_PRESETS = [
   { cents: 50000, label: "$500", helper: "High signal" },
   { cents: 150000, label: "$1,500", helper: "Very high signal" },
 ] as const;
+
+/** Format bytes as a human-readable string, e.g. "2.4 MB". */
+export function formatBytes(bytes: number, decimals = 1): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const idx = Math.min(i, sizes.length - 1);
+  return `${parseFloat((bytes / Math.pow(k, idx)).toFixed(decimals))} ${sizes[idx]}`;
+}
 
 /** Read a File as a data URL string. Rejects on FileReader error. */
 export function readFileAsDataURL(file: File): Promise<string> {

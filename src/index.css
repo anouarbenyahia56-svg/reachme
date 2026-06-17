@@ -219,3 +219,151 @@ body::after {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Media timeline — fully custom slider (no browser range input track).
+   Track + played portion are explicit divs so the scrubber dot sits exactly
+   on the edge of the played bar with zero gap.
+   ──────────────────────────────────────────────────────────────────────────── */
+.media-custom-slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 0%;
+  min-width: 0;
+  height: 100%;
+  cursor: pointer;
+  touch-action: none;
+  --scrubber-inset: 6px;
+}
+
+.media-custom-track {
+  position: absolute;
+  left: var(--scrubber-inset);
+  right: var(--scrubber-inset);
+  top: 50%;
+  transform: translateY(-50%);
+  height: 6px;
+  border-radius: 999px;
+  overflow: visible;
+}
+
+.media-custom-track-fill-wrap {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.media-custom-track-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--media-timeline-fill, hsl(var(--ink)));
+}
+
+.media-custom-track-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--media-timeline-track, hsl(var(--rule)));
+}
+
+.media-custom-scrubber {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--media-timeline-thumb, hsl(var(--page)));
+  border: 2px solid var(--media-timeline-thumb-border, hsl(var(--ink)));
+  box-shadow: 0 1px 2px hsl(var(--shadow-color) / 0.15);
+  cursor: pointer;
+  transition: transform 0.15s ease, width 0.15s ease, height 0.15s ease;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Hidden range input kept for keyboard accessibility / form submission */
+.media-hidden-range {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.media-custom-slider:hover .media-custom-scrubber,
+.media-custom-slider.dragging .media-custom-scrubber {
+  transform: translate(-50%, -50%) scale(1.15);
+}
+
+.media-custom-slider.dragging .media-custom-track {
+  height: 8px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Media volume slider — custom range input with current / remaining contrast.
+   Smaller sibling of the media timeline, using the same color approach.
+   ──────────────────────────────────────────────────────────────────────────── */
+.media-volume {
+  --media-volume-fill: hsl(var(--ink));
+  --media-volume-track: hsl(var(--rule));
+  --media-volume-thumb: hsl(var(--page));
+  --media-volume-thumb-border: hsl(var(--ink));
+  --volume-level: 0%;
+  background: linear-gradient(
+    to right,
+    var(--media-volume-fill) var(--volume-level),
+    var(--media-volume-track) var(--volume-level)
+  );
+}
+
+.media-volume::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.media-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--media-volume-thumb);
+  border: 2px solid var(--media-volume-thumb-border);
+  margin-top: -3px;
+  box-shadow: 0 1px 2px hsl(var(--shadow-color) / 0.15);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.media-volume::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.media-volume::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.media-volume::-moz-range-progress {
+  background: transparent;
+}
+
+.media-volume::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--media-volume-thumb);
+  border: 2px solid var(--media-volume-thumb-border);
+  box-shadow: 0 1px 2px hsl(var(--shadow-color) / 0.15);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.media-volume::-moz-range-thumb:hover {
+  transform: scale(1.15);
+}

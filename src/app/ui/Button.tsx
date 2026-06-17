@@ -46,7 +46,8 @@ const variantClasses: Record<Variant, string> = {
 };
 
 export interface ButtonProps
-  extends Omit<HTMLMotionProps<"button">, "children" | "ref"> {
+  extends Omit<HTMLMotionProps<"button">, "children" | "ref" | "onClick"> {
+  onClick?: () => void | Promise<void>;
   variant?: Variant;
   size?: Size;
   trailingArrow?: boolean;

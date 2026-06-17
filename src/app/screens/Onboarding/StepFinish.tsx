@@ -46,6 +46,7 @@ export function StepFinish() {
   const previewProfile: Profile = {
     handle: draft.handle,
     displayName: draft.displayName,
+    email: draft.email!,
     title: draft.title,
     avatarUrl: draft.avatarUrl,
     minAmountCents: draft.minAmountCents ?? 15000,
