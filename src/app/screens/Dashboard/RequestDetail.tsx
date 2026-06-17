@@ -224,31 +224,20 @@ export function RequestDetail({ id }: { id: string }) {
 
       <div className="grid gap-6 lg:grid-cols-12">
         <div className="lg:col-span-8">
-          <Card className="relative flex min-h-[600px] flex-col overflow-hidden rounded-[32px] border-[hsl(var(--rule))] bg-[hsl(var(--surface))] shadow-elevated">
-        {/* Header — pill-shaped identity bar with avatar, name, and category. */}
-        <header className="shrink-0 px-5 pt-5 md:px-7 md:pt-6">
-          <div className="flex w-full items-center gap-3 rounded-full bg-[hsl(var(--page))] px-4 py-2.5 ring-1 ring-[hsl(var(--rule))]">
-            <Avatar
-              size="md"
-              name={r.from.name}
-              className="bg-[hsl(var(--rule))] text-[hsl(var(--ink-muted))]"
-            />
-            <div className="min-w-0">
-              <p className="truncate text-[14.5px] font-medium text-[hsl(var(--ink))]">
-                {r.from.name}
-              </p>
-              {categoryLabel && (
-                <p className="truncate text-[11px] text-[hsl(var(--ink-muted))]">
-                  {categoryLabel}
-                </p>
-              )}
-            </div>
-          </div>
-        </header>
-
-        {/* Chat area — one incoming message, one reply. */}
+          <Card className="relative flex h-[640px] flex-col overflow-hidden rounded-[32px] border-[hsl(var(--rule))] bg-[hsl(var(--surface))] shadow-elevated">
+        {/* Chat area — the pill is overlaid on top of this scroll container
+            (see <header> below). Content below the pill scrolls at full
+            opacity with no effects whatsoever. Content that scrolls up past
+            the pill is completely hidden by the pill's solid opaque
+            background; the pill's own rounded-full corners are what clip
+            the visual cleanly at its bottom curve. Content that has emerged
+            above the pill — the strip between the top of the card and the
+            top of the pill — is dimmed by the gradient band below, so the
+            user can still see it but at noticeably reduced opacity. Content
+            uses the same horizontal padding as the header so it lines up
+            under the pill's left and right edges. */}
         <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
-          <div className="space-y-6 px-5 py-6 md:px-7 md:py-8">
+          <div className="space-y-6 px-5 pt-28 pb-6 md:px-7 md:pt-28 md:pb-8">
             {/* Sender message */}
             <div className="flex items-end">
               <div className="flex max-w-[85%] flex-col gap-2">
@@ -290,25 +279,72 @@ export function RequestDetail({ id }: { id: string }) {
                 </div>
               </div>
             )}
+
+            {/* Status line — lives inside the scroll area so it scrolls
+                with the messages instead of staying pinned below the card. */}
+            {r.status !== "pending" && (
+              <div className="flex items-center justify-center gap-2 pt-2 text-[11.5px] text-[hsl(var(--ink-subtle))]">
+                {r.status === "replied" ? (
+                  <>
+                    <Check size={13} strokeWidth={1.6} />
+                    Replied {timeShort(r.reply!.repliedAt)}
+                  </>
+                ) : (
+                  <>
+                    <Clock size={13} strokeWidth={1.6} />
+                    Expired
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Bottom status line — only action state, no money. */}
-        {r.status !== "pending" && (
-          <div className="flex items-center justify-center gap-2 px-5 py-3 text-[11.5px] text-[hsl(var(--ink-subtle))]">
-            {r.status === "replied" ? (
-              <>
-                <Check size={13} strokeWidth={1.6} />
-                Replied {timeShort(r.reply!.repliedAt)}
-              </>
-            ) : (
-              <>
-                <Clock size={13} strokeWidth={1.6} />
-                Expired
-              </>
-            )}
+        {/* Dimming band — covers the strip between the top of the card and
+            the top of the pill. Content that has scrolled up past the pill
+            and emerged above it shows through this gradient at reduced
+            opacity — visible enough to read, clearly dimmed. Sits below
+            the pill in z-order so the pill's opaque background and rounded
+            bottom corners remain the final word on what's visible at and
+            behind the curve. pointer-events-none lets touches pass through
+            to the scroll container underneath. */}
+        <div
+          className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-5 md:h-6"
+          style={{
+            background:
+              "linear-gradient(to bottom, hsl(var(--ink) / 0.22) 0%, hsl(var(--ink) / 0.13) 55%, hsl(var(--ink) / 0.05) 100%)",
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Header — pill-shaped identity bar with avatar, name, and category.
+            Positioned absolutely on top of the scroll area with a solid
+            opaque background so content scrolling up behind it is
+            completely hidden. The pill's own rounded-full border-radius
+            creates the visual clipping at its bottom corners — content
+            stays fully visible one pixel before the curve, then disappears
+            behind the pill. pointer-events-none on the header lets
+            touch/click on the pill area pass through to the scroll
+            container underneath, so scrolling still works there. */}
+        <header className="pointer-events-none absolute inset-x-0 top-0 z-10 px-5 pt-5 md:px-7 md:pt-6">
+            <div className="pointer-events-auto flex w-full items-center gap-3 rounded-full bg-[hsl(var(--page))] px-4 py-2.5 ring-1 ring-[hsl(var(--rule))]">
+            <Avatar
+              size="md"
+              name={r.from.name}
+              className="bg-[hsl(var(--rule))] text-[hsl(var(--ink-muted))]"
+            />
+            <div className="min-w-0">
+              <p className="truncate text-[14.5px] font-medium text-[hsl(var(--ink))]">
+                {r.from.name}
+              </p>
+              {categoryLabel && (
+                <p className="truncate text-[11px] text-[hsl(var(--ink-muted))]">
+                  {categoryLabel}
+                </p>
+              )}
+            </div>
           </div>
-        )}
+        </header>
 
         {/* Reply input */}
         {r.status === "pending" && (
