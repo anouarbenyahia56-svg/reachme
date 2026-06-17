@@ -60,6 +60,8 @@ export interface Profile {
   /** The handle is the public address: reachme.com/{handle} */
   handle: string;
   displayName: string;
+  /** Email address associated with this profile. */
+  email: string;
   /** A short role label sitting under the display name. */
   title: string;
   /** Data URL or future remote URL — same shape, swap the source. */
@@ -124,6 +126,9 @@ export interface RequestRecord {
   category: string;
   subject: string;
   message: string;
+  /** Attachments sent by the sender alongside the request. Stored as
+   *  data URLs locally; openable and downloadable by both sender and owner. */
+  attachments?: RequestAttachment[];
   amountCents: number;
   status: RequestStatus;
   createdAt: ISODate;
@@ -151,13 +156,20 @@ export interface RequestRecord {
 }
 
 /** An attachment included in a reply. For v1, stored as data
- *  URLs locally. For v2, swap to remote URLs from S3. */
+ *  URLs locally. For v2, swap to remote URLs from S3.
+ *
+ *  `url` is optional because the actual bytes live in the
+ *  in-memory file cache (`requests.ts`) and are resolved to a
+ *  short `blob:` URL on first access. Persisted records carry
+ *  just the metadata so localStorage doesn't fill with base64. */
 export interface RequestAttachment {
   type: "voice" | "video" | "file" | "image";
-  url: string;
+  url?: string;
   name?: string;
   /** Duration in seconds — for voice/video playback UI. */
   duration?: number;
+  /** File size in bytes — shown for document attachments. */
+  size?: number;
 }
 
 /** Snapshot stored locally so a sender can see their own outbox. */

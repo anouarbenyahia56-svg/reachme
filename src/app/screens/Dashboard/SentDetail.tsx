@@ -1,16 +1,17 @@
-import type { ReactNode } from "react";
-import { ArrowLeft, Camera, File, Mic, Play } from "lucide-react";
+import { useCallback, useState, type ReactNode } from "react";
+import { ArrowLeft } from "lucide-react";
 import { Card } from "../../ui/Card";
 import { Pill } from "../../ui/Pill";
 import { Avatar } from "../../ui/Avatar";
 import { Reveal } from "../../ui/Reveal";
 import { Link, useRouter } from "../../router";
-import { useSent, getConversation, platformFeeCents } from "../../store/requests";
+import { useSent, getConversation, platformFeeCents, getAttachmentUrl } from "../../store/requests";
 import { useProfile } from "../../store/session";
 import { dateLong, formatMoney, timeAgo, timeUntil } from "../../store/format";
-import type { RequestRecord } from "../../types";
+import type { RequestAttachment, RequestRecord } from "../../types";
 import { cn } from "@/lib/utils";
 import { CardSkeleton, ScreenError } from "../../ui/ScreenStates";
+import { AttachmentChip, AttachmentViewer } from "../../ui/AttachmentViewer";
 
 /**
  * Sent detail — read-only view from the sender's perspective.
@@ -23,6 +24,19 @@ export function SentDetail({ id }: { id: string }) {
   const profile = useProfile();
   const r = all.find((x) => x.id === id);
   const { navigate } = useRouter();
+  const [viewAttachment, setViewAttachment] = useState<RequestAttachment | null>(null);
+
+  // Resolve a click on a sent-side chip to the in-memory blob URL
+  // (or fall back to whatever the record carried). Kept stable so
+  // the chip's memo isn't defeated on every render.
+  const handleViewAttachment = useCallback(
+    (a: RequestAttachment, reqId: string, index: number) => {
+      const url = a.url || getAttachmentUrl(reqId, "msg", index) || "";
+      if (!url) return;
+      setViewAttachment({ ...a, url });
+    },
+    [],
+  );
 
   // TODO: wire to backend — set `loading` to `true` while the
   // request detail fetch is in flight; set `error` to the caught error.
@@ -141,7 +155,7 @@ export function SentDetail({ id }: { id: string }) {
             {/* Conversation thread */}
             <div className="space-y-6">
               {thread.map((req) => (
-                <ConversationEntry key={req.id} r={req} />
+                <ConversationEntry key={req.id} r={req} onViewAttachment={setViewAttachment} />
               ))}
             </div>
           </div>
@@ -215,11 +229,23 @@ export function SentDetail({ id }: { id: string }) {
           </div>
         </Card>
       </div>
+
+      <AttachmentViewer
+        attachment={viewAttachment}
+        open={viewAttachment !== null}
+        onClose={() => setViewAttachment(null)}
+      />
     </Reveal>
   );
 }
 
-function ConversationEntry({ r }: { r: RequestRecord }) {
+function ConversationEntry({
+  r,
+  onViewAttachment,
+}: {
+  r: RequestRecord;
+  onViewAttachment?: (a: RequestAttachment, reqId: string, index: number) => void;
+}) {
   const fee = r.escrow.feeCents ?? platformFeeCents(r.amountCents);
   const release = r.amountCents - fee;
 
@@ -239,6 +265,17 @@ function ConversationEntry({ r }: { r: RequestRecord }) {
         >
           {r.message}
         </p>
+        {r.attachments && r.attachments.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {r.attachments.map((a, i) => (
+              <AttachmentChip
+                key={`m-${i}`}
+                attachment={a}
+                onClick={onViewAttachment ? () => onViewAttachment(a, r.id, i) : undefined}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Owner's reply */}
@@ -259,18 +296,11 @@ function ConversationEntry({ r }: { r: RequestRecord }) {
           {r.reply.attachments && r.reply.attachments.length > 0 && (
             <div className={cn("flex flex-wrap gap-2", r.reply.body ? "mt-3" : "mt-2")}>
               {r.reply.attachments.map((a, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 rounded-full bg-[hsl(var(--page))] px-3 py-1.5 ring-1 ring-[hsl(var(--rule))]"
-                >
-                  {a.type === "image" && <Camera size={12} strokeWidth={1.6} />}
-                  {a.type === "voice" && <Mic size={12} strokeWidth={1.6} />}
-                  {a.type === "video" && <Play size={12} strokeWidth={1.6} />}
-                  {a.type === "file" && <File size={12} strokeWidth={1.6} />}
-                  <span className="max-w-[120px] truncate text-[11.5px] text-[hsl(var(--ink))]">
-                    {a.name || a.type}
-                  </span>
-                </div>
+                <AttachmentChip
+                  key={`r-${i}`}
+                  attachment={a}
+                  onClick={onViewAttachment ? () => onViewAttachment(a, r.id, i) : undefined}
+                />
               ))}
             </div>
           )}

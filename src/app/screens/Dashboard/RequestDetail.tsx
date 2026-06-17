@@ -1,33 +1,54 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, ArrowUp, Check, Clock, Maximize2, Mic, Minimize2, Paperclip, Camera, X, File, Play, Pause } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
+import {
+  ArrowLeft,
+  Check,
+  Clock,
+  Paperclip,
+  Mic,
+  Send,
+  File,
+  Play,
+  Download,
+  ExternalLink,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { EASE } from "@/components/motion";
 import { Card } from "../../ui/Card";
-import { Pill } from "../../ui/Pill";
 import { Avatar } from "../../ui/Avatar";
-import { Button } from "../../ui/Button";
 import { Link, useRouter } from "../../router";
-import { useReceived, replyToRequest, platformFeeCents, markOpened } from "../../store/requests";
 import {
-  dateLong,
-  formatMoney,
-  timeAgo,
-  timeUntil,
-} from "../../store/format";
-import { useToast } from "../../ui/Toast";
+  useReceived,
+  replyToRequest,
+  platformFeeCents,
+  markOpened,
+  saveAttachmentFiles,
+  getAttachmentUrl,
+  type AttachmentScope,
+} from "../../store/requests";
 import { useProfile } from "../../store/session";
+import { formatMoney, timeShort, formatBytes } from "../../store/format";
+import { useToast } from "../../ui/Toast";
 import { cn } from "@/lib/utils";
 import type { RequestAttachment } from "../../types";
+import {
+  AttachmentChip,
+  AttachmentViewer,
+  downloadAttachment,
+  getInitialAttachmentType,
+} from "../../ui/AttachmentViewer";
 
 /**
- * Request detail — the moment of decision. Sender block at top,
- * full message below, escrow card in the sidebar showing exactly
- * where the money sits. Reply or do nothing.
+ * Reply interface — the most important screen in ReachMe.
  *
- * Reply transforms the page into a conversation view — the
- * sender's message becomes a chat bubble, the reply input
- * appears below it. No modal, no bottom sheet.
+ * One incoming request. One reply. Nothing else.
+ *
+ * The surface is calm, focused, and monochrome: a black header bar
+ * holding the sender, a soft chat area with the sender's message on
+ * the left and the owner's reply on the right, and a minimal input
+ * that quietly shifts from microphone to send the moment words
+ * appear. No amounts, no timelines, no clutter — the financial layer
+ * lives outside this moment.
  */
 export function RequestDetail({ id }: { id: string }) {
   const all = useReceived();
@@ -35,18 +56,26 @@ export function RequestDetail({ id }: { id: string }) {
   const r = all.find((x) => x.id === id);
   const { navigate } = useRouter();
   const toast = useToast();
-  const [replying, setReplying] = useState(false);
+
   const [reply, setReply] = useState("");
   const [attachments, setAttachments] = useState<RequestAttachment[]>([]);
-  const [focusMode, setFocusMode] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [viewAttachment, setViewAttachment] = useState<RequestAttachment | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+  const fileMap = useRef<Map<string, File>>(new Map());
+  const attachmentsRef = useRef(attachments);
+  attachmentsRef.current = attachments;
   useEffect(() => {
-    if (!replying) return;
-    const t = setTimeout(() => inputRef.current?.focus(), 350);
-    return () => clearTimeout(t);
-  }, [replying]);
+    return () => {
+      attachmentsRef.current.forEach((a) => {
+        if (a.url?.startsWith("blob:")) {
+          URL.revokeObjectURL(a.url);
+        }
+      });
+      fileMap.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     if (r && r.status === "pending" && !r.openedAt) {
@@ -54,21 +83,26 @@ export function RequestDetail({ id }: { id: string }) {
     }
   }, [r]);
 
+  // Auto-resize the textarea up to a sensible max; the outer shape stays fixed.
+  // Wrapped in requestAnimationFrame to avoid layout thrashing on every keystroke.
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
-    el.style.height = "auto";
-    const max = 105; // 5 lines × 21px line-height
-    el.style.height = `${Math.min(el.scrollHeight, max)}px`;
-    el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
-    el.classList.add("scrollbar-none");
-  }, [reply, replying]);
+    const raf = requestAnimationFrame(() => {
+      el.style.height = "auto";
+      const max = 120;
+      const newHeight = Math.min(el.scrollHeight, max);
+      el.style.height = `${newHeight}px`;
+      el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [reply]);
 
-  if (!profile) return null;
-  if (!r || r.toHandle.toLowerCase() !== profile.handle.toLowerCase()) {
+  if (!profile || !profile.handle) return null;
+  if (!r || !r.toHandle || r.toHandle.toLowerCase() !== profile.handle.toLowerCase()) {
     return (
-      <Card>
-        <div className="px-7 py-16 text-center md:px-9">
+      <Card className="rounded-[32px]">
+        <div className="px-8 py-20 text-center md:px-10">
           <h3
             className="font-serif text-[hsl(var(--ink))]"
             style={{
@@ -84,7 +118,7 @@ export function RequestDetail({ id }: { id: string }) {
           </p>
           <Link
             href="/dashboard/received"
-            className="mt-6 inline-flex rounded-full border border-[hsl(var(--rule-strong))] px-5 py-2.5 text-[13px] text-[hsl(var(--ink))] transition-colors hover:border-[hsl(var(--ink))]"
+            className="mt-7 inline-flex rounded-full border border-[hsl(var(--rule-strong))] px-5 py-2.5 text-[13px] text-[hsl(var(--ink))] transition-colors hover:border-[hsl(var(--ink))]"
           >
             Back to inbox
           </Link>
@@ -93,538 +127,883 @@ export function RequestDetail({ id }: { id: string }) {
     );
   }
 
-  const cat = profile.categories.find((c) => c.id === r.category)?.label ?? "—";
-
-  const onSendReply = () => {
-    const hasBody = reply.trim().length > 0;
+  const onSendReply = async () => {
+    const body = reply.trim();
+    const hasBody = body.length > 0;
     const hasAttachments = attachments.length > 0;
     if (!hasBody && !hasAttachments) return;
 
-    if (replyToRequest(r.id, hasBody ? reply.trim() : undefined, hasAttachments ? attachments : undefined)) {
-      toast.show(
-        "Reply sent.",
-        `Released ${formatMoney(r.amountCents - platformFeeCents(r.amountCents))}`,
-      );
-      setReplying(false);
+    // Hand the raw File objects straight to the cache — no base64
+    // round-trip, no main-thread serialization. The cache will mint
+    // a blob URL for each so the reply's bubbles render instantly.
+    if (hasAttachments && r) {
+      const files: File[] = [];
+      for (const a of attachments) {
+        if (!a.url) continue;
+        const file = fileMap.current.get(a.url);
+        if (file) files.push(file);
+      }
+      if (files.length) {
+        saveAttachmentFiles(r.id, "reply", files);
+      }
+    }
+
+    if (r && replyToRequest(r.id, hasBody ? body : undefined, attachments)) {
+      toast.show("Reply sent.", "The request is now complete.");
+      attachments.forEach((a) => {
+        if (a.url?.startsWith("blob:")) {
+          URL.revokeObjectURL(a.url);
+        }
+      });
+      fileMap.current.clear();
       setReply("");
       setAttachments([]);
     }
   };
 
-  const onAddFile = () => {
-    fileInputRef.current?.click();
-  };
+  // Stable handler the bubbles call. The bubble passes its own
+  // attachment so we don't have to re-find it through the list on
+  // every click — keeps the bubble memoized and the click path
+  // tight.
+  const handleViewAttachment = useCallback(
+    (attachment: RequestAttachment, reqId: string, scope: AttachmentScope, index: number) => {
+      const url = attachment.url || getAttachmentUrl(reqId, scope, index) || "";
+      if (!url) return;
+      setViewAttachment({ ...attachment, url });
+    },
+    [],
+  );
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onAddFile = () => fileInputRef.current?.click();
+
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const url = reader.result as string;
-        const type = file.type.startsWith("image/")
-          ? "image"
-          : file.type.startsWith("video/")
-            ? "video"
-            : file.type.startsWith("audio/")
-              ? "voice"
-              : "file";
+    for (const file of Array.from(files)) {
+      try {
+        const type = await getInitialAttachmentType(file);
+        const url = URL.createObjectURL(file);
         setAttachments((prev) => [
           ...prev,
-          { type, url, name: file.name },
+          { type, url, name: file.name, size: file.size },
         ]);
-      };
-      reader.readAsDataURL(file);
-    });
+        fileMap.current.set(url, file);
+      } catch {
+        toast.show("Couldn't attach file.");
+      }
+    }
 
-    // Reset input so the same file can be selected again
     e.target.value = "";
   };
 
   const onRemoveAttachment = (index: number) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index));
+    setAttachments((prev) => {
+      const removed = prev[index];
+      if (removed?.url?.startsWith("blob:")) {
+        URL.revokeObjectURL(removed.url);
+        fileMap.current.delete(removed.url);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const canSend = reply.trim().length > 0 || attachments.length > 0;
+  const categoryLabel = profile.categories?.find((c) => c.id === r.category)?.label;
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <button
-          type="button"
-          onClick={() => {
-            if (replying) {
-              setReplying(false);
-              setReply("");
-            } else {
-              navigate("/dashboard/received");
-            }
-          }}
-          className="inline-flex items-center gap-2 text-[12.5px] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
-        >
-          <ArrowLeft size={14} strokeWidth={1.6} aria-hidden="true" />
-          {replying ? "Back to request" : "Inbox"}
-        </button>
+    <div className="mx-auto max-w-5xl">
+      <button
+        type="button"
+        onClick={() => navigate("/dashboard/received")}
+        className="group mb-5 inline-flex items-center gap-2 text-[12.5px] text-[hsl(var(--ink-muted))] transition-colors duration-300 hover:text-[hsl(var(--ink))]"
+      >
+        <ArrowLeft size={14} strokeWidth={1.6} aria-hidden="true" />
+        Inbox
+      </button>
 
-        <button
-          type="button"
-          onClick={() => setFocusMode((v) => !v)}
-          aria-pressed={focusMode}
-          aria-label={focusMode ? "Exit focus mode" : "Enter focus mode"}
-          className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11.5px] font-medium transition-colors duration-200",
-            focusMode
-              ? "border-[hsl(var(--ink))] bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:bg-[hsl(var(--ink))]/90"
-              : "border-[hsl(var(--rule-strong))] bg-[hsl(var(--surface))] text-[hsl(var(--ink-muted))] hover:border-[hsl(var(--ink))] hover:text-[hsl(var(--ink))]",
-          )}
-        >
-          {focusMode ? (
-            <Minimize2 size={11.5} strokeWidth={1.6} aria-hidden="true" />
-          ) : (
-            <Maximize2 size={11.5} strokeWidth={1.6} aria-hidden="true" />
-          )}
-          {focusMode ? "Exit focus" : "Focus mode"}
-        </button>
-      </div>
+      <div className="grid gap-6 lg:grid-cols-12">
+        <div className="lg:col-span-8">
+          <Card className="relative flex min-h-[600px] flex-col overflow-hidden rounded-[32px] border-[hsl(var(--rule))] bg-[hsl(var(--surface))] shadow-elevated">
+        {/* Header — pill-shaped identity bar with avatar, name, and category. */}
+        <header className="shrink-0 px-5 pt-5 md:px-7 md:pt-6">
+          <div className="flex w-full items-center gap-3 rounded-full bg-[hsl(var(--page))] px-4 py-2.5 ring-1 ring-[hsl(var(--rule))]">
+            <Avatar
+              size="md"
+              name={r.from.name}
+              className="bg-[hsl(var(--rule))] text-[hsl(var(--ink-muted))]"
+            />
+            <div className="min-w-0">
+              <p className="truncate text-[14.5px] font-medium text-[hsl(var(--ink))]">
+                {r.from.name}
+              </p>
+              {categoryLabel && (
+                <p className="truncate text-[11px] text-[hsl(var(--ink-muted))]">
+                  {categoryLabel}
+                </p>
+              )}
+            </div>
+          </div>
+        </header>
 
-      <div className="grid items-start gap-6 lg:grid-cols-12">
-        <motion.div
-          layout
-          transition={{ duration: 0.28, ease: EASE }}
-          className={cn(
-            "flex sticky top-24",
-            focusMode ? "lg:col-span-12" : "lg:col-span-8",
-            replying ? "h-[calc(100dvh-8rem)]" : "lg:h-[400px]",
-          )}
-        >
-          {replying ? (
-            /* ── Conversation view ── */
-            <div key="conversation" className="flex min-h-0 flex-1 flex-col">
-              {/* Sender's message — scrolls independently */}
-              <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none pb-2 pr-2">
-                <div className="flex min-h-full flex-col justify-end gap-2.5">
-                  <div className="flex items-end gap-2.5">
-                    <Avatar size="sm" name={r.from.name} />
-                    <div className="max-w-[78%]">
-                      <div className="mb-1 flex items-baseline gap-2">
-                        <p className="text-[13px] font-medium text-[hsl(var(--ink))]">
-                          {r.from.name}
-                        </p>
-                        {r.from.organization && (
-                          <span className="text-[11.5px] text-[hsl(var(--ink-subtle))]">
-                            · {r.from.organization}
-                          </span>
-                        )}
-                      </div>
-                      <div className="rounded-2xl rounded-tl-md bg-[hsl(var(--page))] px-4 py-3 ring-1 ring-[hsl(var(--rule))]">
-                        <p className="text-[13px] font-medium text-[hsl(var(--ink))]">
-                          {r.subject}
-                        </p>
-                        <p
-                          className="mt-1.5 whitespace-pre-line text-[hsl(var(--ink))]"
-                          style={{ fontSize: "0.92rem", lineHeight: 1.65 }}
-                        >
-                          {r.message}
-                        </p>
-                      </div>
-                      <p className="mt-1.5 ml-1 text-[10.5px] text-[hsl(var(--ink-subtle))]">
-                        {timeAgo(r.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+        {/* Chat area — one incoming message, one reply. */}
+        <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
+          <div className="space-y-6 px-5 py-6 md:px-7 md:py-8">
+            {/* Sender message */}
+            <div className="flex items-end">
+              <div className="flex max-w-[85%] flex-col gap-2">
+                <TextBubble text={r.message} time={r.createdAt} side="left" />
+                {r.attachments?.map((a, i) => (
+                  <AttachmentBubble
+                    key={`m-${i}`}
+                    attachment={a}
+                    time={r.createdAt}
+                    side="left"
+                    requestId={r.id}
+                    scope="msg"
+                    index={i}
+                    onView={handleViewAttachment}
+                  />
+                ))}
               </div>
+            </div>
 
-              {/* Reply input — pinned at bottom */}
-              <div className="mt-4 shrink-0">
-                <Card>
-                  <div className="px-5 py-4">
-                    {/* Attached files preview */}
-                    {attachments.length > 0 && (
-                      <div className="mb-3 flex flex-wrap gap-2">
-                        {attachments.map((a, i) => (
-                          <div
-                            key={i}
-                            className="flex items-center gap-2 rounded-full bg-[hsl(var(--page))] px-3 py-1.5 ring-1 ring-[hsl(var(--rule))]"
-                          >
-                            {a.type === "image" && <Camera size={12} strokeWidth={1.6} />}
-                            {a.type === "voice" && <Mic size={12} strokeWidth={1.6} />}
-                            {a.type === "video" && <Play size={12} strokeWidth={1.6} />}
-                            {a.type === "file" && <File size={12} strokeWidth={1.6} />}
-                            <span className="max-w-[120px] truncate text-[11.5px] text-[hsl(var(--ink))]">
-                              {a.name || a.type}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => onRemoveAttachment(i)}
-                              className="text-[hsl(var(--ink-muted))] hover:text-[hsl(var(--ink))]"
-                            >
-                              <X size={12} strokeWidth={1.6} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex items-end gap-3">
-                      {/* Text input — auto-grows with content */}
-                      <div className="flex-1 rounded-2xl bg-[hsl(var(--page))] px-4 py-2.5 transition-colors duration-200 focus-within:ring-1 focus-within:ring-[hsl(var(--rule-strong))]">
-                        <textarea
-                          ref={inputRef}
-                          value={reply}
-                          onChange={(e) => setReply(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              onSendReply();
-                            }
-                          }}
-                          placeholder={`Reply to ${r.from.name.split(" ")[0]}...`}
-                          rows={1}
-                          className="block w-full resize-none overflow-hidden border-0 bg-transparent text-[14px] leading-[1.5] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none focus:ring-0"
-                        />
-                      </div>
-
-                      {/* Action buttons — always visible */}
-                      <div className="flex items-center gap-0.5 pb-1.5">
-                        <ReplyIconBtn icon={<Paperclip size={19} strokeWidth={1.5} />} label="Attach file" onClick={onAddFile} />
-                        <ReplyIconBtn icon={<Camera size={19} strokeWidth={1.5} />} label="Add photo" onClick={onAddFile} />
-                        <ReplyIconBtn icon={<Mic size={19} strokeWidth={1.5} />} label="Voice message" />
-                      </div>
-
-                      {/* Send button — appears once the user starts typing or has attachments */}
-                      {canSend && (
-                        <div className="pb-1.5">
-                          <button
-                            type="button"
-                            onClick={onSendReply}
-                            disabled={!canSend}
-                            aria-label="Send reply"
-                            className={cn(
-                              "inline-flex h-9 w-9 items-center justify-center rounded-full transition-all duration-200",
-                              canSend
-                                ? "bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:bg-[hsl(var(--ink))]/90 scale-100"
-                                : "bg-[hsl(var(--rule))] text-[hsl(var(--ink-subtle))] cursor-not-allowed scale-95",
-                            )}
-                          >
-                            <ArrowUp size={17} strokeWidth={2.2} />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-
-                {/* Hidden file input */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
-                  className="hidden"
-                  onChange={onFileChange}
-                />
-
-                <div className="mt-4 flex items-center gap-3">
-                  <Button onClick={onSendReply} disabled={!canSend} trailingArrow>
-                    Send &amp; release {formatMoney(r.amountCents)}
-                  </Button>
-                  <Button variant="ghost" onClick={() => { setReplying(false); setReply(""); setAttachments([]); }}>
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-              </div>
-            ) : (
-              /* ── Default request view ── */
-              <div key="detail" className="flex h-full min-h-0 flex-col">
-                <Card className="flex h-full min-h-0 flex-col overflow-hidden">
-                  {/* Sender + subject + message — clean, no dividers */}
-                  <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-7 pt-7 md:px-9 md:pt-9">
-                    {/* Sender header — pinned at top, doesn't scroll */}
-                    <div className="shrink-0 pb-8">
-                      <div className="flex items-center gap-3">
-                        <Avatar size="sm" name={r.from.name} />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-baseline gap-2">
-                            <p className="text-[14px] font-semibold text-[hsl(var(--ink))]">
-                              {r.from.name}
-                            </p>
-                            {r.from.organization && (
-                              <span className="text-[12px] text-[hsl(var(--ink-subtle))]">
-                                {r.from.organization}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[12px] text-[hsl(var(--ink-muted))]">
-                            {r.from.email}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Pill size="sm">{cat}</Pill>
-                          <StatusPill status={r.status} />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Conversation — scrolls under the pinned header */}
-                    <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none pr-2">
-                      <div className="space-y-6 pt-1 pb-2">
-                        {/* Sender's first message — avatar left, bubble, time below */}
-                        <div className="flex items-end gap-2.5">
-                          <Avatar size="sm" name={r.from.name} />
-                          <div className="max-w-[78%]">
-                            <div className="rounded-2xl rounded-tl-md bg-[hsl(var(--page))] px-4 py-3 ring-1 ring-[hsl(var(--rule))]">
-                              <p className="text-[13px] font-medium text-[hsl(var(--ink))]">
-                                {r.subject}
-                              </p>
-                              <p
-                                className="mt-1.5 whitespace-pre-line text-[hsl(var(--ink))]"
-                                style={{ fontSize: "0.95rem", lineHeight: 1.7 }}
-                              >
-                                {r.message}
-                              </p>
-                            </div>
-                            <p className="mt-1.5 ml-1 text-[10.5px] text-[hsl(var(--ink-subtle))]">
-                              {timeAgo(r.createdAt)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Owner's reply — bubble right, time below */}
-                        {r.reply && (
-                          <div className="flex items-end justify-end gap-2.5">
-                            <div className="max-w-[78%]">
-                              <div className="rounded-2xl rounded-tr-md bg-[hsl(var(--ink))] px-4 py-3 text-[hsl(var(--page))]">
-                                {r.reply.body && (
-                                  <p
-                                    className="whitespace-pre-line"
-                                    style={{ fontSize: "0.95rem", lineHeight: 1.7 }}
-                                  >
-                                    {r.reply.body}
-                                  </p>
-                                )}
-                                {/* Attachments */}
-                                {r.reply.attachments && r.reply.attachments.length > 0 && (
-                                  <div className={cn("flex flex-wrap gap-2", r.reply.body && "mt-2")}>
-                                    {r.reply.attachments.map((a, i) => (
-                                      <div
-                                        key={i}
-                                        className="flex items-center gap-2 rounded-full bg-[hsl(var(--page))]/20 px-3 py-1.5"
-                                      >
-                                        {a.type === "image" && <Camera size={12} strokeWidth={1.6} />}
-                                        {a.type === "voice" && <Mic size={12} strokeWidth={1.6} />}
-                                        {a.type === "video" && <Play size={12} strokeWidth={1.6} />}
-                                        {a.type === "file" && <File size={12} strokeWidth={1.6} />}
-                                        <span className="max-w-[120px] truncate text-[11.5px]">
-                                          {a.name || a.type}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                              <p className="mt-1.5 mr-1 text-right text-[10.5px] text-[hsl(var(--ink-subtle))]">
-                                {timeAgo(r.reply.repliedAt)}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions — flush, no divider */}
-                   {r.status === "pending" && (
-                    <div className="px-7 pt-5 pb-7 md:px-9 md:pt-6 md:pb-9">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <Button
-                          size="md"
-                          onClick={() => setReplying(true)}
-                          trailingArrow
-                        >
-                          Reply &amp; release {formatMoney(r.amountCents)}
-                        </Button>
-                      </div>
-                    </div>
+            {/* Owner reply */}
+            {r.reply && (
+              <div className="flex items-end justify-end">
+                <div className="flex max-w-[85%] flex-col items-end gap-2">
+                  {r.reply.body && (
+                    <TextBubble text={r.reply.body} time={r.reply.repliedAt} side="right" />
                   )}
-                </Card>
+                  {r.reply.attachments?.map((a, i) => (
+                    <AttachmentBubble
+                      key={`r-${i}`}
+                      attachment={a}
+                      time={r.reply!.repliedAt}
+                      side="right"
+                      requestId={r.id}
+                      scope="reply"
+                      index={i}
+                      onView={handleViewAttachment}
+                    />
+                  ))}
+                </div>
               </div>
             )}
-        </motion.div>
+          </div>
+        </div>
 
-        <AnimatePresence>
-          {!focusMode && (
-            <motion.div
-              key="sidebar"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 8 }}
-              transition={{ duration: 0.22, ease: EASE }}
-              className={cn(
-                "flex flex-col gap-6 sticky top-24",
-                "lg:col-span-4",
-                replying && "h-[calc(100dvh-8rem)] overflow-y-auto scrollbar-none",
+        {/* Bottom status line — only action state, no money. */}
+        {r.status !== "pending" && (
+          <div className="flex items-center justify-center gap-2 px-5 py-3 text-[11.5px] text-[hsl(var(--ink-subtle))]">
+            {r.status === "replied" ? (
+              <>
+                <Check size={13} strokeWidth={1.6} />
+                Replied {timeShort(r.reply!.repliedAt)}
+              </>
+            ) : (
+              <>
+                <Clock size={13} strokeWidth={1.6} />
+                Expired
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Reply input */}
+        {r.status === "pending" && (
+          <div className="shrink-0 px-5 pb-5 pt-2 md:px-7 md:pb-6">
+            <div className="overflow-hidden rounded-[28px] border border-[hsl(var(--rule-strong))] bg-[hsl(var(--page))] focus-within:border-[hsl(var(--ink))]">
+              {/* Pending attachment chips — live inside the input container */}
+              {attachments.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto scrollbar-none px-3 pt-3">
+                  {attachments.map((a, i) => (
+                    <AttachmentChip
+                      key={i}
+                      attachment={a}
+                      onRemove={() => onRemoveAttachment(i)}
+                      onClick={() => setViewAttachment(a)}
+                    />
+                  ))}
+                </div>
               )}
-            >
-              <EscrowCard r={r} />
-              <TimelineCard r={r} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+              <div className="flex items-end gap-2 px-3 py-1">
+                <InputIconButton
+                  label="Attach file"
+                  onClick={onAddFile}
+                  icon={<Paperclip size={17} strokeWidth={1.5} />}
+                />
+
+                <textarea
+                  ref={inputRef}
+                  value={reply}
+                  onChange={(e) => setReply(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      onSendReply();
+                    }
+                  }}
+                  placeholder={`Reply to ${r.from.name.split(" ")[0]}...`}
+                  rows={1}
+                  className="block max-h-[120px] min-h-[38px] w-full flex-1 resize-none bg-transparent pl-1 pr-3 py-2 text-[14.5px] leading-[1.5] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none scrollbar-none"
+                />
+
+                <div className="relative h-[38px] w-[38px] shrink-0">
+                  <AnimatePresence mode="wait" initial={false}>
+                    {canSend ? (
+                      <motion.div
+                        key="send"
+                        initial={{ opacity: 0, scale: 0.85, rotate: -45 }}
+                        animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                        exit={{ opacity: 0, scale: 0.85, rotate: 45 }}
+                        transition={{ duration: 0, ease: EASE }}
+                        className="absolute inset-0"
+                      >
+                        <InputIconButton
+                          label="Send reply"
+                          onClick={onSendReply}
+                          active
+                          icon={<Send size={17} strokeWidth={1.8} />}
+                        />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="mic"
+                        initial={{ opacity: 0, scale: 0.85, rotate: 45 }}
+                        animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                        exit={{ opacity: 0, scale: 0.85, rotate: -45 }}
+                        transition={{ duration: 0, ease: EASE }}
+                        className="absolute inset-0"
+                      >
+                        <InputIconButton
+                          label="Voice message"
+                          onClick={() => setIsRecording((v) => !v)}
+                          icon={<Mic size={17} strokeWidth={1.5} />}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={onFileChange}
+            />
+
+            {isRecording && (
+              <div className="mt-3 text-center text-[12px] text-[hsl(var(--ink-muted))]">
+                Voice recording is not yet available.
+              </div>
+            )}
+          </div>
+        )}
+          </Card>
+        </div>
+
+        <div className="lg:col-span-4">
+          <FinancialCard
+            status={r.status === "pending" ? "pending" : r.status === "replied" ? "released" : "refunded"}
+            amountCents={r.amountCents}
+            feeCents={r.escrow.feeCents ?? platformFeeCents(r.amountCents)}
+            releaseCents={r.amountCents - (r.escrow.feeCents ?? platformFeeCents(r.amountCents))}
+            replyDate={r.reply?.repliedAt}
+            expiryDate={r.expiresAt}
+          />
+        </div>
       </div>
+
+      <AttachmentViewer
+        attachment={viewAttachment}
+        open={viewAttachment !== null}
+        onClose={() => setViewAttachment(null)}
+      />
     </div>
   );
 }
 
-function ReplyIconBtn({
+// ────────────────────────────────────────────────────────────────────────────
+// Bubbles
+// ────────────────────────────────────────────────────────────────────────────
+
+const TextBubble = memo(function TextBubble({
+  text,
+  time,
+  side,
+}: {
+  text: string;
+  time: string;
+  side: "left" | "right";
+}) {
+  return (
+    <div
+      className={cn(
+        "relative max-w-[85%] min-w-[80px] rounded-[22px] px-4 pb-6 pt-3.5",
+        side === "left"
+          ? "rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
+          : "rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
+      )}
+    >
+      <p
+        className="whitespace-pre-line"
+        style={{
+          fontSize: "0.96rem",
+          lineHeight: 1.65,
+          letterSpacing: "-0.005em",
+        }}
+      >
+        {text}
+      </p>
+      <Timestamp time={time} side={side} />
+    </div>
+  );
+});
+
+type BubbleView = (
+  attachment: RequestAttachment,
+  requestId: string,
+  scope: AttachmentScope,
+  index: number,
+) => void;
+
+const AttachmentBubble = memo(function AttachmentBubble({
+  attachment,
+  time,
+  side,
+  requestId,
+  scope,
+  index,
+  onView,
+}: {
+  attachment: RequestAttachment;
+  time: string;
+  side: "left" | "right";
+  requestId: string;
+  scope: AttachmentScope;
+  index: number;
+  onView: BubbleView;
+}) {
+  // Resolve URL: stored URL takes priority; the cache fills in
+  // blob URLs for attachments saved through the new file path.
+  // The lookup is a single Map.get and runs only when the cache
+  // has a value (most of the time).
+  const url =
+    attachment.url ||
+    getAttachmentUrl(requestId, scope, index) ||
+    "";
+
+  if (attachment.type === "image") {
+    return (
+      <ImageBubble
+        url={url}
+        name={attachment.name}
+        time={time}
+        side={side}
+        onView={onView}
+        attachment={attachment}
+        requestId={requestId}
+        scope={scope}
+        index={index}
+      />
+    );
+  }
+  if (attachment.type === "voice" || attachment.type === "video") {
+    return (
+      <AudioBubble
+        attachment={{ ...attachment, url }}
+        time={time}
+        side={side}
+        onView={onView}
+      />
+    );
+  }
+  return (
+    <DocumentBubble
+      attachment={{ ...attachment, url }}
+      time={time}
+      side={side}
+      onView={onView}
+    />
+  );
+});
+
+const ImageBubble = memo(function ImageBubble({
+  url,
+  name,
+  time,
+  side,
+  onView,
+  attachment,
+  requestId,
+  scope,
+  index,
+}: {
+  url: string;
+  name?: string;
+  time: string;
+  side: "left" | "right";
+  onView: BubbleView;
+  attachment: RequestAttachment;
+  requestId: string;
+  scope: AttachmentScope;
+  index: number;
+}) {
+  const handleView = useCallback(() => {
+    onView(attachment, requestId, scope, index);
+  }, [onView, attachment, requestId, scope, index]);
+
+  const handleDownload = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      downloadAttachment({ type: "image", url, name });
+    },
+    [url, name],
+  );
+
+  return (
+    <div
+      className={cn(
+        "group relative max-w-[85%] overflow-hidden rounded-[22px] bg-[hsl(var(--rule))]/40",
+        side === "left" ? "rounded-tl-md" : "rounded-tr-md",
+      )}
+    >
+      <button
+        type="button"
+        onClick={handleView}
+        className="block w-full focus:outline-none"
+        aria-label={name || "Open image"}
+      >
+        <img
+          src={url}
+          alt={name || "Image"}
+          loading="lazy"
+          decoding="async"
+          className="block max-h-[320px] min-h-[160px] w-full object-cover"
+          draggable={false}
+        />
+      </button>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/35 to-transparent" />
+      <span className="absolute bottom-2 right-3 text-[11px] font-medium text-white/90">
+        {timeShort(time)}
+      </span>
+      <button
+        type="button"
+        onClick={handleDownload}
+        aria-label="Download image"
+        className="absolute right-2 top-2 rounded-full bg-black/40 p-1.5 text-white/90 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus:opacity-100"
+      >
+        <Download size={12} strokeWidth={1.6} />
+      </button>
+    </div>
+  );
+});
+
+const AudioBubble = memo(function AudioBubble({
+  attachment,
+  time,
+  side,
+  onView,
+}: {
+  attachment: RequestAttachment;
+  time: string;
+  side: "left" | "right";
+  onView: BubbleView;
+}) {
+  const duration = attachment.duration ?? 0;
+  const formattedDuration = formatDuration(duration);
+
+  const handleClick = useCallback(() => {
+    onView(attachment, "", "msg", -1);
+  }, [onView, attachment]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleClick();
+      }
+    },
+    [handleClick],
+  );
+
+  // Waveform is derived from the URL but, for blob URLs, that
+  // changes once when the file is cached. Memoize on the URL so
+  // typing in the reply input doesn't re-hash the string.
+  const bars = useMemo(
+    () => waveformBars(attachment.url ?? ""),
+    [attachment.url],
+  );
+
+  return (
+    <div
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      className={cn(
+        "relative flex max-w-[85%] min-w-[220px] cursor-pointer items-center gap-3 rounded-[22px] px-3.5 py-3",
+        side === "left"
+          ? "rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
+          : "rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
+      )}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleClick();
+        }}
+        aria-label="Open audio"
+        className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors",
+          side === "left"
+            ? "bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
+            : "bg-[hsl(var(--page))] text-[hsl(var(--ink))]",
+        )}
+      >
+        <Play size={14} strokeWidth={1.8} />
+      </button>
+
+      <div className="flex flex-1 items-center gap-[3px]">
+        {bars.map((h, i) => (
+          <span
+            key={i}
+            className={cn(
+              "w-[3px] rounded-full",
+              side === "left" ? "bg-[hsl(var(--ink))]/20" : "bg-[hsl(var(--page))]/25",
+            )}
+            style={{ height: `${h}%` }}
+          />
+        ))}
+      </div>
+
+      {formattedDuration && (
+        <span
+          className={cn(
+            "mr-2 text-[11px] tabular-nums",
+            side === "left" ? "text-[hsl(var(--ink-muted))]" : "text-[hsl(var(--page))]/70",
+          )}
+        >
+          {formattedDuration}
+        </span>
+      )}
+
+      <span
+        className={cn(
+          "absolute bottom-2 right-3 text-[11px] tabular-nums",
+          side === "left" ? "text-[hsl(var(--ink-subtle))]" : "text-[hsl(var(--page))]/70",
+        )}
+      >
+        {timeShort(time)}
+      </span>
+    </div>
+  );
+});
+
+const DocumentBubble = memo(function DocumentBubble({
+  attachment,
+  time,
+  side,
+  onView,
+}: {
+  attachment: RequestAttachment;
+  time: string;
+  side: "left" | "right";
+  onView: BubbleView;
+}) {
+  const extension = (attachment.name?.split(".").pop() || "file").toUpperCase();
+  const size = attachment.size ? formatBytes(attachment.size) : undefined;
+
+  const handleClick = useCallback(() => {
+    onView(attachment, "", "msg", -1);
+  }, [onView, attachment]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        handleClick();
+      }
+    },
+    [handleClick],
+  );
+
+  const handleDownload = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      downloadAttachment(attachment);
+    },
+    [attachment],
+  );
+
+  return (
+    <div
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      className={cn(
+        "relative flex max-w-[90%] min-w-[260px] cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5",
+        side === "left"
+          ? "rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
+          : "rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
+      )}
+    >
+      <div
+        className={cn(
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px]",
+          side === "left"
+            ? "bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
+            : "bg-[hsl(var(--page))] text-[hsl(var(--ink))]",
+        )}
+      >
+        <File size={18} strokeWidth={1.6} />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[13px] font-medium tracking-[-0.005em]">
+          {attachment.name || "Document"}
+        </p>
+        <p
+          className={cn(
+            "text-[11px]",
+            side === "left" ? "text-[hsl(var(--ink-subtle))]" : "text-[hsl(var(--page))]/65",
+          )}
+        >
+          {extension}
+          {size && ` · ${size}`}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClick();
+          }}
+          className={cn(
+            "flex items-center gap-1 text-[11px] transition-colors",
+            side === "left"
+              ? "text-[hsl(var(--ink-muted))] hover:text-[hsl(var(--ink))]"
+              : "text-[hsl(var(--page))]/70 hover:text-[hsl(var(--page))]",
+          )}
+        >
+          <ExternalLink size={11} strokeWidth={1.6} />
+          Open
+        </button>
+        <button
+          type="button"
+          onClick={handleDownload}
+          className={cn(
+            "flex items-center gap-1 text-[11px] transition-colors",
+            side === "left"
+              ? "text-[hsl(var(--ink-muted))] hover:text-[hsl(var(--ink))]"
+              : "text-[hsl(var(--page))]/70 hover:text-[hsl(var(--page))]",
+          )}
+        >
+          <Download size={11} strokeWidth={1.6} />
+          Download
+        </button>
+      </div>
+
+      <Timestamp time={time} side={side} />
+    </div>
+  );
+});
+
+const Timestamp = memo(function Timestamp({ time, side }: { time: string; side: "left" | "right" }) {
+  return (
+    <span
+      className={cn(
+        "absolute bottom-2 right-3 text-[11px] tabular-nums",
+        side === "left" ? "text-[hsl(var(--ink-subtle))]" : "text-[hsl(var(--page))]/70",
+      )}
+    >
+      {timeShort(time)}
+    </span>
+  );
+});
+
+function InputIconButton({
   icon,
   label,
   onClick,
+  active,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
-  onClick?: () => void;
+  onClick?: () => void | Promise<void>;
+  active?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[hsl(var(--ink-muted))] transition-colors duration-200 hover:bg-[hsl(var(--rule))]/40 hover:text-[hsl(var(--ink))]"
+      className={cn(
+        "inline-flex h-[38px] w-[38px] items-center justify-center rounded-full transition-all duration-200",
+        active
+          ? "bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:bg-[hsl(var(--ink))]/85"
+          : "text-[hsl(var(--ink-muted))] hover:bg-[hsl(var(--rule))]/50 hover:text-[hsl(var(--ink))]",
+      )}
     >
       {icon}
     </button>
   );
 }
 
-function StatusPill({
+// ────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ────────────────────────────────────────────────────────────────────────────
+
+function formatDuration(seconds: number): string | null {
+  if (!seconds || seconds <= 0) return null;
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+/** Generate a deterministic, varied waveform from an attachment URL. */
+function waveformBars(url: string, count = 24): number[] {
+  let hash = 0;
+  for (let i = 0; i < url.length; i++) {
+    hash = (hash * 31 + url.charCodeAt(i)) | 0;
+  }
+  const out: number[] = [];
+  for (let i = 0; i < count; i++) {
+    const v = Math.abs((Math.sin(hash + i * 13) * 10000) % 100);
+    out.push(20 + v * 0.7);
+  }
+  return out;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Money card
+// ────────────────────────────────────────────────────────────────────────────
+
+function FinancialCard({
   status,
-}: {
-  status: "pending" | "replied" | "expired";
-}) {
-  if (status === "pending") return <Pill size="sm" tone="ink">Pending</Pill>;
-  if (status === "replied") return <Pill size="sm">Replied</Pill>;
-  return <Pill size="sm" tone="muted">Expired</Pill>;
-}
-
-function EscrowCard({
-  r,
+  amountCents,
+  feeCents,
+  releaseCents,
+  replyDate,
+  expiryDate,
   className,
 }: {
-  r: import("../../types").RequestRecord;
+  status: "pending" | "released" | "refunded";
+  amountCents: number;
+  feeCents: number;
+  releaseCents: number;
+  replyDate?: string;
+  expiryDate?: string;
   className?: string;
 }) {
-  const fee = r.escrow.feeCents ?? platformFeeCents(r.amountCents);
-  const release = r.amountCents - fee;
-
-  return (
-    <Card className={className}>
-      <div className="flex flex-col justify-between px-7 py-6 md:px-9 md:py-7">
-        <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-          Amount on hold
-        </p>
-        <p
-          className="mt-1.5 font-serif text-[hsl(var(--ink))]"
-          style={{
-            fontSize: "2.4rem",
-            fontWeight: 500,
-            letterSpacing: "-0.025em",
-            lineHeight: 1,
-            fontVariantNumeric: "tabular-nums",
-          }}
-        >
-          {formatMoney(r.amountCents)}
-        </p>
-        <p className="mt-1.5 text-[12px] text-[hsl(var(--ink-muted))]">
-          {r.status === "pending"
-            ? `Auto-refunds ${timeUntil(r.expiresAt)}`
-            : r.status === "replied"
-              ? `Released ${dateLong(r.reply!.repliedAt)}`
-              : "Refunded automatically"}
-        </p>
-
-        <div className="pt-5 space-y-2">
-          <div className="flex items-baseline justify-between">
-            <span className="text-[12.5px] text-[hsl(var(--ink-muted))]">If you reply</span>
-            <span className="text-[13px] font-medium tabular-nums text-[hsl(var(--ink))]">
-              + {formatMoney(release)}
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-[12.5px] text-[hsl(var(--ink-muted))]">Platform fee</span>
-            <span className="text-[12.5px] tabular-nums text-[hsl(var(--ink-subtle))]">
-              − {formatMoney(fee)}
-            </span>
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="text-[12.5px] text-[hsl(var(--ink-muted))]">If you don't reply</span>
-            <span className="text-[12.5px] tabular-nums text-[hsl(var(--ink-subtle))]">
-              Refund {formatMoney(r.amountCents)}
-            </span>
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-function TimelineCard({
-  r,
-  className,
-}: {
-  r: import("../../types").RequestRecord;
-  className?: string;
-}) {
-  const events: Array<{ icon: ReactNode; label: string; meta: string }> = [
-    {
-      icon: <Clock size={12} strokeWidth={1.6} />,
-      label: "Held on submit",
-      meta: dateLong(r.escrow.heldAt),
+  const states = {
+    pending: {
+      label: "AMOUNT ON HOLD",
+      amount: amountCents,
+      subtitle: `Held until ${dateShort(expiryDate)}`,
+      rows: [
+        { label: "If you reply", value: `+${formatMoney(releaseCents)}`, dark: true },
+        { label: "Platform fee", value: `–${formatMoney(feeCents)}`, dark: false },
+        { label: "If you don't reply", value: "Full refund", dark: false },
+      ],
     },
-  ];
-  if (r.escrow.releasedAt)
-    events.push({
-      icon: <Check size={12} strokeWidth={1.6} />,
-      label: "Released to you",
-      meta: dateLong(r.escrow.releasedAt),
-    });
-  if (r.escrow.refundedAt && r.status === "expired")
-    events.push({
-      icon: <Clock size={12} strokeWidth={1.6} />,
-      label: "Expired and refunded",
-      meta: dateLong(r.escrow.refundedAt),
-    });
-  if (r.status === "pending")
-    events.push({
-      icon: <Clock size={12} strokeWidth={1.6} />,
-      label: "Auto-refunds",
-      meta: dateLong(r.expiresAt),
-    });
+    released: {
+      label: "RELEASED TO YOU",
+      amount: releaseCents,
+      subtitle: `Replied on ${dateShort(replyDate)}`,
+      rows: [
+        { label: "Amount held", value: formatMoney(amountCents), dark: false },
+        { label: "Platform fee", value: `–${formatMoney(feeCents)}`, dark: false },
+        { label: "You received", value: `+${formatMoney(releaseCents)}`, dark: true },
+      ],
+    },
+    refunded: {
+      label: "REFUNDED",
+      amount: amountCents,
+      subtitle: `Expired on ${dateShort(expiryDate)}`,
+      rows: [
+        { label: "Returned to sender", value: formatMoney(amountCents), dark: false },
+        { label: "Platform fee", value: "None", dark: false },
+      ],
+    },
+  };
+
+  const state = states[status];
 
   return (
-    <Card className={className}>
-      <div className="flex h-full flex-col px-7 py-6 md:px-9 md:py-7">
-        <p className="text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
-          Timeline
-        </p>
-        <ol className="mt-4 flex-1 space-y-3">
-          {events.map((e, i) => (
-            <li key={i} className="flex items-center gap-2.5">
-              <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[hsl(var(--ink-subtle))]">
-                {e.icon}
-              </span>
-              <span className="flex-1 text-[12.5px] text-[hsl(var(--ink))]">
-                {e.label}
-              </span>
-              <span className="text-[11.5px] text-[hsl(var(--ink-subtle))]">
-                {e.meta}
-              </span>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </Card>
+    <div
+      className={cn(
+        "bg-[#FFFFFF] rounded-[14px] px-6 py-[26px] shadow-[0_1px_4px_rgba(0,0,0,0.07)]",
+        className,
+      )}
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={status}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+          <p className="font-sans text-[11px] font-medium uppercase tracking-[0.12em] text-[#B0ACA4]">
+            {state.label}
+          </p>
+          <p
+            className="mt-[10px] font-serif text-[#1A1A18]"
+            style={{
+              fontSize: "52px",
+              fontWeight: 500,
+              letterSpacing: "-0.04em",
+              lineHeight: 1,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            {formatMoney(state.amount)}
+          </p>
+          <p className="mt-[7px] font-sans text-[13px] text-[#B0ACA4]">
+            {state.subtitle}
+          </p>
+
+          {state.rows.length > 0 && (
+            <div className="mt-[26px] space-y-[12px]">
+              {state.rows.map((row, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <span className="font-sans text-[13.5px] text-[#B0ACA4]">
+                    {row.label}
+                  </span>
+                  <span
+                    className={cn(
+                      "font-sans text-[13.5px]",
+                      row.dark
+                        ? "font-semibold text-[#1A1A18]"
+                        : "font-normal text-[#B0ACA4]",
+                    )}
+                  >
+                    {row.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
+}
+
+function dateShort(iso?: string): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }

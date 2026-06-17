@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, Paperclip } from "lucide-react";
 import { EASE } from "@/components/motion";
 import { cn } from "@/lib/utils";
 import { CelebrationBurst } from "@/components/CelebrationBurst";
@@ -13,9 +13,11 @@ import { Reveal } from "../../ui/Reveal";
 import { findInDirectory } from "../../store/directory";
 import { Link, useRouter } from "../../router";
 import { formatMoney, parseMoneyToCents, dateLong } from "../../store/format";
-import { submitRequest } from "../../store/requests";
+import { submitRequest, saveAttachmentFiles } from "../../store/requests";
 import { useToast } from "../../ui/Toast";
 import { useAccount, useProfile } from "../../store/session";
+import type { RequestAttachment } from "../../types";
+import { AttachmentChip, AttachmentViewer, getInitialAttachmentType } from "../../ui/AttachmentViewer";
 
 /**
  * Send-a-request flow — for people reaching out to a ReachMe
@@ -65,6 +67,21 @@ export function SendRequest({ handle }: { handle: string }) {
   const [category, setCategory] = useState<string>("");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [attachments, setAttachments] = useState<RequestAttachment[]>([]);
+  const [viewAttachment, setViewAttachment] = useState<RequestAttachment | null>(null);
+  const fileMap = useRef<Map<string, File>>(new Map());
+  const attachmentsRef = useRef(attachments);
+  attachmentsRef.current = attachments;
+  useEffect(() => {
+    return () => {
+      attachmentsRef.current.forEach((a) => {
+        if (a.url?.startsWith("blob:")) {
+          URL.revokeObjectURL(a.url);
+        }
+      });
+      fileMap.current.clear();
+    };
+  }, []);
   const [amountStr, setAmountStr] = useState<string>(
     profile
       ? String(buildAmountTiers(profile.minAmountCents)[1].cents / 100)
@@ -73,6 +90,7 @@ export function SendRequest({ handle }: { handle: string }) {
   const amountCents = parseMoneyToCents(amountStr);
 
   const stepRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     stepRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [step]);
@@ -180,7 +198,57 @@ export function SendRequest({ handle }: { handle: string }) {
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
 
-  const submit = () => {
+  const onAddFile = () => fileInputRef.current?.click();
+
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    for (const file of Array.from(files)) {
+      try {
+        const type = await getInitialAttachmentType(file);
+        const url = URL.createObjectURL(file);
+        setAttachments((prev) => [
+          ...prev,
+          { type, url, name: file.name, size: file.size },
+        ]);
+        fileMap.current.set(url, file);
+      } catch {
+        toast.show("Couldn't attach file.");
+      }
+    }
+
+    e.target.value = "";
+  };
+
+  const onRemoveAttachment = (index: number) => {
+    setAttachments((prev) => {
+      const removed = prev[index];
+      if (removed?.url?.startsWith("blob:")) {
+        URL.revokeObjectURL(removed.url);
+        fileMap.current.delete(removed.url);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const submit = async () => {
+    // Collect the raw File objects before submitting. The new
+    // attachment cache hands the bytes straight through — no
+    // base64 round-trip on the main thread.
+    const files: File[] = [];
+    const stripped: RequestAttachment[] = [];
+    for (const a of attachments) {
+      if (!a.url) continue;
+      const file = fileMap.current.get(a.url);
+      if (file) {
+        files.push(file);
+        stripped.push({ ...a, url: undefined });
+      } else {
+        stripped.push(a);
+      }
+    }
+
     const result = submitRequest({
       toHandle: profile.handle,
       from: {
@@ -192,12 +260,26 @@ export function SendRequest({ handle }: { handle: string }) {
       category,
       subject: subject.trim(),
       message: message.trim(),
+      attachments: files.length > 0 ? stripped : undefined,
       amountCents,
     });
     if (!result.ok) {
       toast.show(result.reason);
       return;
     }
+
+    if (files.length > 0) {
+      saveAttachmentFiles(result.record.id, "msg", files);
+    }
+
+    attachments.forEach((a) => {
+      if (a.url?.startsWith("blob:")) {
+        URL.revokeObjectURL(a.url);
+      }
+    });
+    fileMap.current.clear();
+    setAttachments([]);
+
     setDone({
       id: result.record.id,
       expiresAt: result.record.expiresAt,
@@ -276,8 +358,14 @@ export function SendRequest({ handle }: { handle: string }) {
                     <StepMessage
                       subject={subject}
                       message={message}
+                      attachments={attachments}
                       onSubject={setSubject}
                       onMessage={setMessage}
+                      onAddFile={onAddFile}
+                      onFileChange={onFileChange}
+                      onRemoveAttachment={onRemoveAttachment}
+                      onViewAttachment={setViewAttachment}
+                      fileInputRef={fileInputRef}
                     />
                   )}
                   {step === 3 && (
@@ -295,6 +383,8 @@ export function SendRequest({ handle }: { handle: string }) {
                       category={category}
                       subject={subject}
                       message={message}
+                      attachments={attachments}
+                      onViewAttachment={setViewAttachment}
                       cents={amountCents}
                     />
                   )}
@@ -348,6 +438,12 @@ export function SendRequest({ handle }: { handle: string }) {
           />
         )}
       </main>
+
+      <AttachmentViewer
+        attachment={viewAttachment}
+        open={viewAttachment !== null}
+        onClose={() => setViewAttachment(null)}
+      />
     </div>
   );
 }
@@ -592,13 +688,25 @@ function StepCategory({
 function StepMessage({
   subject,
   message,
+  attachments,
   onSubject,
   onMessage,
+  onAddFile,
+  onFileChange,
+  onRemoveAttachment,
+  onViewAttachment,
+  fileInputRef,
 }: {
   subject: string;
   message: string;
+  attachments: RequestAttachment[];
   onSubject: (s: string) => void;
   onMessage: (s: string) => void;
+  onAddFile: () => void;
+  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemoveAttachment: (index: number) => void;
+  onViewAttachment: (a: RequestAttachment) => void;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
 }) {
   return (
     <div>
@@ -625,6 +733,40 @@ function StepMessage({
           helper="A few short paragraphs. The amount you attach earns this message a careful read; the message earns the reply."
         />
       </div>
+
+      <div className="mt-4 flex items-center justify-between gap-4">
+        <button
+          type="button"
+          onClick={onAddFile}
+          className="inline-flex items-center gap-2 rounded-full border border-[hsl(var(--rule-strong))] px-4 py-2 text-[13px] text-[hsl(var(--ink))] transition-colors hover:border-[hsl(var(--ink))]"
+        >
+          <Paperclip size={16} strokeWidth={1.5} aria-hidden="true" />
+          Attach file
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={onFileChange}
+        />
+        <span className="text-[12px] text-[hsl(var(--ink-subtle))]">
+          Any file type
+        </span>
+      </div>
+
+      {attachments.length > 0 && (
+        <div className="mt-4 flex gap-2 overflow-x-auto scrollbar-none pb-1">
+          {attachments.map((a, i) => (
+            <AttachmentChip
+              key={i}
+              attachment={a}
+              onRemove={() => onRemoveAttachment(i)}
+              onClick={() => onViewAttachment(a)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -753,6 +895,8 @@ function StepReview({
   category,
   subject,
   message,
+  attachments,
+  onViewAttachment,
   cents,
 }: {
   profile: NonNullable<ReturnType<typeof findInDirectory>>;
@@ -765,6 +909,8 @@ function StepReview({
   category: string;
   subject: string;
   message: string;
+  attachments: RequestAttachment[];
+  onViewAttachment: (a: RequestAttachment) => void;
   cents: number;
 }) {
   const cat = profile.categories.find((c) => c.id === category);
@@ -836,6 +982,25 @@ function StepReview({
           </p>
         </div>
       </div>
+
+      {/* Attachments — included with the request, openable by both sides. */}
+      {attachments.length > 0 && (
+        <div className="mt-6">
+          <p className="mb-3 text-[10.5px] font-medium uppercase tracking-[0.22em] text-[hsl(var(--ink-subtle))]">
+            Attachments
+          </p>
+          <ul className="flex flex-wrap gap-2">
+            {attachments.map((a, i) => (
+              <li key={i}>
+                <AttachmentChip
+                  attachment={a}
+                  onClick={() => onViewAttachment(a)}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <p className="mt-7 text-[12px] leading-[1.6] text-[hsl(var(--ink-subtle))]">
         By sending, you agree to ReachMe's escrow terms: held on submit,

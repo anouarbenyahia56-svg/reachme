@@ -11,6 +11,102 @@ import { findInDirectory } from "./directory";
 import { getProfile } from "./session";
 import { useExternal } from "./useExternal";
 
+// ─── Attachment storage ────────────────────────────────────────────
+//
+// Attachments are kept out of React state. The store holds the raw
+// `File` objects in memory and creates short `blob:` URLs lazily on
+// first access. Two reasons this matters:
+//
+//   1. Base64 data URLs are ~33% larger than the binary, fully
+//      serialized through React's render pipeline, and force the
+//      browser to decode megabytes of base64 into pixels for every
+//      re-render. Blob URLs are tiny strings the browser resolves
+//      natively against the already-decoded file.
+//   2. Sending (or re-opening) a request with N attachments used
+//      to call `readFileAsDataURL` on every file synchronously on
+//      the main thread, blocking the UI for the duration. We now
+//      hand the `File` straight through.
+//
+// The cache is keyed `requestId::scope::index` so the sender's
+// message attachments and the owner's reply attachments can share
+// a request id without colliding. The URL cache wraps each File in
+// a blob URL the first time it's asked for and reuses that URL
+// thereafter; the URL is revoked when the slot is overwritten or
+// cleared.
+
+const attachmentFileCache = new Map<string, File>();
+const attachmentBlobUrlCache = new Map<string, string>();
+
+export type AttachmentScope = "msg" | "reply";
+
+function attachmentCacheKey(
+  requestId: string,
+  scope: AttachmentScope,
+  index: number,
+): string {
+  return `${requestId}::${scope}::${index}`;
+}
+
+/** Persist the raw files for a request. The array must align with
+ *  the attachment metadata stored on the record (same length, same
+ *  order). Blob URLs are pre-created so the first render of the
+ *  bubbles is immediate. */
+export function saveAttachmentFiles(
+  requestId: string,
+  scope: AttachmentScope,
+  files: ArrayLike<File | undefined>,
+): void {
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    if (!file) continue;
+    const key = attachmentCacheKey(requestId, scope, i);
+    attachmentFileCache.set(key, file);
+    const prev = attachmentBlobUrlCache.get(key);
+    if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+    attachmentBlobUrlCache.set(key, URL.createObjectURL(file));
+  }
+}
+
+/** Synchronous lookup: returns the blob URL if the attachment is
+ *  already cached, otherwise `undefined`. The bubble uses this on
+ *  every render; the first time it returns undefined the URL is
+ *  created on the next save (or on hydration from the in-memory
+ *  cache after a page mount). */
+export function getAttachmentUrl(
+  requestId: string,
+  scope: AttachmentScope,
+  index: number,
+): string | undefined {
+  return attachmentBlobUrlCache.get(attachmentCacheKey(requestId, scope, index));
+}
+
+/** Revoke the blob URL and drop the File reference. Used when an
+ *  attachment is removed or the request is cleared. */
+export function revokeAttachmentUrl(
+  requestId: string,
+  scope: AttachmentScope,
+  index: number,
+): void {
+  const key = attachmentCacheKey(requestId, scope, index);
+  const url = attachmentBlobUrlCache.get(key);
+  if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+  attachmentBlobUrlCache.delete(key);
+  attachmentFileCache.delete(key);
+}
+
+/** Drop every cached attachment for a request (both sender's
+ *  message and owner's reply). */
+export function clearAttachmentCache(requestId: string): void {
+  const prefix = `${requestId}::`;
+  for (const key of Array.from(attachmentBlobUrlCache.keys())) {
+    if (!key.startsWith(prefix)) continue;
+    const url = attachmentBlobUrlCache.get(key);
+    if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+    attachmentBlobUrlCache.delete(key);
+    attachmentFileCache.delete(key);
+  }
+}
+
 /**
  * Requests store — owner's inbox and sender's outbox.
  *
@@ -123,6 +219,9 @@ export interface SubmitInput {
   category: string;
   subject: string;
   message: string;
+  /** Attachments supplied by the sender. Stored as data URLs so both
+   *  sides can open and download them. */
+  attachments?: RequestAttachment[];
   amountCents: number;
 }
 
@@ -162,6 +261,15 @@ export function submitRequest(
     now.getTime() + owner.replyWindowDays * MS_PER_DAY,
   );
 
+  // The blob URLs from compose state are stripped before the record
+  // is persisted — localStorage would otherwise fill with megabytes
+  // of base64 and fail at the quota wall. The actual files are
+  // handed to `saveAttachmentFiles` by the caller; the in-memory
+  // cache resolves them back to short blob URLs on demand.
+  const storedAttachments = input.attachments?.map(
+    ({ url: _url, ...rest }) => rest,
+  );
+
   const record: RequestRecord = {
     id: uid(),
     conversationId: getConversationId(input.from.email, owner.handle),
@@ -172,6 +280,7 @@ export function submitRequest(
     category: input.category,
     subject: input.subject.trim(),
     message: input.message.trim(),
+    ...(storedAttachments?.length ? { attachments: storedAttachments } : {}),
     amountCents: input.amountCents,
     status: "pending",
     createdAt: now.toISOString(),
@@ -206,6 +315,12 @@ export function replyToRequest(
   const hasAttachments = attachments && attachments.length > 0;
   if (!hasBody && !hasAttachments) return false;
 
+  // Strip data URLs before storing — they're too large for localStorage.
+  // Actual URLs are kept in the in-memory attachmentUrlCache.
+  const storedAttachments = hasAttachments
+    ? attachments!.map(({ url: _, ...rest }) => rest)
+    : undefined;
+
   const now = new Date().toISOString();
   let changed = false;
   const update = <T extends RequestRecord>(r: T): T => {
@@ -216,7 +331,7 @@ export function replyToRequest(
       status: "replied",
       reply: {
         ...(hasBody ? { body: body!.trim() } : {}),
-        ...(hasAttachments ? { attachments } : {}),
+        ...(storedAttachments ? { attachments: storedAttachments } : {}),
         repliedAt: now,
       },
       escrow: {
