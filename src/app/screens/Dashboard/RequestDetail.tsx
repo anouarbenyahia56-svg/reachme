@@ -827,7 +827,7 @@ const DocumentBubble = memo(function DocumentBubble({
         onClick={handleDownload}
         aria-label={`Download ${attachment.name || meta.label}`}
         className={cn(
-          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
+          "absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors",
           side === "left"
             ? "text-[hsl(var(--ink-muted))] hover:bg-[hsl(var(--rule))]/50 hover:text-[hsl(var(--ink))]"
             : "text-[hsl(var(--page))]/70 hover:bg-[hsl(var(--page))]/10 hover:text-[hsl(var(--page))]",
