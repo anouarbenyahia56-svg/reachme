@@ -241,7 +241,7 @@ export function RequestDetail({ id }: { id: string }) {
              as the header so it lines up under the pill's left and right
              edges. */}
         <div
-          className="min-h-0 flex-1 overflow-y-auto scrollbar-none [--pill-top:20px] [--pill-pad-x:20px] [--pill-radius:34px] md:[--pill-top:24px] md:[--pill-pad-x:28px]"
+          className="min-h-0 flex-1 flex flex-col overflow-y-auto scrollbar-none [--pill-top:20px] [--pill-pad-x:20px] [--pill-radius:34px] md:[--pill-top:24px] md:[--pill-pad-x:28px]"
           style={{
             maskImage:
               "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0) calc(var(--pill-top) + var(--pill-radius)), rgba(0,0,0,1) calc(var(--pill-top) + var(--pill-radius)), rgba(0,0,0,1) 100%), radial-gradient(circle at calc(var(--pill-pad-x) + var(--pill-radius)) calc(var(--pill-top) + var(--pill-radius)), rgba(0,0,0,1) var(--pill-radius), rgba(0,0,0,0) var(--pill-radius)), radial-gradient(circle at calc(100% - var(--pill-pad-x) - var(--pill-radius)) calc(var(--pill-top) + var(--pill-radius)), rgba(0,0,0,1) var(--pill-radius), rgba(0,0,0,0) var(--pill-radius)), linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.4) 100%)",
@@ -251,7 +251,11 @@ export function RequestDetail({ id }: { id: string }) {
             WebkitMaskComposite: "source-over",
           }}
         >
-          <div className="space-y-6 px-5 pt-28 pb-6 md:px-7 md:pt-28 md:pb-8">
+          {/* Messages area — min-h-full so the status line is always pushed
+              to the very bottom regardless of message length. The messages
+              live inside this wrapper so they scroll normally while the
+              status line stays anchored at the bottom of the card. */}
+          <div className="min-h-full flex-1 space-y-6 px-5 pt-28 pb-6 md:px-7 md:pt-28 md:pb-8">
             {/* Sender message */}
             <div className="flex items-end">
               <div className="flex max-w-[85%] flex-col gap-2">
@@ -293,25 +297,24 @@ export function RequestDetail({ id }: { id: string }) {
                 </div>
               </div>
             )}
-
-            {/* Status line — lives inside the scroll area so it scrolls
-                with the messages instead of staying pinned below the card. */}
-            {r.status !== "pending" && (
-              <div className="flex items-center justify-center gap-2 pt-2 text-[11.5px] text-[hsl(var(--ink-subtle))]">
-                {r.status === "replied" ? (
-                  <>
-                    <Check size={13} strokeWidth={1.6} />
-                    Replied {timeShort(r.reply!.repliedAt)}
-                  </>
-                ) : (
-                  <>
-                    <Clock size={13} strokeWidth={1.6} />
-                    Expired
-                  </>
-                )}
-              </div>
-            )}
           </div>
+
+          {/* Status line — always pinned to the very bottom of the scroll area. */}
+          {r.status !== "pending" && (
+            <div className="shrink-0 flex items-center justify-center gap-2 px-5 pb-6 pt-2 text-[11.5px] text-[hsl(var(--ink-subtle))] md:px-7 md:pb-8">
+              {r.status === "replied" ? (
+                <>
+                  <Check size={13} strokeWidth={1.6} />
+                  Replied {timeShort(r.reply!.repliedAt)}
+                </>
+              ) : (
+                <>
+                  <Clock size={13} strokeWidth={1.6} />
+                  Expired
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Header — pill-shaped identity bar with avatar, name, and category.
