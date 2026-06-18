@@ -232,11 +232,23 @@ export function RequestDetail({ id }: { id: string }) {
             background; the pill's own rounded-full corners are what clip
             the visual cleanly at its bottom curve. Content that has emerged
             above the pill — the strip between the top of the card and the
-            top of the pill — is dimmed by the gradient band below, so the
-            user can still see it but at noticeably reduced opacity. Content
-            uses the same horizontal padding as the header so it lines up
-            under the pill's left and right edges. */}
-        <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
+            top of the pill — is rendered at reduced opacity via a per-pixel
+            mask on this scroll container. The mask is a property of the
+            container (not an overlay element), and its hard edge is at the
+            pill's top edge, so the triangular regions beside the pill's
+            bottom rounded corners stay completely outside the dimmed area
+            and render at full opacity. Content uses the same horizontal
+            padding as the header so it lines up under the pill's left and
+            right edges. */}
+        <div
+          className="min-h-0 flex-1 overflow-y-auto scrollbar-none [--pill-top:20px] md:[--pill-top:24px]"
+          style={{
+            maskImage:
+              "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.4) var(--pill-top), rgba(0,0,0,1) var(--pill-top), rgba(0,0,0,1) 100%)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.4) var(--pill-top), rgba(0,0,0,1) var(--pill-top), rgba(0,0,0,1) 100%)",
+          }}
+        >
           <div className="space-y-6 px-5 pt-28 pb-6 md:px-7 md:pt-28 md:pb-8">
             {/* Sender message */}
             <div className="flex items-end">
@@ -300,23 +312,6 @@ export function RequestDetail({ id }: { id: string }) {
           </div>
         </div>
 
-        {/* Dimming band — covers the strip between the top of the card and
-            the top of the pill. Content that has scrolled up past the pill
-            and emerged above it shows through this gradient at reduced
-            opacity — visible enough to read, clearly dimmed. Sits below
-            the pill in z-order so the pill's opaque background and rounded
-            bottom corners remain the final word on what's visible at and
-            behind the curve. pointer-events-none lets touches pass through
-            to the scroll container underneath. */}
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-5 md:h-6"
-          style={{
-            background:
-              "linear-gradient(to bottom, hsl(var(--ink) / 0.22) 0%, hsl(var(--ink) / 0.13) 55%, hsl(var(--ink) / 0.05) 100%)",
-          }}
-          aria-hidden="true"
-        />
-
         {/* Header — pill-shaped identity bar with avatar, name, and category.
             Positioned absolutely on top of the scroll area with a solid
             opaque background so content scrolling up behind it is
@@ -325,7 +320,10 @@ export function RequestDetail({ id }: { id: string }) {
             stays fully visible one pixel before the curve, then disappears
             behind the pill. pointer-events-none on the header lets
             touch/click on the pill area pass through to the scroll
-            container underneath, so scrolling still works there. */}
+            container underneath, so scrolling still works there. The
+            mask on the scroll container (see above) is what handles the
+            dimming of content that has scrolled above the pill — nothing
+            extra sits on top of the pill area itself. */}
         <header className="pointer-events-none absolute inset-x-0 top-0 z-10 px-5 pt-5 md:px-7 md:pt-6">
             <div className="pointer-events-auto flex w-full items-center gap-3 rounded-full bg-[hsl(var(--page))] px-4 py-2.5 ring-1 ring-[hsl(var(--rule))]">
             <Avatar
