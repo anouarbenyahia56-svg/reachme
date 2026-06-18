@@ -226,27 +226,29 @@ export function RequestDetail({ id }: { id: string }) {
         <div className="lg:col-span-8">
           <Card className="relative flex h-[640px] flex-col overflow-hidden rounded-[32px] border-[hsl(var(--rule))] bg-[hsl(var(--surface))] shadow-elevated">
         {/* Chat area — the pill is overlaid on top of this scroll container
-            (see <header> below). Content below the pill scrolls at full
-            opacity with no effects whatsoever. Content that scrolls up past
-            the pill is completely hidden by the pill's solid opaque
-            background; the pill's own rounded-full corners are what clip
-            the visual cleanly at its bottom curve. Content that has emerged
-            above the pill — the strip between the top of the card and the
-            top of the pill — is rendered at reduced opacity via a per-pixel
-            mask on this scroll container. The mask is a property of the
-            container (not an overlay element), and its hard edge is at the
-            pill's top edge, so the triangular regions beside the pill's
-            bottom rounded corners stay completely outside the dimmed area
-            and render at full opacity. Content uses the same horizontal
-            padding as the header so it lines up under the pill's left and
-            right edges. */}
+             (see <header> below). Content below the pill scrolls at full
+             opacity with no effects whatsoever. Content that scrolls up past
+             the pill is completely hidden by the pill's solid opaque
+             background; the pill's own rounded-full corners are what clip
+             the visual cleanly at its bottom curve. Content that has emerged
+             above the pill — the strip between the top of the card and the
+             top of the pill, plus the triangular pockets beside the pill's
+             top rounded corners — is rendered at reduced opacity via a
+             per-pixel mask on this scroll container. The mask is a property
+             of the container (not an overlay element), and its boundary
+             follows the pill's rounded top edge, so no scrolled-past fragment
+             stays at full opacity. Content uses the same horizontal padding
+             as the header so it lines up under the pill's left and right
+             edges. */}
         <div
-          className="min-h-0 flex-1 overflow-y-auto scrollbar-none [--pill-top:20px] md:[--pill-top:24px]"
+          className="min-h-0 flex-1 overflow-y-auto scrollbar-none [--pill-top:20px] [--pill-pad-x:20px] [--pill-radius:34px] md:[--pill-top:24px] md:[--pill-pad-x:28px]"
           style={{
             maskImage:
-              "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.4) var(--pill-top), rgba(0,0,0,1) var(--pill-top), rgba(0,0,0,1) 100%)",
+              "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0) calc(var(--pill-top) + var(--pill-radius)), rgba(0,0,0,1) calc(var(--pill-top) + var(--pill-radius)), rgba(0,0,0,1) 100%), radial-gradient(circle at calc(var(--pill-pad-x) + var(--pill-radius)) calc(var(--pill-top) + var(--pill-radius)), rgba(0,0,0,1) var(--pill-radius), rgba(0,0,0,0) var(--pill-radius)), radial-gradient(circle at calc(100% - var(--pill-pad-x) - var(--pill-radius)) calc(var(--pill-top) + var(--pill-radius)), rgba(0,0,0,1) var(--pill-radius), rgba(0,0,0,0) var(--pill-radius)), linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.4) 100%)",
             WebkitMaskImage:
-              "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.4) var(--pill-top), rgba(0,0,0,1) var(--pill-top), rgba(0,0,0,1) 100%)",
+              "linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0) calc(var(--pill-top) + var(--pill-radius)), rgba(0,0,0,1) calc(var(--pill-top) + var(--pill-radius)), rgba(0,0,0,1) 100%), radial-gradient(circle at calc(var(--pill-pad-x) + var(--pill-radius)) calc(var(--pill-top) + var(--pill-radius)), rgba(0,0,0,1) var(--pill-radius), rgba(0,0,0,0) var(--pill-radius)), radial-gradient(circle at calc(100% - var(--pill-pad-x) - var(--pill-radius)) calc(var(--pill-top) + var(--pill-radius)), rgba(0,0,0,1) var(--pill-radius), rgba(0,0,0,0) var(--pill-radius)), linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.4) 100%)",
+            maskComposite: "add",
+            WebkitMaskComposite: "source-over",
           }}
         >
           <div className="space-y-6 px-5 pt-28 pb-6 md:px-7 md:pt-28 md:pb-8">
