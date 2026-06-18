@@ -802,7 +802,7 @@ const DocumentBubble = memo(function DocumentBubble({
       >
         {meta.icon}
       </span>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 pr-12">
         <p
           className={cn(
             "truncate text-[14px] font-medium leading-tight",
