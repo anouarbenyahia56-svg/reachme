@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
+import { useState, useRef, useEffect, useCallback, memo } from "react";
 import {
   ArrowLeft,
   Check,
@@ -7,7 +7,6 @@ import {
   Paperclip,
   Mic,
   Send,
-  Play,
   Download,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -552,18 +551,9 @@ const AttachmentBubble = memo(function AttachmentBubble({
       />
     );
   }
-  if (attachment.type === "voice" || attachment.type === "video") {
-    return (
-      <AudioBubble
-        attachment={{ ...attachment, url }}
-        time={time}
-        side={side}
-        onView={onView}
-      />
-    );
-  }
+
   return (
-    <DocumentBubble
+    <ChatAttachmentBubble
       attachment={{ ...attachment, url }}
       time={time}
       side={side}
@@ -597,25 +587,17 @@ const ImageBubble = memo(function ImageBubble({
     onView(attachment, requestId, scope, index);
   }, [onView, attachment, requestId, scope, index]);
 
-  const handleDownload = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      downloadAttachment({ type: "image", url, name });
-    },
-    [url, name],
-  );
-
   return (
     <div
       className={cn(
-        "group relative max-w-[85%] overflow-hidden rounded-[22px] bg-[hsl(var(--rule))]/40",
+        "group relative h-14 w-14 min-h-14 max-h-14 min-w-14 max-w-14 shrink-0 basis-14 overflow-hidden rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--page))] shadow-sm transition-colors duration-200 hover:border-[hsl(var(--ink))]/30",
         side === "left" ? "rounded-tl-md" : "rounded-tr-md",
       )}
     >
       <button
         type="button"
         onClick={handleView}
-        className="block w-full focus:outline-none"
+        className="block h-full w-full focus:outline-none"
         aria-label={name || "Open image"}
       >
         <img
@@ -623,129 +605,18 @@ const ImageBubble = memo(function ImageBubble({
           alt={name || "Image"}
           loading="lazy"
           decoding="async"
-          className="block max-h-[320px] min-h-[160px] w-full object-cover"
+          className="h-full w-full object-cover"
           draggable={false}
         />
       </button>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/35 to-transparent" />
-      <span className="absolute bottom-2 right-3 text-[11px] font-medium text-white/90">
-        {timeShort(time)}
-      </span>
-      <button
-        type="button"
-        onClick={handleDownload}
-        aria-label="Download image"
-        className="absolute right-2 top-2 rounded-full bg-black/40 p-1.5 text-white/90 opacity-0 transition-opacity duration-150 group-hover:opacity-100 focus:opacity-100"
-      >
-        <Download size={12} strokeWidth={1.6} />
-      </button>
-    </div>
-  );
-});
-
-const AudioBubble = memo(function AudioBubble({
-  attachment,
-  time,
-  side,
-  onView,
-}: {
-  attachment: RequestAttachment;
-  time: string;
-  side: "left" | "right";
-  onView: BubbleView;
-}) {
-  const duration = attachment.duration ?? 0;
-  const formattedDuration = formatDuration(duration);
-
-  const handleClick = useCallback(() => {
-    onView(attachment, "", "msg", -1);
-  }, [onView, attachment]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        handleClick();
-      }
-    },
-    [handleClick],
-  );
-
-  // Waveform is derived from the URL but, for blob URLs, that
-  // changes once when the file is cached. Memoize on the URL so
-  // typing in the reply input doesn't re-hash the string.
-  const bars = useMemo(
-    () => waveformBars(attachment.url ?? ""),
-    [attachment.url],
-  );
-
-  return (
-    <div
-      onClick={handleClick}
-      onKeyDown={handleKeyDown}
-      role="button"
-      tabIndex={0}
-      className={cn(
-        "relative flex max-w-[85%] min-w-[220px] cursor-pointer items-center gap-3 rounded-[22px] px-3.5 py-3",
-        side === "left"
-          ? "rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
-          : "rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
-      )}
-    >
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleClick();
-        }}
-        aria-label="Open audio"
-        className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors",
-          side === "left"
-            ? "bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
-            : "bg-[hsl(var(--page))] text-[hsl(var(--ink))]",
-        )}
-      >
-        <Play size={14} strokeWidth={1.8} />
-      </button>
-
-      <div className="flex flex-1 items-center gap-[3px]">
-        {bars.map((h, i) => (
-          <span
-            key={i}
-            className={cn(
-              "w-[3px] rounded-full",
-              side === "left" ? "bg-[hsl(var(--ink))]/20" : "bg-[hsl(var(--page))]/25",
-            )}
-            style={{ height: `${h}%` }}
-          />
-        ))}
-      </div>
-
-      {formattedDuration && (
-        <span
-          className={cn(
-            "mr-2 text-[11px] tabular-nums",
-            side === "left" ? "text-[hsl(var(--ink-muted))]" : "text-[hsl(var(--page))]/70",
-          )}
-        >
-          {formattedDuration}
-        </span>
-      )}
-
-      <span
-        className={cn(
-          "absolute bottom-2 right-3 text-[11px] tabular-nums",
-          side === "left" ? "text-[hsl(var(--ink-subtle))]" : "text-[hsl(var(--page))]/70",
-        )}
-      >
+      <span className="absolute bottom-2 right-2 text-[11px] font-medium text-white/90 drop-shadow-md">
         {timeShort(time)}
       </span>
     </div>
   );
 });
 
-const DocumentBubble = memo(function DocumentBubble({
+const ChatAttachmentBubble = memo(function ChatAttachmentBubble({
   attachment,
   time,
   side,
@@ -788,10 +659,10 @@ const DocumentBubble = memo(function DocumentBubble({
       role="button"
       tabIndex={0}
       className={cn(
-        "relative flex h-14 w-[280px] min-w-[280px] max-w-[280px] shrink-0 cursor-pointer items-center gap-3 overflow-hidden rounded-2xl px-4 py-3",
+        "relative flex h-14 w-[280px] min-w-[280px] max-w-[280px] shrink-0 cursor-pointer items-center gap-3 overflow-hidden rounded-2xl px-4 py-3 shadow-sm transition-colors transition-shadow duration-200",
         side === "left"
-          ? "rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
-          : "rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
+          ? "rounded-tl-md border border-[hsl(var(--rule))] bg-[hsl(var(--page))] hover:border-[hsl(var(--ink))]/30 hover:shadow-md"
+          : "rounded-tr-md border border-[hsl(var(--page))]/10 bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:border-[hsl(var(--page))]/20 hover:shadow-md",
       )}
     >
       <span
@@ -836,7 +707,14 @@ const DocumentBubble = memo(function DocumentBubble({
         <Download size={14} strokeWidth={1.6} />
       </button>
 
-      <Timestamp time={time} side={side} />
+      <span
+        className={cn(
+          "absolute bottom-2 right-3 text-[11px] tabular-nums",
+          side === "left" ? "text-[hsl(var(--ink-subtle))]" : "text-[hsl(var(--page))]/70",
+        )}
+      >
+        {timeShort(time)}
+      </span>
     </div>
   );
 });
@@ -880,31 +758,6 @@ function InputIconButton({
       {icon}
     </button>
   );
-}
-
-// ────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ────────────────────────────────────────────────────────────────────────────
-
-function formatDuration(seconds: number): string | null {
-  if (!seconds || seconds <= 0) return null;
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
-/** Generate a deterministic, varied waveform from an attachment URL. */
-function waveformBars(url: string, count = 24): number[] {
-  let hash = 0;
-  for (let i = 0; i < url.length; i++) {
-    hash = (hash * 31 + url.charCodeAt(i)) | 0;
-  }
-  const out: number[] = [];
-  for (let i = 0; i < count; i++) {
-    const v = Math.abs((Math.sin(hash + i * 13) * 10000) % 100);
-    out.push(20 + v * 0.7);
-  }
-  return out;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
