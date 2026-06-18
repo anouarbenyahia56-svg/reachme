@@ -7,10 +7,8 @@ import {
   Paperclip,
   Mic,
   Send,
-  File,
   Play,
   Download,
-  ExternalLink,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { EASE } from "@/components/motion";
@@ -35,6 +33,7 @@ import {
   AttachmentChip,
   AttachmentViewer,
   downloadAttachment,
+  getAttachmentMeta,
   getInitialAttachmentType,
 } from "../../ui/AttachmentViewer";
 
@@ -757,7 +756,7 @@ const DocumentBubble = memo(function DocumentBubble({
   side: "left" | "right";
   onView: BubbleView;
 }) {
-  const extension = (attachment.name?.split(".").pop() || "file").toUpperCase();
+  const meta = getAttachmentMeta(attachment);
   const size = attachment.size ? formatBytes(attachment.size) : undefined;
 
   const handleClick = useCallback(() => {
@@ -789,69 +788,53 @@ const DocumentBubble = memo(function DocumentBubble({
       role="button"
       tabIndex={0}
       className={cn(
-        "relative flex w-[280px] shrink-0 cursor-pointer items-center gap-3.5 overflow-hidden rounded-[22px] px-4 py-3.5",
+        "relative flex h-14 w-[280px] min-w-[280px] max-w-[280px] shrink-0 cursor-pointer items-center gap-3 overflow-hidden rounded-2xl px-4 py-3",
         side === "left"
           ? "rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
           : "rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
       )}
     >
-      <div
+      <span
         className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px]",
-          side === "left"
-            ? "bg-[hsl(var(--ink))] text-[hsl(var(--page))]"
-            : "bg-[hsl(var(--page))] text-[hsl(var(--ink))]",
+          "shrink-0 transition-colors",
+          side === "left" ? meta.colorClass : "text-[hsl(var(--page))]/70",
         )}
       >
-        <File size={18} strokeWidth={1.6} />
-      </div>
-
+        {meta.icon}
+      </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] font-medium tracking-[-0.005em]">
-          {attachment.name || "Document"}
+        <p
+          className={cn(
+            "truncate text-[14px] font-medium leading-tight",
+            side === "left" ? "text-[hsl(var(--ink))]" : "text-[hsl(var(--page))]",
+          )}
+        >
+          {attachment.name || meta.label}
         </p>
         <p
           className={cn(
-            "text-[11px]",
+            "truncate text-[11px] leading-tight",
             side === "left" ? "text-[hsl(var(--ink-subtle))]" : "text-[hsl(var(--page))]/65",
           )}
         >
-          {extension}
+          {meta.label}
           {size && ` · ${size}`}
         </p>
       </div>
 
-      <div className="flex shrink-0 items-center gap-3">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleClick();
-          }}
-          className={cn(
-            "flex items-center gap-1 text-[11px] transition-colors",
-            side === "left"
-              ? "text-[hsl(var(--ink-muted))] hover:text-[hsl(var(--ink))]"
-              : "text-[hsl(var(--page))]/70 hover:text-[hsl(var(--page))]",
-          )}
-        >
-          <ExternalLink size={11} strokeWidth={1.6} />
-          Open
-        </button>
-        <button
-          type="button"
-          onClick={handleDownload}
-          className={cn(
-            "flex items-center gap-1 text-[11px] transition-colors",
-            side === "left"
-              ? "text-[hsl(var(--ink-muted))] hover:text-[hsl(var(--ink))]"
-              : "text-[hsl(var(--page))]/70 hover:text-[hsl(var(--page))]",
-          )}
-        >
-          <Download size={11} strokeWidth={1.6} />
-          Download
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={handleDownload}
+        aria-label={`Download ${attachment.name || meta.label}`}
+        className={cn(
+          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors",
+          side === "left"
+            ? "text-[hsl(var(--ink-muted))] hover:bg-[hsl(var(--rule))]/50 hover:text-[hsl(var(--ink))]"
+            : "text-[hsl(var(--page))]/70 hover:bg-[hsl(var(--page))]/10 hover:text-[hsl(var(--page))]",
+        )}
+      >
+        <Download size={14} strokeWidth={1.6} />
+      </button>
 
       <Timestamp time={time} side={side} />
     </div>
