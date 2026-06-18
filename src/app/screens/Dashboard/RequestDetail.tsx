@@ -251,11 +251,12 @@ export function RequestDetail({ id }: { id: string }) {
             WebkitMaskComposite: "source-over",
           }}
         >
-          {/* Messages area — min-h-full so the status line is always pushed
-              to the very bottom regardless of message length. The messages
-              live inside this wrapper so they scroll normally while the
-              status line stays anchored at the bottom of the card. */}
-          <div className="min-h-full flex-1 space-y-6 px-5 pt-28 pb-6 md:px-7 md:pt-28 md:pb-8">
+          {/* Messages area — flex-1 lets the messages fill whatever
+              space is available.  When messages are short the status
+              line sits right beneath them (both at the bottom of the
+              card).  When messages overflow, the whole container
+              scrolls and the status line ends up at the very bottom. */}
+          <div className="flex-1 space-y-6 px-5 pt-28 pb-6 md:px-7 md:pt-28 md:pb-8">
             {/* Sender message */}
             <div className="flex items-end">
               <div className="flex max-w-[85%] flex-col gap-2">
