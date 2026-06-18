@@ -789,7 +789,7 @@ const DocumentBubble = memo(function DocumentBubble({
       role="button"
       tabIndex={0}
       className={cn(
-        "relative flex max-w-[90%] min-w-[260px] cursor-pointer items-center gap-3.5 rounded-[22px] px-4 py-3.5",
+        "relative flex w-[280px] shrink-0 cursor-pointer items-center gap-3.5 overflow-hidden rounded-[22px] px-4 py-3.5",
         side === "left"
           ? "rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
           : "rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
@@ -821,7 +821,7 @@ const DocumentBubble = memo(function DocumentBubble({
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-3">
         <button
           type="button"
           onClick={(e) => {
