@@ -1149,9 +1149,11 @@ function TextView({
     };
   }, [attachment.url, attachment.name]);
 
-  if (error || content === null) {
+  if (error) {
     return <FallbackView attachment={attachment} meta={meta} />;
   }
+
+  if (content === null) return null;
 
   return (
     <div className="flex h-[85vh] w-[85vw] flex-col overflow-hidden rounded-2xl bg-[hsl(var(--page))] shadow-2xl">
@@ -1199,9 +1201,11 @@ function SpreadsheetView({
     };
   }, [attachment.url]);
 
-  if (error || rows === null) {
+  if (error) {
     return <FallbackView attachment={attachment} meta={meta} />;
   }
+
+  if (rows === null) return null;
 
   return (
     <div className="flex h-[85vh] w-[85vw] flex-col overflow-hidden rounded-2xl bg-[hsl(var(--page))] shadow-2xl">
@@ -1264,9 +1268,11 @@ function DocumentView({
     };
   }, [attachment.url, attachment.name]);
 
-  if (error || html === null) {
+  if (error) {
     return <FallbackView attachment={attachment} meta={meta} />;
   }
+
+  if (html === null) return null;
 
   return (
     <div className="flex h-[85vh] w-[85vw] flex-col overflow-hidden rounded-2xl bg-[hsl(var(--page))] shadow-2xl">
@@ -1345,9 +1351,11 @@ function PresentationView({
     };
   }, [attachment.url, attachment.name]);
 
-  if (error || slides === null) {
+  if (error) {
     return <FallbackView attachment={attachment} meta={meta} />;
   }
+
+  if (slides === null) return null;
 
   return (
     <div className="flex h-[85vh] w-[85vw] flex-col overflow-hidden rounded-2xl bg-[hsl(var(--page))] shadow-2xl">
@@ -1412,9 +1420,11 @@ function ArchiveView({
     };
   }, [attachment.url, attachment.name]);
 
-  if (error || files === null) {
+  if (error) {
     return <FallbackView attachment={attachment} meta={meta} />;
   }
+
+  if (files === null) return null;
 
   return (
     <div className="flex h-[85vh] w-[85vw] flex-col overflow-hidden rounded-2xl bg-[hsl(var(--page))] shadow-2xl">
