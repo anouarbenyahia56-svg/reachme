@@ -15,27 +15,75 @@ import { useExternal } from "./useExternal";
 //
 // Attachments are kept out of React state. The store holds the raw
 // `File` objects in memory and creates short `blob:` URLs lazily on
-// first access. Two reasons this matters:
-//
-//   1. Base64 data URLs are ~33% larger than the binary, fully
-//      serialized through React's render pipeline, and force the
-//      browser to decode megabytes of base64 into pixels for every
-//      re-render. Blob URLs are tiny strings the browser resolves
-//      natively against the already-decoded file.
-//   2. Sending (or re-opening) a request with N attachments used
-//      to call `readFileAsDataURL` on every file synchronously on
-//      the main thread, blocking the UI for the duration. We now
-//      hand the `File` straight through.
-//
-// The cache is keyed `requestId::scope::index` so the sender's
-// message attachments and the owner's reply attachments can share
-// a request id without colliding. The URL cache wraps each File in
-// a blob URL the first time it's asked for and reuses that URL
-// thereafter; the URL is revoked when the slot is overwritten or
-// cleared.
+// first access. Files are also persisted to IndexedDB so they survive
+// page reloads.
 
 const attachmentFileCache = new Map<string, File>();
 const attachmentBlobUrlCache = new Map<string, string>();
+
+// ─── IndexedDB persistence ─────────────────────────────────────────
+const IDB_DB_NAME = "reachme-attachments";
+const IDB_STORE_NAME = "files";
+const IDB_VERSION = 1;
+
+function openIdb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_DB_NAME, IDB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(IDB_STORE_NAME)) {
+        db.createObjectStore(IDB_STORE_NAME);
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbPut(key: string, file: File): Promise<void> {
+  const db = await openIdb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE_NAME, "readwrite");
+    tx.objectStore(IDB_STORE_NAME).put(file, key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+async function idbDelete(key: string): Promise<void> {
+  const db = await openIdb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE_NAME, "readwrite");
+    tx.objectStore(IDB_STORE_NAME).delete(key);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+
+/** Hydrate the in-memory caches from IndexedDB. Called once at app
+ *  startup so attachment URLs are available synchronously by the
+ *  time the first render happens. */
+export const attachmentHydrated = openIdb()
+  .then((db) => new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE_NAME, "readonly");
+    const store = tx.objectStore(IDB_STORE_NAME);
+    const req = store.openCursor();
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (cursor) {
+        const key = cursor.key as string;
+        const file = cursor.value as File;
+        attachmentFileCache.set(key, file);
+        attachmentBlobUrlCache.set(key, URL.createObjectURL(file));
+        cursor.continue();
+      } else {
+        db.close();
+        resolve();
+      }
+    };
+    req.onerror = () => { db.close(); reject(req.error); };
+  }))
+  .catch(() => {});
 
 export type AttachmentScope = "msg" | "reply";
 
@@ -64,6 +112,7 @@ export function saveAttachmentFiles(
     const prev = attachmentBlobUrlCache.get(key);
     if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
     attachmentBlobUrlCache.set(key, URL.createObjectURL(file));
+    idbPut(key, file).catch(() => {});
   }
 }
 
@@ -92,6 +141,7 @@ export function revokeAttachmentUrl(
   if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
   attachmentBlobUrlCache.delete(key);
   attachmentFileCache.delete(key);
+  idbDelete(key).catch(() => {});
 }
 
 /** Drop every cached attachment for a request (both sender's
@@ -104,6 +154,7 @@ export function clearAttachmentCache(requestId: string): void {
     if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
     attachmentBlobUrlCache.delete(key);
     attachmentFileCache.delete(key);
+    idbDelete(key).catch(() => {});
   }
 }
 

@@ -416,8 +416,10 @@ export const AttachmentChip = memo(function AttachmentChip({
         {meta.icon}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[14px] font-medium leading-tight text-[hsl(var(--ink))]">
-          {attachment.name || meta.label}
+        <p className="overflow-hidden whitespace-nowrap text-[14px] font-medium leading-tight text-[hsl(var(--ink))]">
+          {(attachment.name || meta.label).length > 19
+            ? `${(attachment.name || meta.label).slice(0, 19)}...`
+            : attachment.name || meta.label}
         </p>
         <p className="truncate text-[11px] leading-tight text-[hsl(var(--ink-subtle))]">
           {meta.label}
@@ -434,7 +436,7 @@ export const AttachmentChip = memo(function AttachmentChip({
               downloadAttachment(attachment);
             }}
             aria-label={`Download ${attachment.name || meta.label}`}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[hsl(var(--ink-muted))] transition-colors hover:bg-[hsl(var(--rule))]/50 hover:text-[hsl(var(--ink))]"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[hsl(var(--ink-muted))] opacity-0 transition-all duration-200 group-hover:opacity-100 hover:bg-[hsl(var(--rule))]/50 hover:text-[hsl(var(--ink))]"
           >
             <Download size={14} strokeWidth={1.6} />
           </button>
@@ -687,6 +689,16 @@ function MediaPlayer({
     setMuted(el.muted);
     setPlaybackRate(el.playbackRate);
 
+    // Auto-play once the media is ready
+    const onCanPlay = () => {
+      el.play().catch(() => {});
+    };
+    if (el.readyState >= 2) {
+      el.play().catch(() => {});
+    } else {
+      el.addEventListener("canplay", onCanPlay, { once: true });
+    }
+
     return () => {
       el.removeEventListener("timeupdate", onTimeUpdate);
       el.removeEventListener("durationchange", onDurationChange);
@@ -695,6 +707,7 @@ function MediaPlayer({
       el.removeEventListener("ended", onEnded);
       el.removeEventListener("volumechange", onVolumeChange);
       el.removeEventListener("ratechange", onRateChange);
+      el.removeEventListener("canplay", onCanPlay);
       clearControlsTimer();
     };
   }, [src]);

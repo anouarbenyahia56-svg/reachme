@@ -8,6 +8,7 @@ import {
   Mic,
   Send,
   Download,
+  Play,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { EASE } from "@/components/motion";
@@ -257,43 +258,29 @@ export function RequestDetail({ id }: { id: string }) {
           <div className="flex-1 space-y-6 px-5 pt-28 pb-6 md:px-7 md:pt-28 md:pb-8">
             {/* Sender message */}
             <div className="flex items-end">
-              <div className="flex max-w-[85%] flex-col gap-2">
-                <TextBubble text={r.message} time={r.createdAt} side="left" />
-                {r.attachments?.map((a, i) => (
-                  <AttachmentBubble
-                    key={`m-${i}`}
-                    attachment={a}
-                    time={r.createdAt}
-                    side="left"
-                    requestId={r.id}
-                    scope="msg"
-                    index={i}
-                    onView={handleViewAttachment}
-                  />
-                ))}
-              </div>
+              <MessageBubble
+                text={r.message}
+                attachments={r.attachments}
+                time={r.createdAt}
+                side="left"
+                requestId={r.id}
+                scope="msg"
+                onView={handleViewAttachment}
+              />
             </div>
 
             {/* Owner reply */}
             {r.reply && (
               <div className="flex items-end justify-end">
-                <div className="flex max-w-[85%] flex-col items-end gap-2">
-                  {r.reply.body && (
-                    <TextBubble text={r.reply.body} time={r.reply.repliedAt} side="right" />
-                  )}
-                  {r.reply.attachments?.map((a, i) => (
-                    <AttachmentBubble
-                      key={`r-${i}`}
-                      attachment={a}
-                      time={r.reply!.repliedAt}
-                      side="right"
-                      requestId={r.id}
-                      scope="reply"
-                      index={i}
-                      onView={handleViewAttachment}
-                    />
-                  ))}
-                </div>
+                <MessageBubble
+                  text={r.reply.body}
+                  attachments={r.reply.attachments}
+                  time={r.reply!.repliedAt}
+                  side="right"
+                  requestId={r.id}
+                  scope="reply"
+                  onView={handleViewAttachment}
+                />
               </div>
             )}
           </div>
@@ -518,6 +505,7 @@ const AttachmentBubble = memo(function AttachmentBubble({
   scope,
   index,
   onView,
+  showTimestamp = true,
 }: {
   attachment: RequestAttachment;
   time: string;
@@ -526,6 +514,7 @@ const AttachmentBubble = memo(function AttachmentBubble({
   scope: AttachmentScope;
   index: number;
   onView: BubbleView;
+  showTimestamp?: boolean;
 }) {
   // Resolve URL: stored URL takes priority; the cache fills in
   // blob URLs for attachments saved through the new file path.
@@ -536,7 +525,9 @@ const AttachmentBubble = memo(function AttachmentBubble({
     getAttachmentUrl(requestId, scope, index) ||
     "";
 
-  if (attachment.type === "image") {
+  const kind = getAttachmentMeta(attachment).kind;
+
+  if (kind === "image") {
     return (
       <ImageBubble
         url={url}
@@ -548,6 +539,23 @@ const AttachmentBubble = memo(function AttachmentBubble({
         requestId={requestId}
         scope={scope}
         index={index}
+        showTimestamp={showTimestamp}
+      />
+    );
+  }
+
+  if (kind === "video") {
+    return (
+      <VideoBubble
+        url={url}
+        time={time}
+        side={side}
+        onView={onView}
+        attachment={attachment}
+        requestId={requestId}
+        scope={scope}
+        index={index}
+        showTimestamp={showTimestamp}
       />
     );
   }
@@ -558,7 +566,142 @@ const AttachmentBubble = memo(function AttachmentBubble({
       time={time}
       side={side}
       onView={onView}
+      showTimestamp={showTimestamp}
     />
+  );
+});
+
+/** Combined message bubble: attachment(s) on top, text below, one
+ *  container. Falls back to TextBubble or AttachmentBubble when
+ *  only one part exists. */
+const MessageBubble = memo(function MessageBubble({
+  text,
+  attachments,
+  time,
+  side,
+  requestId,
+  scope,
+  onView,
+}: {
+  text?: string;
+  attachments?: RequestAttachment[];
+  time: string;
+  side: "left" | "right";
+  requestId: string;
+  scope: AttachmentScope;
+  onView: BubbleView;
+}) {
+  const hasText = !!text?.trim();
+  const hasAttachments = !!attachments?.length;
+
+  // Only text → standalone text bubble
+  if (hasText && !hasAttachments) {
+    return <TextBubble text={text!} time={time} side={side} />;
+  }
+
+  // Only attachment(s) → standalone attachment bubble(s)
+  if (hasAttachments && !hasText) {
+    return (
+      <>
+        {attachments!.map((a, i) => (
+          <AttachmentBubble
+            key={`${scope}-${i}`}
+            attachment={a}
+            time={time}
+            side={side}
+            requestId={requestId}
+            scope={scope}
+            index={i}
+            onView={onView}
+          />
+        ))}
+      </>
+    );
+  }
+
+  // Single attachment + text → full-form attachment, text below
+  if (attachments!.length === 1) {
+    return (
+      <div
+        className={cn(
+          "relative flex w-fit max-w-[85%] flex-col overflow-hidden rounded-[22px]",
+          side === "left"
+            ? "rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
+            : "rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
+        )}
+      >
+        <div className="flex flex-col gap-2 p-2">
+          <AttachmentBubble
+            key={`${scope}-0`}
+            attachment={attachments![0]}
+            time={time}
+            side={side}
+            requestId={requestId}
+            scope={scope}
+            index={0}
+            onView={onView}
+            showTimestamp={false}
+          />
+        </div>
+        <div className="overflow-hidden [contain:inline-size] px-2 pb-6 pt-1">
+          <p
+            className="whitespace-pre-line"
+            style={{
+              fontSize: "0.96rem",
+              lineHeight: 1.65,
+              letterSpacing: "-0.005em",
+            }}
+          >
+            {text}
+          </p>
+        </div>
+        <Timestamp time={time} side={side} />
+      </div>
+    );
+  }
+
+  // Multiple attachments + text → all as uniform chips, text below
+  return (
+    <div
+      className={cn(
+        "relative flex w-fit max-w-[85%] flex-col overflow-hidden rounded-[22px]",
+        side === "left"
+          ? "rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
+          : "rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
+      )}
+    >
+      <div className="flex flex-col gap-2 p-2">
+        {attachments!.map((a, i) => {
+          const url = a.url || getAttachmentUrl(requestId, scope, i) || "";
+          return (
+            <ChatAttachmentBubble
+              key={`${scope}-${i}`}
+              attachment={{ ...a, url }}
+              time={time}
+              side={side}
+              onView={onView}
+              requestId={requestId}
+              scope={scope}
+              index={i}
+              showTimestamp={false}
+            />
+          );
+        })}
+      </div>
+      <div className="overflow-hidden [contain:inline-size] px-2 pb-6 pt-1">
+        <p
+          className="whitespace-pre-line"
+          style={{
+            fontSize: "0.96rem",
+            lineHeight: 1.65,
+            letterSpacing: "-0.005em",
+          }}
+        >
+          {text}
+        </p>
+      </div>
+      <Timestamp time={time} side={side} />
+    </div>
   );
 });
 
@@ -572,6 +715,7 @@ const ImageBubble = memo(function ImageBubble({
   requestId,
   scope,
   index,
+  showTimestamp = true,
 }: {
   url: string;
   name?: string;
@@ -582,36 +726,293 @@ const ImageBubble = memo(function ImageBubble({
   requestId: string;
   scope: AttachmentScope;
   index: number;
+  showTimestamp?: boolean;
 }) {
+  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+
+  useEffect(() => {
+    if (!url) return;
+    const img = new Image();
+    img.onload = () => setDims({ w: img.naturalWidth, h: img.naturalHeight });
+    img.src = url;
+  }, [url]);
+
   const handleView = useCallback(() => {
     onView(attachment, requestId, scope, index);
   }, [onView, attachment, requestId, scope, index]);
 
+  const handleDownload = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      downloadAttachment(attachment);
+    },
+    [attachment],
+  );
+
+  const aspect = dims ? dims.w / dims.h : 4 / 3;
+
+  // Area-based normalization: all images get the same pixel area
+  // regardless of aspect ratio, clamped to max bounds.
+  const MAX_W = 340;
+  const MAX_H = 280;
+  const MIN_W = 280;
+  const REF_AREA = MAX_W * MAX_H;
+  const srcArea = dims ? dims.w * dims.h : REF_AREA;
+  const area = Math.min(REF_AREA, srcArea);
+  let dw = Math.round(Math.sqrt(area * aspect));
+  let dh = Math.round(dw / aspect);
+  if (dw > MAX_W) { dw = MAX_W; dh = Math.round(dw / aspect); }
+  if (dh > MAX_H) { dh = MAX_H; dw = Math.round(dh * aspect); }
+
+  const bubbleW = Math.max(dw, MIN_W);
+
   return (
     <div
       className={cn(
-        "group relative h-14 w-14 min-h-14 max-h-14 min-w-14 max-w-14 shrink-0 basis-14 overflow-hidden rounded-2xl border border-[hsl(var(--rule))] bg-[hsl(var(--page))] shadow-sm transition-colors duration-200 hover:border-[hsl(var(--ink))]/30",
+        "group relative overflow-hidden rounded-[22px]",
         side === "left" ? "rounded-tl-md" : "rounded-tr-md",
       )}
+      style={{ width: bubbleW, height: dh }}
     >
       <button
         type="button"
         onClick={handleView}
-        className="block h-full w-full focus:outline-none"
+        className="relative flex h-full w-full items-center justify-center focus:outline-none"
         aria-label={name || "Open image"}
       >
+        {dw < MIN_W && (
+          <img
+            src={url}
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover blur-2xl brightness-[0.65]"
+            draggable={false}
+          />
+        )}
         <img
           src={url}
           alt={name || "Image"}
           loading="lazy"
           decoding="async"
-          className="h-full w-full object-cover"
+          className="relative block object-contain"
+          style={{ width: dw, height: dh }}
           draggable={false}
         />
       </button>
-      <span className="absolute bottom-2 right-2 text-[11px] font-medium text-white/90 drop-shadow-md">
-        {timeShort(time)}
-      </span>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/35 to-transparent" />
+      <button
+        type="button"
+        onClick={handleDownload}
+        aria-label={`Download ${name || "image"}`}
+        className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white opacity-0 transition-opacity duration-200 hover:bg-black/60 group-hover:opacity-100"
+      >
+        <Download size={14} strokeWidth={1.6} />
+      </button>
+      {showTimestamp && (
+        <span className="absolute bottom-2 right-3 text-[11px] font-medium text-white/90 drop-shadow-md">
+          {timeShort(time)}
+        </span>
+      )}
+    </div>
+  );
+});
+
+/** Extract the first frame of a video as a data-URL thumbnail. Returns
+ *  null while loading and the data-URL once ready. */
+function useVideoThumbnail(url: string) {
+  const [thumb, setThumb] = useState<string | null>(null);
+  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+
+  useEffect(() => {
+    if (!url) return;
+    let cancelled = false;
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.muted = true;
+    video.playsInline = true;
+    // Do NOT set crossOrigin for blob/data URLs — it causes the
+    // browser to treat them as opaque-origin, blocking canvas draws
+    // and producing a black frame.
+    if (!url.startsWith("blob:") && !url.startsWith("data:")) {
+      video.crossOrigin = "anonymous";
+    }
+    video.src = url;
+
+    const captureFrame = () => {
+      if (cancelled) return;
+      try {
+        const w = video.videoWidth;
+        const h = video.videoHeight;
+        if (w === 0 || h === 0) return;
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        const ctx = c.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(video, 0, 0, w, h);
+        // Detect a fully-black frame (all pixels = 0).  This happens
+        // when the decoder hasn't finished preparing the frame yet.
+        const pixels = ctx.getImageData(0, 0, 1, 1).data;
+        const isEmpty = pixels[0] === 0 && pixels[1] === 0 && pixels[2] === 0 && pixels[3] === 0;
+        if (!isEmpty) {
+          setThumb(c.toDataURL("image/jpeg", 0.6));
+          return true;
+        }
+      } catch {
+        /* tainted canvas or codec error */
+      }
+      return false;
+    };
+
+    video.onloadedmetadata = () => {
+      if (cancelled) return;
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      if (w === 0 || h === 0) return;
+      setDims({ w, h });
+      // Seek to a position that is likely to have a decoded keyframe.
+      // Use 10% of duration (min 0.1s, max 2s) — well past the
+      // first keyframe for most formats while still showing the start.
+      const seekTo = Math.max(0.1, Math.min(2, (video.duration || 1) * 0.1));
+      video.currentTime = seekTo;
+    };
+
+    let attempts = 0;
+    const maxAttempts = 3;
+    // Seek positions to try if the first attempt yields a black frame.
+    const seekPositions = [0.1, 0.5, 1];
+
+    const tryNextPosition = () => {
+      if (cancelled || attempts >= maxAttempts) return;
+      const seekTo = seekPositions[attempts] ?? seekPositions[seekPositions.length - 1];
+      attempts++;
+      video.currentTime = seekTo;
+    };
+
+    video.onseeked = () => {
+      if (cancelled) return;
+      // Give the decoder a frame to paint before reading pixels.
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        if (!captureFrame()) {
+          tryNextPosition();
+        }
+      });
+    };
+
+    video.onerror = () => {
+      /* video failed to load — leave thumb as null */
+    };
+
+    return () => { cancelled = true; };
+  }, [url]);
+
+  return { thumb, dims };
+}
+
+const VideoBubble = memo(function VideoBubble({
+  url,
+  time,
+  side,
+  onView,
+  attachment,
+  requestId,
+  scope,
+  index,
+  showTimestamp = true,
+}: {
+  url: string;
+  time: string;
+  side: "left" | "right";
+  onView: BubbleView;
+  attachment: RequestAttachment;
+  requestId: string;
+  scope: AttachmentScope;
+  index: number;
+  showTimestamp?: boolean;
+}) {
+  const { thumb, dims } = useVideoThumbnail(url);
+  const size = attachment.size ? formatBytes(attachment.size) : undefined;
+
+  const handleView = useCallback(() => {
+    onView(attachment, requestId, scope, index);
+  }, [onView, attachment, requestId, scope, index]);
+
+  // Auto-download: prefetch the blob so playback is instant on click.
+  useEffect(() => {
+    if (!url || url.startsWith("blob:")) return;
+    fetch(url, { credentials: "omit" }).catch(() => {});
+  }, [url]);
+
+  const aspect = dims ? dims.w / dims.h : 16 / 9;
+
+  // Area-based normalization: all videos get the same pixel area
+  // regardless of aspect ratio, clamped to max bounds.
+  const MAX_W = 340;
+  const MAX_H = 280;
+  const MIN_W = 280;
+  const REF_AREA = MAX_W * MAX_H;
+  const srcArea = dims ? dims.w * dims.h : REF_AREA;
+  const area = Math.min(REF_AREA, srcArea);
+  let dw = Math.round(Math.sqrt(area * aspect));
+  let dh = Math.round(dw / aspect);
+  if (dw > MAX_W) { dw = MAX_W; dh = Math.round(dw / aspect); }
+  if (dh > MAX_H) { dh = MAX_H; dw = Math.round(dh * aspect); }
+
+  const bubbleW = Math.max(dw, MIN_W);
+
+  return (
+    <div
+      className={cn(
+        "group relative overflow-hidden rounded-[22px]",
+        side === "left" ? "rounded-tl-md" : "rounded-tr-md",
+      )}
+      style={{ width: bubbleW, height: dh }}
+    >
+      <button
+        type="button"
+        onClick={handleView}
+        className="relative flex h-full w-full items-center justify-center focus:outline-none"
+        aria-label="Play video"
+      >
+        {dw < MIN_W && thumb && (
+          <img
+            src={thumb}
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover blur-2xl brightness-[0.65]"
+            draggable={false}
+          />
+        )}
+        {thumb ? (
+          <img
+            src={thumb}
+            alt=""
+            className="relative block object-contain"
+            style={{ width: dw, height: dh }}
+            draggable={false}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-[hsl(var(--ink))]" />
+        )}
+        {/* Play button */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white shadow-lg backdrop-blur-sm transition-transform duration-200 group-hover:scale-110">
+            <Play size={22} strokeWidth={1.8} className="ml-0.5" />
+          </span>
+        </div>
+      </button>
+      {/* File size — receiver only (side=left), no filename */}
+      {size && side === "left" && (
+        <span className="absolute bottom-2 left-2 rounded-md bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white/90 backdrop-blur-sm">
+          {size}
+        </span>
+      )}
+      {showTimestamp && (
+        <span className="absolute bottom-2 right-3 text-[11px] font-medium text-white/90 drop-shadow-md">
+          {timeShort(time)}
+        </span>
+      )}
     </div>
   );
 });
@@ -621,18 +1022,26 @@ const ChatAttachmentBubble = memo(function ChatAttachmentBubble({
   time,
   side,
   onView,
+  showTimestamp = true,
+  requestId = "",
+  scope = "msg",
+  index = -1,
 }: {
   attachment: RequestAttachment;
   time: string;
   side: "left" | "right";
   onView: BubbleView;
+  showTimestamp?: boolean;
+  requestId?: string;
+  scope?: AttachmentScope;
+  index?: number;
 }) {
   const meta = getAttachmentMeta(attachment);
   const size = attachment.size ? formatBytes(attachment.size) : undefined;
 
   const handleClick = useCallback(() => {
-    onView(attachment, "", "msg", -1);
-  }, [onView, attachment]);
+    onView(attachment, requestId, scope, index);
+  }, [onView, attachment, requestId, scope, index]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -659,28 +1068,41 @@ const ChatAttachmentBubble = memo(function ChatAttachmentBubble({
       role="button"
       tabIndex={0}
       className={cn(
-        "relative flex h-14 w-[280px] min-w-[280px] max-w-[280px] shrink-0 cursor-pointer items-center gap-3 overflow-hidden rounded-2xl px-4 py-3 shadow-sm transition-colors transition-shadow duration-200",
+        "group relative flex h-14 w-[280px] min-w-[280px] max-w-[280px] shrink-0 cursor-pointer items-center gap-3 overflow-hidden rounded-2xl px-4 py-3 shadow-sm transition-colors transition-shadow duration-200",
         side === "left"
           ? "rounded-tl-md border border-[hsl(var(--rule))] bg-[hsl(var(--page))] hover:border-[hsl(var(--ink))]/30 hover:shadow-md"
           : "rounded-tr-md border border-[hsl(var(--page))]/10 bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:border-[hsl(var(--page))]/20 hover:shadow-md",
       )}
     >
-      <span
-        className={cn(
-          "shrink-0 transition-colors",
-          side === "left" ? meta.colorClass : "text-[hsl(var(--page))]/70",
-        )}
-      >
-        {meta.icon}
-      </span>
+      {meta.kind === "image" && attachment.url ? (
+        <img
+          src={attachment.url}
+          alt={attachment.name || "Image"}
+          className="h-8 w-8 shrink-0 rounded-lg object-cover"
+          draggable={false}
+          loading="lazy"
+          decoding="async"
+        />
+      ) : (
+        <span
+          className={cn(
+            "shrink-0 transition-colors",
+            side === "left" ? meta.colorClass : "text-[hsl(var(--page))]/70",
+          )}
+        >
+          {meta.icon}
+        </span>
+      )}
       <div className="min-w-0 flex-1 pr-12">
         <p
           className={cn(
-            "truncate text-[14px] font-medium leading-tight",
+            "overflow-hidden whitespace-nowrap text-[14px] font-medium leading-tight",
             side === "left" ? "text-[hsl(var(--ink))]" : "text-[hsl(var(--page))]",
           )}
         >
-          {attachment.name || meta.label}
+          {(attachment.name || meta.label).length > 19
+            ? `${(attachment.name || meta.label).slice(0, 19)}...`
+            : attachment.name || meta.label}
         </p>
         <p
           className={cn(
@@ -698,7 +1120,7 @@ const ChatAttachmentBubble = memo(function ChatAttachmentBubble({
         onClick={handleDownload}
         aria-label={`Download ${attachment.name || meta.label}`}
         className={cn(
-          "absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+          "absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full opacity-0 transition-all duration-200 group-hover:opacity-100",
           side === "left"
             ? "text-[hsl(var(--ink-muted))] hover:bg-[hsl(var(--rule))]/50 hover:text-[hsl(var(--ink))]"
             : "text-[hsl(var(--page))]/70 hover:bg-[hsl(var(--page))]/10 hover:text-[hsl(var(--page))]",
@@ -707,14 +1129,16 @@ const ChatAttachmentBubble = memo(function ChatAttachmentBubble({
         <Download size={14} strokeWidth={1.6} />
       </button>
 
-      <span
-        className={cn(
-          "absolute bottom-2 right-3 text-[11px] tabular-nums",
-          side === "left" ? "text-[hsl(var(--ink-subtle))]" : "text-[hsl(var(--page))]/70",
-        )}
-      >
-        {timeShort(time)}
-      </span>
+      {showTimestamp && (
+        <span
+          className={cn(
+            "absolute bottom-2 right-3 text-[11px] tabular-nums",
+            side === "left" ? "text-[hsl(var(--ink-subtle))]" : "text-[hsl(var(--page))]/70",
+          )}
+        >
+          {timeShort(time)}
+        </span>
+      )}
     </div>
   );
 });

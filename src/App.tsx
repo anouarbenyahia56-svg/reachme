@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { RouterProvider } from "@/app/router";
 import { Routes } from "@/app/Routes";
 import { LinkInterceptor } from "@/app/LinkInterceptor";
 import { ToastProvider } from "@/app/ui/Toast";
 import { ErrorBoundary } from "@/app/ErrorBoundary";
+import { attachmentHydrated } from "@/app/store/requests";
 
 /**
  * App root.
@@ -23,6 +25,14 @@ import { ErrorBoundary } from "@/app/ErrorBoundary";
  *   • Routes             — the dispatch surface itself.
  */
 export default function App() {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    attachmentHydrated.then(() => setReady(true));
+  }, []);
+
+  if (!ready) return null;
+
   return (
     <ErrorBoundary>
       <RouterProvider>
