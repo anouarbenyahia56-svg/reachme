@@ -42,6 +42,15 @@ import { VoicePlayer, useWaveform } from "../../ui/VoicePlayer";
 import { LiveWaveform } from "../../ui/LiveWaveform";
 import { useVoiceRecorder } from "../../ui/voiceRecorder";
 
+const MIN_VISIBLE_BARS = 25;
+const BAR_GAP = 4;
+const REFERENCE_WAVEFORM_WIDTH = 180;
+const BAR_INTERVAL_MS = 90;
+const BAR_WIDTH =
+  (REFERENCE_WAVEFORM_WIDTH - BAR_GAP * (MIN_VISIBLE_BARS - 1)) /
+  MIN_VISIBLE_BARS;
+const STEP_WIDTH = BAR_WIDTH + BAR_GAP;
+
 /**
  * Reply interface — the most important screen in ReachMe.
  *
@@ -432,6 +441,17 @@ export function RequestDetail({ id }: { id: string }) {
               />
             </div>
 
+            {/* Date separator — "Today" / "Yesterday" / "Jun 4", centered
+                between messages from different days. Just text: no lines,
+                no pill, no container. */}
+            {r.reply && dayKey(r.createdAt) !== dayKey(r.reply.repliedAt) && (
+              <div className="flex justify-center py-1">
+                <span className="text-[13px] font-medium tracking-[0.01em] text-[hsl(var(--ink-muted))]">
+                  {daySeparatorLabel(r.reply.repliedAt)}
+                </span>
+              </div>
+            )}
+
             {/* Owner reply */}
             {r.reply && (
               <div className="flex items-end justify-end">
@@ -633,7 +653,7 @@ export function RequestDetail({ id }: { id: string }) {
                         <span className="shrink-0 text-[13.5px] font-medium tabular-nums text-[hsl(var(--ink))]">
                           {formatDuration(recorder.elapsed)}
                         </span>
-                        <div className="relative h-7 flex-1 overflow-hidden">
+                        <div className="relative h-7 flex-1 overflow-hidden px-3">
                           <LiveWaveform stream={recorder.stream} />
                         </div>
                         <button
@@ -665,14 +685,14 @@ export function RequestDetail({ id }: { id: string }) {
                         <span className="relative flex h-2.5 w-2.5 shrink-0">
                           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[hsl(var(--danger))]" />
                         </span>
-                        <div className="relative h-7 flex-1 overflow-hidden">
-                          {recordedBlobUrl ? (
-                            <PreviewWaveform
-                              url={recordedBlobUrl}
-                              current={previewCurrent}
-                              duration={previewDuration}
-                            />
-                          ) : null}
+                        <div className="relative h-7 flex-1 overflow-hidden px-3">
+                        {recordedBlobUrl ? (
+                          <PreviewWaveform
+                            url={recordedBlobUrl}
+                            current={previewCurrent}
+                            duration={previewDuration}
+                          />
+                        ) : null}
                         </div>
                         <span className="shrink-0 text-[13.5px] font-medium tabular-nums text-[hsl(var(--ink))]">
                           {formatDuration(previewCurrent || recorder.elapsed)}
@@ -749,23 +769,37 @@ const TextBubble = memo(function TextBubble({
   return (
     <div
       className={cn(
-        "relative max-w-[85%] min-w-[80px] rounded-[22px] px-4 pb-6 pt-3.5",
+        "relative max-w-[85%] min-w-[80px] rounded-[22px] px-3.5 pt-2.5 pb-1.5",
+        // Three fully rounded corners, one flat. The flat corner points
+        // toward the speaker: bottom-right on the owner's (right) bubble,
+        // bottom-left on the sender's (left) bubble.
         side === "left"
-          ? "rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
-          : "rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
+          ? "rounded-bl-none bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
+          : "rounded-br-none bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
       )}
     >
       <p
         className="whitespace-pre-line"
         style={{
           fontSize: "0.96rem",
-          lineHeight: 1.65,
+          lineHeight: 1.5,
           letterSpacing: "-0.005em",
         }}
       >
         {text}
       </p>
-      <Timestamp time={time} side={side} />
+      {/* Timestamp sits in its own line below the text, small and muted,
+          aligned to the bottom-right of the bubble. */}
+      <span
+        className={cn(
+          "mt-1 block text-right text-[11px] leading-none tabular-nums",
+          side === "left"
+            ? "text-[hsl(var(--ink-subtle))]"
+            : "text-[hsl(var(--page))]/55",
+        )}
+      >
+        {timeShort(time)}
+      </span>
     </div>
   );
 });
@@ -922,8 +956,8 @@ const MessageBubble = memo(function MessageBubble({
         className={cn(
           "relative flex w-fit max-w-[85%] flex-col overflow-hidden rounded-[22px]",
           side === "left"
-            ? "rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
-            : "rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
+            ? "rounded-bl-none bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
+            : "rounded-br-none bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
         )}
       >
         <div className="flex flex-col gap-2 p-2">
@@ -939,19 +973,28 @@ const MessageBubble = memo(function MessageBubble({
             showTimestamp={false}
           />
         </div>
-        <div className="overflow-hidden [contain:inline-size] px-2 pb-6 pt-1">
+        <div className="overflow-hidden [contain:inline-size] px-3.5 pt-1 pb-1.5">
           <p
             className="whitespace-pre-line"
             style={{
               fontSize: "0.96rem",
-              lineHeight: 1.65,
+              lineHeight: 1.5,
               letterSpacing: "-0.005em",
             }}
           >
             {text}
           </p>
+          <span
+            className={cn(
+              "mt-1 block text-right text-[11px] leading-none tabular-nums",
+              side === "left"
+                ? "text-[hsl(var(--ink-subtle))]"
+                : "text-[hsl(var(--page))]/55",
+            )}
+          >
+            {timeShort(time)}
+          </span>
         </div>
-        <Timestamp time={time} side={side} />
       </div>
     );
   }
@@ -962,8 +1005,8 @@ const MessageBubble = memo(function MessageBubble({
       className={cn(
         "relative flex w-fit max-w-[85%] flex-col overflow-hidden rounded-[22px]",
         side === "left"
-          ? "rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
-          : "rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
+          ? "rounded-bl-none bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
+          : "rounded-br-none bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
       )}
     >
       <div className="flex flex-col gap-2 p-2">
@@ -981,19 +1024,28 @@ const MessageBubble = memo(function MessageBubble({
           />
         ))}
       </div>
-      <div className="overflow-hidden [contain:inline-size] px-2 pb-6 pt-1">
+      <div className="overflow-hidden [contain:inline-size] px-3.5 pt-1 pb-1.5">
         <p
           className="whitespace-pre-line"
           style={{
             fontSize: "0.96rem",
-            lineHeight: 1.65,
+            lineHeight: 1.5,
             letterSpacing: "-0.005em",
           }}
         >
           {text}
         </p>
+        <span
+          className={cn(
+            "mt-1 block text-right text-[11px] leading-none tabular-nums",
+            side === "left"
+              ? "text-[hsl(var(--ink-subtle))]"
+              : "text-[hsl(var(--page))]/55",
+          )}
+        >
+          {timeShort(time)}
+        </span>
       </div>
-      <Timestamp time={time} side={side} />
     </div>
   );
 });
@@ -1063,7 +1115,7 @@ const ImageBubble = memo(function ImageBubble({
     <div
       className={cn(
         "group relative overflow-hidden rounded-[22px]",
-        side === "left" ? "rounded-tl-md" : "rounded-tr-md",
+        side === "left" ? "rounded-bl-none" : "rounded-br-none",
       )}
       style={{ width: bubbleW, height: dh }}
     >
@@ -1102,7 +1154,7 @@ const ImageBubble = memo(function ImageBubble({
         <Download size={14} strokeWidth={1.6} />
       </button>
       {showTimestamp && (
-        <span className="absolute bottom-2 right-3 text-[11px] font-medium text-white/90 drop-shadow-md">
+        <span className="absolute bottom-2 right-3.5 text-[12px] font-medium text-white/90 drop-shadow-md">
           {timeShort(time)}
         </span>
       )}
@@ -1258,7 +1310,7 @@ const VideoBubble = memo(function VideoBubble({
     <div
       className={cn(
         "group relative overflow-hidden rounded-[22px]",
-        side === "left" ? "rounded-tl-md" : "rounded-tr-md",
+        side === "left" ? "rounded-bl-none" : "rounded-br-none",
       )}
       style={{ width: bubbleW, height: dh }}
     >
@@ -1302,7 +1354,7 @@ const VideoBubble = memo(function VideoBubble({
         </span>
       )}
       {showTimestamp && (
-        <span className="absolute bottom-2 right-3 text-[11px] font-medium text-white/90 drop-shadow-md">
+        <span className="absolute bottom-2 right-3.5 text-[12px] font-medium text-white/90 drop-shadow-md">
           {timeShort(time)}
         </span>
       )}
@@ -1346,10 +1398,12 @@ const VoiceBubble = memo(function VoiceBubble({
   return (
     <div
       className={cn(
-        "group relative flex items-stretch rounded-[22px] px-3.5 py-3",
+        "group relative flex items-center rounded-[22px] px-3 py-3",
+        // Same corner rule as text: three rounded, one flat (toward the
+        // speaker). Tall enough that the player breathes — nothing truncated.
         side === "left"
-          ? "min-h-[68px] w-[300px] rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
-          : "min-h-[68px] w-[300px] rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
+          ? "w-[300px] rounded-bl-none bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
+          : "w-[300px] rounded-br-none bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
       )}
     >
       {url ? (
@@ -1357,23 +1411,11 @@ const VoiceBubble = memo(function VoiceBubble({
           url={url}
           duration={attachment.duration}
           side={side}
+          time={showTimestamp ? time : undefined}
         />
       ) : (
         <span className="text-[12px] text-[hsl(var(--ink-subtle))]">
           Voice message unavailable
-        </span>
-      )}
-
-
-
-      {showTimestamp && (
-        <span
-          className={cn(
-            "absolute bottom-1 right-3 text-[11px] tabular-nums",
-            side === "left" ? "text-[hsl(var(--ink-subtle))]" : "text-[hsl(var(--page))]/70",
-          )}
-        >
-          {timeShort(time)}
         </span>
       )}
     </div>
@@ -1433,8 +1475,8 @@ const ChatAttachmentBubble = memo(function ChatAttachmentBubble({
       className={cn(
         "group relative flex h-14 w-[280px] min-w-[280px] max-w-[280px] shrink-0 cursor-pointer items-center gap-3 overflow-hidden rounded-2xl px-4 py-3 shadow-sm transition-colors transition-shadow duration-200",
         side === "left"
-          ? "rounded-tl-md border border-[hsl(var(--rule))] bg-[hsl(var(--page))] hover:border-[hsl(var(--ink))]/30 hover:shadow-md"
-          : "rounded-tr-md border border-[hsl(var(--page))]/10 bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:border-[hsl(var(--page))]/20 hover:shadow-md",
+          ? "rounded-bl-none border border-[hsl(var(--rule))] bg-[hsl(var(--page))] hover:border-[hsl(var(--ink))]/30 hover:shadow-md"
+          : "rounded-br-none border border-[hsl(var(--page))]/10 bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:border-[hsl(var(--page))]/20 hover:shadow-md",
       )}
     >
       {meta.kind === "image" && attachment.url ? (
@@ -1495,7 +1537,7 @@ const ChatAttachmentBubble = memo(function ChatAttachmentBubble({
       {showTimestamp && (
         <span
           className={cn(
-            "absolute bottom-2 right-3 text-[11px] tabular-nums",
+            "absolute bottom-2 right-3.5 text-[12px] tabular-nums",
             side === "left" ? "text-[hsl(var(--ink-subtle))]" : "text-[hsl(var(--page))]/70",
           )}
         >
@@ -1510,7 +1552,7 @@ const Timestamp = memo(function Timestamp({ time, side }: { time: string; side: 
   return (
     <span
       className={cn(
-        "absolute bottom-2 right-3 text-[11px] tabular-nums",
+        "absolute bottom-2 right-3.5 text-[12px] tabular-nums",
         side === "left" ? "text-[hsl(var(--ink-subtle))]" : "text-[hsl(var(--page))]/70",
       )}
     >
@@ -1677,27 +1719,67 @@ function PreviewWaveform({
   duration: number;
 }) {
   const bars = useWaveform(url);
-  const effectiveBars = useMemo(
-    () => (bars.length ? bars : Array.from({ length: 36 }, () => 0.5)),
-    [bars],
-  );
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const updateWidth = () => setWidth(el.getBoundingClientRect().width);
+    updateWidth();
+    const ro = new ResizeObserver(updateWidth);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const visibleBars = Math.max(MIN_VISIBLE_BARS, Math.ceil(width / STEP_WIDTH));
+  const trackWidth = visibleBars * BAR_WIDTH + visibleBars * BAR_GAP;
   const progress = duration > 0 ? Math.min(1, current / duration) : 0;
-  const playedBars = Math.round(progress * effectiveBars.length);
+  const playedBars = Math.round(progress * visibleBars);
+
+  // Resample the decoded bars to the visibleBars count
+  const resampledBars = useMemo(() => {
+    if (!bars.length) return new Array(visibleBars).fill(0);
+    const out: number[] = [];
+    for (let i = 0; i < visibleBars; i++) {
+      const srcIdx = (i / visibleBars) * (bars.length - 1);
+      const idx0 = Math.floor(srcIdx);
+      const idx1 = Math.min(idx0 + 1, bars.length - 1);
+      const t = srcIdx - idx0;
+      out.push(bars[idx0] * (1 - t) + bars[idx1] * t);
+    }
+    return out;
+  }, [bars, visibleBars]);
 
   return (
-    <div className="flex h-full w-full items-center gap-[2px]">
-      {effectiveBars.map((h, i) => (
-        <span
-          key={i}
-          style={{ height: `${Math.max(14, h * 100)}%` }}
-          className={cn(
-            "flex-1 rounded-full",
-            i < playedBars
-              ? "bg-[hsl(var(--ink))]"
-              : "bg-[hsl(var(--ink))]/20",
-          )}
-        />
-      ))}
+    <div
+      ref={containerRef}
+      className={cn("flex h-full flex-1 justify-center overflow-hidden")}
+      aria-hidden="true"
+    >
+      <div
+        className="flex h-full shrink-0 items-center gap-[4px]"
+        style={{
+          width: `${trackWidth}px`,
+          willChange: "transform",
+        }}
+      >
+        {resampledBars.map((h, i) => (
+          <span
+            key={i}
+            style={{
+              width: `${BAR_WIDTH}px`,
+              height: h === 0 ? 0 : `${h * 100}%`,
+            }}
+            className={cn(
+              "rounded-full",
+              i < playedBars
+                ? "bg-[hsl(var(--ink))]"
+                : "bg-[hsl(var(--ink))]/20",
+            )}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -1715,4 +1797,23 @@ function formatDuration(seconds: number): string {
   const s = Math.max(0, Math.floor(seconds));
   const m = Math.floor(s / 60);
   return `${m}:${(s % 60).toString().padStart(2, "0")}`;
+}
+
+/** Local calendar-day key (YYYY-MM-DD) for grouping messages by day. */
+function dayKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Date separator label: "Today", "Yesterday", or "Jun 4". */
+function daySeparatorLabel(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const that = new Date(d);
+  that.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((today.getTime() - that.getTime()) / 86_400_000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }

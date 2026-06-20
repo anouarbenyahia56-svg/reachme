@@ -27,12 +27,12 @@ export function parseMoneyToCents(input: string): number {
   return Math.round(value * 100);
 }
 
-/** "10:42 AM", "2:15 PM" */
+/** "10:42", "14:15" */
 export function timeShort(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-US", {
-    hour: "numeric",
+    hour: "2-digit",
     minute: "2-digit",
-    hour12: true,
+    hour12: false,
   });
 }
 

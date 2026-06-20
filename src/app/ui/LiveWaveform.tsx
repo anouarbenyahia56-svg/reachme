@@ -2,23 +2,36 @@ import { useEffect, useRef, useState, memo } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Live frequency data from the microphone. Returns an array of 0–1
- * values representing the current amplitude of each frequency band.
- * Updates via requestAnimationFrame while the stream is active.
+ * Live amplitude data from the microphone. Returns a sliding queue of
+ * 0–1 values used as bar heights. The queue starts empty, then new bars
+ * are appended on the right and scroll left immediately while recording.
  */
 function useLiveFrequency(
   stream: MediaStream | null,
-  barCount: number,
-): number[] {
+  visibleBars: number,
+): { bars: number[]; offset: number } {
+  const trackBars = visibleBars + 1;
   const [bars, setBars] = useState<number[]>(() =>
-    Array.from({ length: barCount }, () => 0.08),
+    new Array(trackBars).fill(0),
   );
+  const [offset, setOffset] = useState(STEP_WIDTH / 2);
   const ctxRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const rafRef = useRef(0);
-  const prevRef = useRef<number[]>(Array.from({ length: barCount }, () => 0.08));
+  const barsRef = useRef<number[]>(new Array(trackBars).fill(0));
+  const offsetRef = useRef(STEP_WIDTH / 2);
+  const prevRef = useRef(0);
+  const lastRef = useRef(0);
+  const firstTickRef = useRef(true);
 
   useEffect(() => {
+    barsRef.current = new Array(trackBars).fill(0);
+    offsetRef.current = STEP_WIDTH / 2;
+    prevRef.current = 0;
+    firstTickRef.current = true;
+    setBars(barsRef.current);
+    setOffset(STEP_WIDTH / 2);
+
     if (!stream) return;
 
     const AudioCtx =
@@ -29,8 +42,8 @@ function useLiveFrequency(
 
     const ctx = new AudioCtx();
     const analyser = ctx.createAnalyser();
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.5;
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.65;
 
     const source = ctx.createMediaStreamSource(stream);
     source.connect(analyser);
@@ -38,25 +51,52 @@ function useLiveFrequency(
     ctxRef.current = ctx;
     sourceRef.current = source;
 
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-    const prev = prevRef.current;
+    const dataArray = new Uint8Array(analyser.fftSize);
 
-    const tick = () => {
-      analyser.getByteFrequencyData(dataArray);
+    const readLevel = () => {
+      analyser.getByteTimeDomainData(dataArray);
 
-      const binCount = dataArray.length;
-      for (let i = 0; i < barCount; i++) {
-        const idx = Math.floor((i / barCount) * binCount);
-        const raw = (dataArray[idx] ?? 0) / 255;
-        const target = Math.min(1, raw * 1.3 + 0.06);
-        const speed = target > prev[i] ? 0.4 : 0.15;
-        prev[i] = prev[i] + (target - prev[i]) * speed;
+      let sum = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const centered = (dataArray[i] - 128) / 128;
+        sum += centered * centered;
       }
 
-      setBars([...prev]);
+      const rms = Math.sqrt(sum / dataArray.length);
+      const target = Math.min(1, Math.max(0.08, rms * 10));
+      const speed = target > prevRef.current ? 0.35 : 0.18;
+      prevRef.current += (target - prevRef.current) * speed;
+      return prevRef.current;
+    };
+
+    const tick = (now: number) => {
+      const delta = lastRef.current ? now - lastRef.current : 16.7;
+      lastRef.current = now;
+
+      const level = readLevel();
+      let nextOffset =
+        offsetRef.current + (STEP_WIDTH * delta) / BAR_INTERVAL_MS;
+      let nextBars = [...barsRef.current];
+
+      if (firstTickRef.current) {
+        firstTickRef.current = false;
+        nextBars = [...nextBars.slice(1), level];
+      }
+
+      while (nextOffset >= STEP_WIDTH) {
+        nextOffset -= STEP_WIDTH;
+        nextBars = [...nextBars.slice(1), level];
+      }
+
+      offsetRef.current = nextOffset;
+      barsRef.current = nextBars;
+      setOffset(nextOffset);
+      setBars(nextBars);
+
       rafRef.current = requestAnimationFrame(tick);
     };
 
+    lastRef.current = performance.now();
     rafRef.current = requestAnimationFrame(tick);
 
     return () => {
@@ -67,12 +107,19 @@ function useLiveFrequency(
       ctxRef.current = null;
       sourceRef.current = null;
     };
-  }, [stream, barCount]);
+  }, [stream, trackBars]);
 
-  return bars;
+  return { bars, offset };
 }
 
-const BAR_COUNT = 40;
+const MIN_VISIBLE_BARS = 25;
+const BAR_GAP = 4;
+const REFERENCE_WAVEFORM_WIDTH = 180;
+const BAR_INTERVAL_MS = 90;
+const BAR_WIDTH =
+  (REFERENCE_WAVEFORM_WIDTH - BAR_GAP * (MIN_VISIBLE_BARS - 1)) /
+  MIN_VISIBLE_BARS;
+const STEP_WIDTH = BAR_WIDTH + BAR_GAP;
 
 export interface LiveWaveformProps {
   stream: MediaStream | null;
@@ -83,20 +130,60 @@ export const LiveWaveform = memo(function LiveWaveform({
   stream,
   className,
 }: LiveWaveformProps) {
-  const bars = useLiveFrequency(stream, BAR_COUNT);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const updateWidth = () => {
+      setWidth(el.getBoundingClientRect().width);
+    };
+
+    updateWidth();
+
+    const resizeObserver = new ResizeObserver(updateWidth);
+    resizeObserver.observe(el);
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  const visibleBars = Math.max(
+    MIN_VISIBLE_BARS,
+    Math.ceil(width / STEP_WIDTH),
+  );
+  const trackWidth = visibleBars * BAR_WIDTH + visibleBars * BAR_GAP;
+  const { bars, offset } = useLiveFrequency(stream, visibleBars);
 
   return (
     <div
-      className={cn("flex h-full w-full items-center gap-[2px]", className)}
+      ref={containerRef}
+      className={cn(
+        "flex h-full flex-1 justify-center overflow-hidden",
+        className,
+      )}
       aria-hidden="true"
     >
-      {bars.map((h, i) => (
-        <span
-          key={i}
-          style={{ height: `${Math.max(12, h * 100)}%` }}
-          className="flex-1 rounded-full bg-[hsl(var(--ink))]/55"
-        />
-      ))}
+      <div
+        className="flex h-full shrink-0 items-center gap-[4px]"
+        style={{
+          width: `${trackWidth}px`,
+          transform: `translateX(${STEP_WIDTH / 2 - offset}px)`,
+          willChange: "transform",
+        }}
+      >
+        {bars.map((h, i) => (
+          <span
+            key={i}
+            style={{
+              width: `${BAR_WIDTH}px`,
+              height: h === 0 ? 0 : `${h * 100}%`,
+            }}
+            className="rounded-full bg-[hsl(var(--ink))]/55"
+          />
+        ))}
+      </div>
     </div>
   );
 });

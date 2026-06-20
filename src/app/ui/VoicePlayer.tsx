@@ -1,23 +1,25 @@
 import { useEffect, useMemo, useRef, useState, memo, type RefObject } from "react";
 import { Play, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { timeShort } from "../store/format";
 
 /**
  * Voice message player — the inline waveform row that appears in a
  * conversation bubble when a voice clip is sent or received.
  *
- * A hidden `<audio>` element drives everything; the visible UI is a
- * circular play/pause toggle, a waveform that fills as playback
- * advances, and a `0:00 / 0:07` timestamp. `side` flips the palette so
- * it reads correctly on the owner's (dark) and sender's (light)
- * bubbles.
+ * Layout, left to right: a large circular filled play button, waveform
+ * bars (varied natural heights) that fill as playback advances, and the
+ * duration (noticeably larger than the timestamp) at the right. When a
+ * `time` is supplied, a small muted timestamp sits beneath the duration
+ * at the bubble's bottom-right. `side` flips the palette so it reads
+ * correctly on the owner's (dark) and sender's (light) bubbles.
  *
  * The waveform is decoded once per clip via `AudioContext` and sampled
  * into a fixed number of bars. If decoding fails (rare codec, tainted
  * data), a calm synthetic bar set is used so the UI is never empty.
  */
 
-const BAR_COUNT = 30;
+const BAR_COUNT = 25;
 const MIN_BARS = 8;
 
 export function useWaveform(url: string | undefined): number[] {
@@ -101,12 +103,15 @@ export interface VoicePlayerProps {
   url: string;
   duration?: number;
   side: "left" | "right";
+  /** Optional send timestamp rendered below the duration, bottom-right. */
+  time?: string;
 }
 
 export const VoicePlayer = memo(function VoicePlayer({
   url,
   duration,
   side,
+  time,
 }: VoicePlayerProps) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -139,7 +144,8 @@ export const VoicePlayer = memo(function VoicePlayer({
     };
   }, [url]);
 
-  const togglePlay = () => {
+  const togglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
     const el = audioRef.current;
     if (!el) return;
     if (el.paused) {
@@ -184,8 +190,13 @@ export const VoicePlayer = memo(function VoicePlayer({
     resolvedDuration > 0 ? Math.min(1, current / resolvedDuration) : 0;
   const playedBars = Math.round(progress * effectiveBars.length);
 
+  const durationLabel =
+    isPlaying || current > 0
+      ? formatClock(current)
+      : formatClock(resolvedDuration);
+
   return (
-    <div className="relative flex w-full items-center">
+    <div className="relative flex w-full items-center gap-2.5 py-3">
       <audio
         ref={audioRef as RefObject<HTMLAudioElement>}
         src={url}
@@ -205,11 +216,17 @@ export const VoicePlayer = memo(function VoicePlayer({
         className="hidden"
       />
 
+      {/* Large circular filled play button. */}
       <button
         type="button"
         onClick={togglePlay}
         aria-label={isPlaying ? "Pause voice message" : "Play voice message"}
-        className="inline-flex h-8 w-8 shrink-0 items-center justify-center transition-colors"
+        className={cn(
+          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors",
+          dark
+            ? "bg-[hsl(var(--page))] text-[hsl(var(--ink))] hover:bg-[hsl(var(--page))]/85"
+            : "bg-[hsl(var(--ink))] text-[hsl(var(--page))] hover:bg-[hsl(var(--ink))]/85",
+        )}
       >
         {isPlaying ? (
           <Pause size={15} strokeWidth={2} />
@@ -218,10 +235,11 @@ export const VoicePlayer = memo(function VoicePlayer({
         )}
       </button>
 
+      {/* Waveform bars — varied natural heights, fill as it plays. */}
       <div
         ref={trackRef}
         onPointerDown={onTrackPointerDown}
-        className="flex h-8 min-w-0 flex-1 cursor-pointer items-center gap-[1px]"
+        className="flex h-8 min-w-0 flex-1 cursor-pointer items-center gap-[4px]"
         role="slider"
         tabIndex={0}
         aria-label="Seek voice message"
@@ -244,32 +262,43 @@ export const VoicePlayer = memo(function VoicePlayer({
           return (
             <span
               key={i}
-                style={{ height: `${Math.max(16, h * 50)}%` }}
+              style={{ height: `${Math.max(18, h * 90)}%` }}
               className={cn(
                 "flex-1 rounded-full transition-colors duration-150",
                 dark
                   ? active
                     ? "bg-[hsl(var(--page))]"
-                    : "bg-[hsl(var(--page))]/30"
+                    : "bg-[hsl(var(--page))]/35"
                   : active
                     ? "bg-[hsl(var(--ink))]"
-                    : "bg-[hsl(var(--ink))]/20",
+                    : "bg-[hsl(var(--ink))]/25",
               )}
             />
           );
         })}
       </div>
 
+      {/* Duration — vertically centred with the waveform row. */}
       <span
         className={cn(
-          "ml-2 shrink-0 text-[10px] tabular-nums",
-          dark ? "text-[hsl(var(--page))]/55" : "text-[hsl(var(--ink-subtle))]",
+          "shrink-0 pl-0.5 text-[13px] font-medium leading-none tabular-nums",
+          dark ? "text-[hsl(var(--page))]/90" : "text-[hsl(var(--ink))]",
         )}
       >
-        {isPlaying || current > 0
-          ? formatClock(current)
-          : formatClock(resolvedDuration)}
+        {durationLabel}
       </span>
+
+      {/* Timestamp — anchored to the bottom-right of the bubble. */}
+      {time && (
+        <span
+          className={cn(
+            "absolute -bottom-0.5 right-1 text-[11px] leading-none tabular-nums",
+            dark ? "text-[hsl(var(--page))]/55" : "text-[hsl(var(--ink-subtle))]",
+          )}
+        >
+          {timeShort(time)}
+        </span>
+      )}
     </div>
   );
 });
