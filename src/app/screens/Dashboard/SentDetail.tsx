@@ -11,7 +11,8 @@ import { dateLong, formatMoney, timeAgo, timeUntil } from "../../store/format";
 import type { RequestAttachment, RequestRecord } from "../../types";
 import { cn } from "@/lib/utils";
 import { CardSkeleton, ScreenError } from "../../ui/ScreenStates";
-import { AttachmentChip, AttachmentViewer } from "../../ui/AttachmentViewer";
+import { AttachmentChip, AttachmentViewer, getAttachmentMeta } from "../../ui/AttachmentViewer";
+import { VoicePlayer } from "../../ui/VoicePlayer";
 
 /**
  * Sent detail — read-only view from the sender's perspective.
@@ -267,13 +268,19 @@ function ConversationEntry({
         </p>
         {r.attachments && r.attachments.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
-            {r.attachments.map((a, i) => (
-              <AttachmentChip
-                key={`m-${i}`}
-                attachment={a}
-                onClick={onViewAttachment ? () => onViewAttachment(a, r.id, i) : undefined}
-              />
-            ))}
+            {r.attachments.map((a, i) => {
+              const url = a.url || getAttachmentUrl(r.id, "msg", i) || "";
+              if (getAttachmentMeta(a).kind === "audio" && url) {
+                return <VoicePlayer key={`m-${i}`} url={url} duration={a.duration} side="left" />;
+              }
+              return (
+                <AttachmentChip
+                  key={`m-${i}`}
+                  attachment={a}
+                  onClick={onViewAttachment ? () => onViewAttachment(a, r.id, i) : undefined}
+                />
+              );
+            })}
           </div>
         )}
       </div>
@@ -295,13 +302,20 @@ function ConversationEntry({
           {/* Attachments */}
           {r.reply.attachments && r.reply.attachments.length > 0 && (
             <div className={cn("flex flex-wrap gap-2", r.reply.body ? "mt-3" : "mt-2")}>
-              {r.reply.attachments.map((a, i) => (
-                <AttachmentChip
-                  key={`r-${i}`}
-                  attachment={a}
-                  onClick={onViewAttachment ? () => onViewAttachment(a, r.id, i) : undefined}
-                />
-              ))}
+              {r.reply.attachments.map((a, i) => {
+                const url = a.url || getAttachmentUrl(r.id, "reply", i) || "";
+                if (getAttachmentMeta(a).kind === "audio" && url) {
+                  // Reply box is light (surface bg), so use the light theme.
+                  return <VoicePlayer key={`r-${i}`} url={url} duration={a.duration} side="left" />;
+                }
+                return (
+                  <AttachmentChip
+                    key={`r-${i}`}
+                    attachment={a}
+                    onClick={onViewAttachment ? () => onViewAttachment(a, r.id, i) : undefined}
+                  />
+                );
+              })}
             </div>
           )}
         </div>

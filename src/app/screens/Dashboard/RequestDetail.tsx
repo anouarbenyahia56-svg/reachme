@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useState, useRef, useEffect, useCallback, memo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
 import {
   ArrowLeft,
   Check,
@@ -9,6 +9,8 @@ import {
   Send,
   Download,
   Play,
+  Pause,
+  Trash2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { EASE } from "@/components/motion";
@@ -36,6 +38,9 @@ import {
   getAttachmentMeta,
   getInitialAttachmentType,
 } from "../../ui/AttachmentViewer";
+import { VoicePlayer, useWaveform } from "../../ui/VoicePlayer";
+import { LiveWaveform } from "../../ui/LiveWaveform";
+import { useVoiceRecorder } from "../../ui/voiceRecorder";
 
 /**
  * Reply interface — the most important screen in ReachMe.
@@ -58,13 +63,39 @@ export function RequestDetail({ id }: { id: string }) {
 
   const [reply, setReply] = useState("");
   const [attachments, setAttachments] = useState<RequestAttachment[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
   const [viewAttachment, setViewAttachment] = useState<RequestAttachment | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileMap = useRef<Map<string, File>>(new Map());
   const attachmentsRef = useRef(attachments);
   attachmentsRef.current = attachments;
+
+  // ─── Voice recording ─────────────────────────────────────────────
+  //
+  // Click the mic to start. Click mic again to pause. Click mic to
+  // resume. The recording bar shows the full pill UI from the first
+  // frame: trash, play (preview), waveform, timer, mic (pause/resume),
+  // send.
+
+  const rRef = useRef(r);
+  rRef.current = r;
+
+  const recorder = useVoiceRecorder({
+    onDenied: () =>
+      toast.show("Microphone blocked.", "Enable mic access to record."),
+    onError: (msg) => toast.show(msg),
+  });
+  const isRecording = recorder.status === "recording";
+  const isPaused = recorder.status === "paused";
+  const isActive = isRecording || isPaused || recorder.status === "starting";
+
+  // Preview playback state — plays back the recorded clip while paused.
+  const [recordedBlobUrl, setRecordedBlobUrl] = useState<string | null>(null);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
+  const [previewCurrent, setPreviewCurrent] = useState(0);
+  const [previewDuration, setPreviewDuration] = useState(0);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
     return () => {
       attachmentsRef.current.forEach((a) => {
@@ -206,6 +237,138 @@ export function RequestDetail({ id }: { id: string }) {
       return prev.filter((_, i) => i !== index);
     });
   };
+
+  // ─── Voice recording: click-to-toggle ─────────────────────────────
+  //
+  // Click mic to start recording. Click again to pause. Click to
+  // resume. The recording bar is always visible while active.
+
+  const toggleRecording = useCallback(() => {
+    if (recorder.status === "idle" || recorder.status === "starting") {
+      setRecordedBlobUrl(null);
+      setIsPreviewPlaying(false);
+      setPreviewCurrent(0);
+      setPreviewDuration(0);
+      void recorder.start();
+    } else if (recorder.status === "recording") {
+      recorder.pause();
+      // Finalize the blob immediately so the paused UI has it on first render.
+      const result = recorder.getBlob();
+      if (result) {
+        setRecordedBlobUrl(result.url);
+        setPreviewDuration(result.duration);
+        fileMap.current.set(result.url, result.file);
+      }
+    } else if (recorder.status === "paused") {
+      recorder.resume();
+    }
+  }, [recorder]);
+
+  // ─── Preview playback ───────────────────────────────────────────
+
+  const togglePreview = useCallback(() => {
+    const audio = previewAudioRef.current;
+    if (!audio || !recordedBlobUrl) return;
+    if (audio.paused) {
+      setPreviewCurrent(0);
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
+    }
+  }, [recordedBlobUrl]);
+
+  const sendRecording = useCallback(async () => {
+    // If actively recording, stop the recorder first and get the clip.
+    if (isRecording || recorder.status === "starting") {
+      const result = await recorder.stop();
+      if (!result) return;
+      // Send immediately.
+      const attachment: RequestAttachment = {
+        type: "voice",
+        url: result.url,
+        name: result.file.name,
+        duration: result.duration,
+        size: result.file.size,
+      };
+      const req = rRef.current;
+      if (req) {
+        saveAttachmentFiles(req.id, "reply", [result.file]);
+        replyToRequest(req.id, undefined, [attachment]);
+        toast.show("Voice message sent.");
+      }
+      URL.revokeObjectURL(result.url);
+      fileMap.current.delete(result.url);
+      setRecordedBlobUrl(null);
+      setIsPreviewPlaying(false);
+      setPreviewCurrent(0);
+      setPreviewDuration(0);
+      return;
+    }
+
+    // If paused, send the already-finalized clip.
+    const url = recordedBlobUrl;
+    if (!url) return;
+    const file = fileMap.current.get(url);
+    if (!file) return;
+
+    const attachment: RequestAttachment = {
+      type: "voice",
+      url,
+      name: file.name,
+      duration: previewDuration,
+      size: file.size,
+    };
+    const req = rRef.current;
+    if (req) {
+      saveAttachmentFiles(req.id, "reply", [file]);
+      replyToRequest(req.id, undefined, [attachment]);
+      toast.show("Voice message sent.");
+    }
+    URL.revokeObjectURL(url);
+    fileMap.current.delete(url);
+    setRecordedBlobUrl(null);
+    setIsPreviewPlaying(false);
+    setPreviewCurrent(0);
+    setPreviewDuration(0);
+    const audio = previewAudioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  }, [recordedBlobUrl, previewDuration, isRecording, recorder, toast]);
+
+  const cancelRecording = useCallback(() => {
+    // Stop the recorder if it's active (recording or paused).
+    if (isRecording || isPaused || recorder.status === "starting") {
+      recorder.cancel();
+    }
+    const url = recordedBlobUrl;
+    if (url) {
+      URL.revokeObjectURL(url);
+      fileMap.current.delete(url);
+    }
+    const audio = previewAudioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    setRecordedBlobUrl(null);
+    setIsPreviewPlaying(false);
+    setPreviewCurrent(0);
+    setPreviewDuration(0);
+  }, [recordedBlobUrl, isRecording, isPaused, recorder]);
+
+  // Cleanup preview blob URL on unmount.
+  useEffect(() => {
+    return () => {
+      if (recordedBlobUrl) {
+        URL.revokeObjectURL(recordedBlobUrl);
+      }
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const showRecordingBar = isActive || isPreviewPlaying || recordedBlobUrl !== null;
 
   const canSend = reply.trim().length > 0 || attachments.length > 0;
   const categoryLabel = profile.categories?.find((c) => c.id === r.category)?.label;
@@ -353,64 +516,187 @@ export function RequestDetail({ id }: { id: string }) {
                 </div>
               )}
 
-              <div className="flex items-end gap-2 px-3 py-1">
-                <InputIconButton
-                  label="Attach file"
-                  onClick={onAddFile}
-                  icon={<Paperclip size={17} strokeWidth={1.5} />}
-                />
+              {/* Single input row — swaps between normal input and recording bar */}
+              <div className="flex items-center gap-2 px-3 py-2">
+                {!showRecordingBar ? (
+                  <>
+                    <InputIconButton
+                      label="Attach file"
+                      onClick={onAddFile}
+                      icon={<Paperclip size={17} strokeWidth={1.5} />}
+                    />
 
-                <textarea
-                  ref={inputRef}
-                  value={reply}
-                  onChange={(e) => setReply(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      onSendReply();
-                    }
-                  }}
-                  placeholder={`Reply to ${r.from.name.split(" ")[0]}...`}
-                  rows={1}
-                  className="block max-h-[120px] min-h-[38px] w-full flex-1 resize-none bg-transparent pl-1 pr-3 py-2 text-[14.5px] leading-[1.5] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none scrollbar-none"
-                />
+                    <textarea
+                      ref={inputRef}
+                      value={reply}
+                      onChange={(e) => setReply(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          onSendReply();
+                        }
+                      }}
+                      placeholder={`Reply to ${r.from.name.split(" ")[0]}...`}
+                      rows={1}
+                      className="block max-h-[120px] min-h-[38px] w-full flex-1 resize-none bg-transparent pl-1 pr-3 py-1.5 text-[14.5px] leading-[1.5] text-[hsl(var(--ink))] placeholder:text-[hsl(var(--ink-subtle))] focus:outline-none scrollbar-none"
+                    />
 
-                <div className="relative h-[38px] w-[38px] shrink-0">
-                  <AnimatePresence mode="wait" initial={false}>
-                    {canSend ? (
-                      <motion.div
-                        key="send"
-                        initial={{ opacity: 0, scale: 0.85, rotate: -45 }}
-                        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                        exit={{ opacity: 0, scale: 0.85, rotate: 45 }}
-                        transition={{ duration: 0, ease: EASE }}
-                        className="absolute inset-0"
-                      >
-                        <InputIconButton
-                          label="Send reply"
-                          onClick={onSendReply}
-                          active
-                          icon={<Send size={17} strokeWidth={1.8} />}
-                        />
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="mic"
-                        initial={{ opacity: 0, scale: 0.85, rotate: 45 }}
-                        animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                        exit={{ opacity: 0, scale: 0.85, rotate: -45 }}
-                        transition={{ duration: 0, ease: EASE }}
-                        className="absolute inset-0"
-                      >
-                        <InputIconButton
-                          label="Voice message"
-                          onClick={() => setIsRecording((v) => !v)}
-                          icon={<Mic size={17} strokeWidth={1.5} />}
-                        />
-                      </motion.div>
+                    <div className="relative h-[38px] w-[38px] shrink-0">
+                      <AnimatePresence mode="wait" initial={false}>
+                        {canSend ? (
+                          <motion.div
+                            key="send"
+                            initial={{ opacity: 0, scale: 0.85, rotate: -45 }}
+                            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                            exit={{ opacity: 0, scale: 0.85, rotate: 45 }}
+                            transition={{ duration: 0, ease: EASE }}
+                            className="absolute inset-0"
+                          >
+                            <InputIconButton
+                              label="Send reply"
+                              onClick={onSendReply}
+                              active
+                              icon={<Send size={17} strokeWidth={1.8} />}
+                            />
+                          </motion.div>
+                        ) : (
+                          <motion.div
+                            key="mic"
+                            initial={{ opacity: 0, scale: 0.85, rotate: 45 }}
+                            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                            exit={{ opacity: 0, scale: 0.85, rotate: -45 }}
+                            transition={{ duration: 0, ease: EASE }}
+                            className="absolute inset-0"
+                          >
+                            <button
+                              type="button"
+                              aria-label="Record a voice message"
+                              onClick={toggleRecording}
+                              className="inline-flex h-[38px] w-[38px] touch-none select-none items-center justify-center rounded-full text-[hsl(var(--ink-muted))] transition-colors hover:bg-[hsl(var(--rule))]/50 hover:text-[hsl(var(--ink))]"
+                            >
+                              <Mic size={17} strokeWidth={1.5} />
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Hidden audio element for preview playback */}
+                    {recordedBlobUrl && (
+                      <audio
+                        ref={previewAudioRef}
+                        src={recordedBlobUrl}
+                        preload="auto"
+                        onPlay={() => setIsPreviewPlaying(true)}
+                        onPause={() => setIsPreviewPlaying(false)}
+                        onEnded={() => {
+                          setIsPreviewPlaying(false);
+                          const el = previewAudioRef.current;
+                          if (el && isFinite(el.duration)) {
+                            setPreviewCurrent(el.duration);
+                          }
+                        }}
+                        onTimeUpdate={(e) => {
+                          const el = e.currentTarget;
+                          setPreviewCurrent(el.currentTime);
+                          if (isFinite(el.duration) && el.duration > 0) {
+                            setPreviewDuration(el.duration);
+                          }
+                        }}
+                        onLoadedMetadata={(e) => {
+                          if (isFinite(e.currentTarget.duration)) {
+                            setPreviewDuration(e.currentTarget.duration);
+                          }
+                        }}
+                      />
                     )}
-                  </AnimatePresence>
-                </div>
+
+                    {/* Delete / trash button */}
+                    <button
+                      type="button"
+                      onClick={cancelRecording}
+                      aria-label="Delete recording"
+                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[hsl(var(--ink-muted))] transition-colors hover:text-[hsl(var(--danger))]"
+                    >
+                      <Trash2 size={18} strokeWidth={1.8} />
+                    </button>
+
+                    {/* ── Active recording state (includes "starting" so elements appear instantly) ── */}
+                    {(isRecording || recorder.status === "starting") && (
+                      <>
+                        <span className="relative flex h-2.5 w-2.5 shrink-0">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[hsl(var(--danger))] opacity-40" />
+                          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[hsl(var(--danger))]" />
+                        </span>
+                        <span className="shrink-0 text-[13.5px] font-medium tabular-nums text-[hsl(var(--ink))]">
+                          {formatDuration(recorder.elapsed)}
+                        </span>
+                        <div className="relative h-7 flex-1 overflow-hidden">
+                          <LiveWaveform stream={recorder.stream} />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={toggleRecording}
+                          aria-label="Pause recording"
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[hsl(var(--danger))] transition-colors hover:text-[hsl(var(--danger))]/80"
+                        >
+                          <Pause size={18} strokeWidth={2} />
+                        </button>
+                      </>
+                    )}
+
+                    {/* ── Paused recording state ── */}
+                    {isPaused && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={togglePreview}
+                          aria-label={isPreviewPlaying ? "Pause preview" : "Play preview"}
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[hsl(var(--ink))] transition-colors hover:bg-[hsl(var(--rule))]/50"
+                        >
+                          {isPreviewPlaying ? (
+                            <Pause size={16} strokeWidth={2} />
+                          ) : (
+                            <Play size={16} strokeWidth={2} className="ml-0.5" />
+                          )}
+                        </button>
+                        <span className="relative flex h-2.5 w-2.5 shrink-0">
+                          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[hsl(var(--danger))]" />
+                        </span>
+                        <div className="relative h-7 flex-1 overflow-hidden">
+                          {recordedBlobUrl ? (
+                            <PreviewWaveform
+                              url={recordedBlobUrl}
+                              current={previewCurrent}
+                              duration={previewDuration}
+                            />
+                          ) : null}
+                        </div>
+                        <span className="shrink-0 text-[13.5px] font-medium tabular-nums text-[hsl(var(--ink))]">
+                          {formatDuration(previewCurrent || recorder.elapsed)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={toggleRecording}
+                          aria-label="Resume recording"
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[hsl(var(--ink-muted))] transition-colors hover:text-[hsl(var(--ink))]"
+                        >
+                          <Mic size={17} strokeWidth={1.8} />
+                        </button>
+                      </>
+                    )}
+
+                    {/* Send button — same as normal input's send */}
+                    <InputIconButton
+                      label="Send voice message"
+                      onClick={sendRecording}
+                      active
+                      icon={<Send size={17} strokeWidth={1.8} />}
+                    />
+                  </>
+                )}
               </div>
             </div>
 
@@ -421,12 +707,6 @@ export function RequestDetail({ id }: { id: string }) {
               className="hidden"
               onChange={onFileChange}
             />
-
-            {isRecording && (
-              <div className="mt-3 text-center text-[12px] text-[hsl(var(--ink-muted))]">
-                Voice recording is not yet available.
-              </div>
-            )}
           </div>
         )}
           </Card>
@@ -560,6 +840,22 @@ const AttachmentBubble = memo(function AttachmentBubble({
     );
   }
 
+  if (kind === "audio") {
+    return (
+      <VoiceBubble
+        url={url}
+        time={time}
+        side={side}
+        attachment={attachment}
+        onView={onView}
+        requestId={requestId}
+        scope={scope}
+        index={index}
+        showTimestamp={showTimestamp}
+      />
+    );
+  }
+
   return (
     <ChatAttachmentBubble
       attachment={{ ...attachment, url }}
@@ -671,22 +967,19 @@ const MessageBubble = memo(function MessageBubble({
       )}
     >
       <div className="flex flex-col gap-2 p-2">
-        {attachments!.map((a, i) => {
-          const url = a.url || getAttachmentUrl(requestId, scope, i) || "";
-          return (
-            <ChatAttachmentBubble
-              key={`${scope}-${i}`}
-              attachment={{ ...a, url }}
-              time={time}
-              side={side}
-              onView={onView}
-              requestId={requestId}
-              scope={scope}
-              index={i}
-              showTimestamp={false}
-            />
-          );
-        })}
+        {attachments!.map((a, i) => (
+          <AttachmentBubble
+            key={`${scope}-${i}`}
+            attachment={a}
+            time={time}
+            side={side}
+            requestId={requestId}
+            scope={scope}
+            index={i}
+            onView={onView}
+            showTimestamp={false}
+          />
+        ))}
       </div>
       <div className="overflow-hidden [contain:inline-size] px-2 pb-6 pt-1">
         <p
@@ -1017,6 +1310,76 @@ const VideoBubble = memo(function VideoBubble({
   );
 });
 
+/** Voice message bubble — inline waveform player with a hover-download
+ *  affordance, matching the shell and timestamp placement of the other
+ *  media bubbles. Renders inside the combined text+attachment layout
+ *  too (via showTimestamp=false). */
+const VoiceBubble = memo(function VoiceBubble({
+  url,
+  time,
+  side,
+  attachment,
+  onView,
+  requestId,
+  scope,
+  index,
+  showTimestamp = true,
+}: {
+  url: string;
+  time: string;
+  side: "left" | "right";
+  attachment: RequestAttachment;
+  onView: BubbleView;
+  requestId: string;
+  scope: AttachmentScope;
+  index: number;
+  showTimestamp?: boolean;
+}) {
+  const handleDownload = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      downloadAttachment(attachment);
+    },
+    [attachment],
+  );
+
+  return (
+    <div
+      className={cn(
+        "group relative flex items-stretch rounded-[22px] px-3.5 py-3",
+        side === "left"
+          ? "min-h-[68px] w-[300px] rounded-tl-md bg-[hsl(var(--page))] ring-1 ring-[hsl(var(--rule))]"
+          : "min-h-[68px] w-[300px] rounded-tr-md bg-[hsl(var(--ink))] text-[hsl(var(--page))]",
+      )}
+    >
+      {url ? (
+        <VoicePlayer
+          url={url}
+          duration={attachment.duration}
+          side={side}
+        />
+      ) : (
+        <span className="text-[12px] text-[hsl(var(--ink-subtle))]">
+          Voice message unavailable
+        </span>
+      )}
+
+
+
+      {showTimestamp && (
+        <span
+          className={cn(
+            "absolute bottom-1 right-3 text-[11px] tabular-nums",
+            side === "left" ? "text-[hsl(var(--ink-subtle))]" : "text-[hsl(var(--page))]/70",
+          )}
+        >
+          {timeShort(time)}
+        </span>
+      )}
+    </div>
+  );
+});
+
 const ChatAttachmentBubble = memo(function ChatAttachmentBubble({
   attachment,
   time,
@@ -1300,10 +1663,56 @@ function FinancialCard({
   );
 }
 
+/** Static waveform for the preview — decodes the recorded clip and
+ *  renders bars that fill as playback advances. Uses the same
+ *  useWaveform hook as VoicePlayer but renders inline in the white
+ *  recording bar. */
+function PreviewWaveform({
+  url,
+  current,
+  duration,
+}: {
+  url: string;
+  current: number;
+  duration: number;
+}) {
+  const bars = useWaveform(url);
+  const effectiveBars = useMemo(
+    () => (bars.length ? bars : Array.from({ length: 36 }, () => 0.5)),
+    [bars],
+  );
+  const progress = duration > 0 ? Math.min(1, current / duration) : 0;
+  const playedBars = Math.round(progress * effectiveBars.length);
+
+  return (
+    <div className="flex h-full w-full items-center gap-[2px]">
+      {effectiveBars.map((h, i) => (
+        <span
+          key={i}
+          style={{ height: `${Math.max(14, h * 100)}%` }}
+          className={cn(
+            "flex-1 rounded-full",
+            i < playedBars
+              ? "bg-[hsl(var(--ink))]"
+              : "bg-[hsl(var(--ink))]/20",
+          )}
+        />
+      ))}
+    </div>
+  );
+}
+
 function dateShort(iso?: string): string {
   if (!iso) return "";
   return new Date(iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });
+}
+
+/** Live recording timer: "0:05", "1:02". */
+function formatDuration(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(s / 60);
+  return `${m}:${(s % 60).toString().padStart(2, "0")}`;
 }
